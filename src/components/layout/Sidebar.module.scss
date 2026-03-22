@@ -7,11 +7,15 @@
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background-color: var(--bg-body);
-  border-right: 1px solid var(--border-color);
+  background: rgba($zinc-900, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid $glass-border;
   overflow-y: auto;
   z-index: 200;
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
 
   @include media-down(md) {
     transform: translateX(-100%);
@@ -26,7 +30,8 @@
   display: none;
   position: fixed;
   inset: 0;
-  background-color: rgba($black, 0.4);
+  background-color: rgba($black, 0.6);
+  backdrop-filter: blur(4px);
   z-index: 199;
 
   @include media-down(md) {
@@ -39,18 +44,29 @@
   align-items: center;
   height: var(--header-height);
   padding: 0 map-get($spacers, 4);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid $glass-border;
+  flex-shrink: 0;
 }
 
 .brandLink {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
   font-size: $font-size-lg;
   font-weight: $font-weight-bold;
-  color: $primary;
+  color: $zinc-100;
   text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.brandIcon {
+  font-size: 1.25rem;
+  color: $accent;
 }
 
 .nav {
   padding: map-get($spacers, 3) 0;
+  flex: 1;
 }
 
 .navItem {
@@ -58,50 +74,75 @@
   align-items: center;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 2) map-get($spacers, 4);
-  color: var(--text-secondary);
+  color: $zinc-500;
   font-size: $font-size-sm;
   text-decoration: none;
   transition: $transition-fast;
+  border-radius: 0;
+  position: relative;
 
   &:hover {
-    color: var(--text-primary);
-    background-color: var(--bg-surface);
+    color: $zinc-200;
+    background-color: rgba($white, 0.03);
+
+    .icon {
+      transform: scale(1.1);
+    }
   }
 
   &.active {
-    color: $primary;
-    background-color: rgba($primary, 0.06);
-    font-weight: $font-weight-medium;
+    color: $accent;
+    background-color: $accent-subtle;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background: $accent;
+      border-radius: 0 $border-radius-pill $border-radius-pill 0;
+    }
   }
 
   &.nested {
-    padding-left: map-get($spacers, 6);
+    padding-left: map-get($spacers, 5);
   }
 }
 
 .icon {
-  font-size: $font-size-base;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+  transition: $transition-fast;
 }
 
 .section {
-  margin-top: map-get($spacers, 3);
+  margin-top: map-get($spacers, 4);
 }
 
 .sectionTitle {
   display: block;
-  padding: map-get($spacers, 2) map-get($spacers, 4);
+  padding: map-get($spacers, 1) map-get($spacers, 4) map-get($spacers, 2);
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: var(--text-muted);
+  color: $zinc-600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .addBtn {
-  color: $primary;
-  font-weight: $font-weight-medium;
+  color: $accent;
 
   &:hover {
-    background-color: rgba($primary, 0.06);
+    color: $accent;
+    background-color: $accent-subtle;
   }
+}
+
+.footer {
+  border-top: 1px solid $glass-border;
+  padding: map-get($spacers, 2) 0;
+  flex-shrink: 0;
 }

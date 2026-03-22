@@ -1,25 +1,46 @@
 @use '../variables' as *;
 
+// ===========================
+// Double-Bezel 카드 아키텍처
+// ===========================
+
+// 외부 셸 — 알루미늄 트레이 느낌
 .card {
-  background-color: var(--bg-body);
-  border: 1px solid var(--border-color);
-  border-radius: $border-radius-lg;
-  box-shadow: $box-shadow-sm;
+  background-color: $glass-bg;
+  border: 1px solid $glass-border;
+  border-radius: $border-radius-3xl;
+  padding: 6px;
+  transition: $transition-spring;
+
+  &:hover {
+    border-color: $glass-highlight;
+  }
+}
+
+// 내부 코어 — 글래스 플레이트
+.card-inner {
+  background-color: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: $glass-shadow;
   overflow: hidden;
 }
 
 .card-header {
-  padding: map-get($spacers, 3) map-get($spacers, 4);
-  border-bottom: 1px solid var(--border-color);
+  padding: map-get($spacers, 4) map-get($spacers, 5);
+  border-bottom: 1px solid $glass-border;
   font-weight: $font-weight-semibold;
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .card-body {
-  padding: map-get($spacers, 4);
+  padding: map-get($spacers, 5);
 }
 
 .card-footer {
-  padding: map-get($spacers, 3) map-get($spacers, 4);
-  border-top: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
+  padding: map-get($spacers, 3) map-get($spacers, 5);
+  border-top: 1px solid $glass-border;
+  background-color: rgba($zinc-800, 0.5);
 }

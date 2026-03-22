@@ -4,34 +4,26 @@
 @use 'components/cards';
 
 // ===========================
-// CSS 변수 (시맨틱 색상)
+// CSS 변수 — Vantablack Luxe 다크 테마
 // ===========================
 :root {
-  --text-primary:     #{$gray-900};
-  --text-secondary:   #{$gray-600};
-  --text-muted:       #{$gray-500};
-  --bg-body:          #{$white};
-  --bg-surface:       #{$gray-50};
-  --bg-input:         #{$white};
-  --border-color:     #{$gray-300};
-  --border-focus:     #{$primary};
-  --success-subtle:   #{rgba($success, 0.08)};
-  --danger-subtle:    #{rgba($danger, 0.08)};
-  --warning-subtle:   #{rgba($warning, 0.08)};
-  --info-subtle:      #{rgba($info, 0.08)};
+  --text-primary:     #{$zinc-100};
+  --text-secondary:   #{$zinc-400};
+  --text-muted:       #{$zinc-600};
+  --bg-body:          #{$zinc-950};
+  --bg-surface:       #{$zinc-900};
+  --bg-elevated:      #{$zinc-800};
+  --bg-input:         #{$zinc-900};
+  --border-color:     #{$glass-border};
+  --border-focus:     #{$accent};
+  --accent:           #{$accent};
+  --accent-dim:       #{$accent-dim};
+  --accent-subtle:    #{$accent-subtle};
+  --glass-bg:         #{$glass-bg};
+  --glass-border:     #{$glass-border};
+  --glass-highlight:  #{$glass-highlight};
   --sidebar-width:    260px;
-  --header-height:    56px;
-}
-
-[data-theme="dark"] {
-  --text-primary:     #{$gray-100};
-  --text-secondary:   #{$gray-400};
-  --text-muted:       #{$gray-600};
-  --bg-body:          #{$gray-900};
-  --bg-surface:       #{$gray-800};
-  --bg-input:         #{$gray-800};
-  --border-color:     #{$gray-700};
-  --border-focus:     #{lighten($primary, 10%)};
+  --header-height:    64px;
 }
 
 // ===========================
@@ -58,14 +50,16 @@ body {
   background-color: var(--bg-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  word-break: keep-all;
 }
 
 a {
-  color: $primary;
+  color: var(--accent);
   text-decoration: none;
+  transition: $transition-fast;
 
   &:hover {
-    color: darken($primary, 15%);
+    color: $accent;
   }
 }
 
@@ -86,11 +80,47 @@ select {
 }
 
 // ===========================
+// 노이즈 텍스처 오버레이
+// ===========================
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+// ===========================
+// 스크롤바 스타일
+// ===========================
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $zinc-700;
+  border-radius: $border-radius-pill;
+
+  &:hover {
+    background: $zinc-600;
+  }
+}
+
+// ===========================
 // 앱 레이아웃
 // ===========================
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-main {
@@ -105,10 +135,36 @@ select {
 }
 
 .app-content {
-  padding: map-get($spacers, 4) map-get($spacers, 5);
+  padding: map-get($spacers, 5) map-get($spacers, 6);
   max-width: 1200px;
 
   @media (max-width: map-get($breakpoints, md) - 0.02px) {
     padding: map-get($spacers, 3);
   }
+}
+
+// ===========================
+// 키프레임 애니메이션
+// ===========================
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }

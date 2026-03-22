@@ -2,20 +2,29 @@
 @use '../../styles/mixins' as *;
 
 .header {
-  @include flex-between;
   position: fixed;
   top: 0;
   left: var(--sidebar-width);
   right: 0;
   height: var(--header-height);
-  padding: 0 map-get($spacers, 4);
-  background-color: var(--bg-body);
-  border-bottom: 1px solid var(--border-color);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
   z-index: 100;
+  display: flex;
+  align-items: center;
 
   @include media-down(md) {
     left: 0;
   }
+}
+
+.inner {
+  @include flex-between;
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 map-get($spacers, 4);
+  height: 44px;
+  border-radius: $border-radius-pill;
+  @include glass-effect;
 }
 
 .left {
@@ -27,15 +36,17 @@
 .menuBtn {
   display: none;
   @include flex-center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
-  color: var(--text-primary);
+  color: $zinc-400;
   border-radius: $border-radius;
+  transition: $transition-fast;
 
   &:hover {
-    background-color: var(--bg-surface);
+    color: $zinc-200;
+    background-color: $glass-bg;
   }
 
   @include media-down(md) {
@@ -44,28 +55,36 @@
 }
 
 .logo {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-bold;
-  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $zinc-300;
   text-decoration: none;
+  letter-spacing: -0.01em;
+
+  @include media-up(md) {
+    display: none;
+  }
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: map-get($spacers, 2);
+  gap: map-get($spacers, 1);
 }
 
-.settingsBtn {
+.iconBtn {
   @include flex-center;
-  width: 36px;
-  height: 36px;
-  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  color: $zinc-500;
+  background: none;
+  border: none;
   border-radius: $border-radius;
   transition: $transition-fast;
+  text-decoration: none;
 
   &:hover {
-    color: var(--text-primary);
-    background-color: var(--bg-surface);
+    color: $zinc-200;
+    background-color: rgba($white, 0.05);
   }
 }

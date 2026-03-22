@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Icon } from '@iconify/react';
 import styles from './Sidebar.module.scss';
 
 const TOKEN_TYPES = [
-  { label: '색상', slug: 'color' },
-  { label: '타이포', slug: 'typography' },
-  { label: '간격', slug: 'spacing' },
-  { label: '반경', slug: 'radius' },
+  { label: '색상', slug: 'color', icon: 'solar:palette-linear' },
+  { label: '타이포', slug: 'typography', icon: 'solar:text-bold-linear' },
+  { label: '간격', slug: 'spacing', icon: 'solar:ruler-angular-linear' },
+  { label: '반경', slug: 'radius', icon: 'solar:rounded-magnifer-linear' },
 ];
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
         <div className={styles.brand}>
           <Link href="/" className={styles.brandLink}>
+            <Icon icon="solar:stars-minimalistic-bold" className={styles.brandIcon} />
             PixelForge
           </Link>
         </div>
@@ -43,12 +45,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className={`${styles.navItem} ${isActive('/') ? styles.active : ''}`}
             onClick={onClose}
           >
-            <span className={styles.icon}>📋</span>
+            <Icon icon="solar:home-2-linear" className={styles.icon} />
             개요
           </Link>
 
           <div className={styles.section}>
-            <span className={styles.sectionTitle}>🎨 토큰</span>
+            <span className={styles.sectionTitle}>토큰</span>
             {TOKEN_TYPES.map((token) => (
               <Link
                 key={token.slug}
@@ -56,14 +58,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={`${styles.navItem} ${styles.nested} ${isActive(`/tokens/${token.slug}`) ? styles.active : ''}`}
                 onClick={onClose}
               >
+                <Icon icon={token.icon} className={styles.icon} />
                 {token.label}
               </Link>
             ))}
           </div>
 
           <div className={styles.section}>
-            <span className={styles.sectionTitle}>🧩 컴포넌트</span>
-            {/* 동적으로 등록된 컴포넌트 목록이 여기에 렌더링됨 */}
+            <span className={styles.sectionTitle}>컴포넌트</span>
           </div>
 
           <Link
@@ -71,13 +73,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className={`${styles.navItem} ${styles.addBtn}`}
             onClick={onClose}
           >
-            + 컴포넌트 추가
+            <Icon icon="solar:add-circle-linear" className={styles.icon} />
+            컴포넌트 추가
           </Link>
 
           <div className={styles.section}>
-            <span className={styles.sectionTitle}>📜 히스토리</span>
+            <span className={styles.sectionTitle}>히스토리</span>
           </div>
         </nav>
+
+        <div className={styles.footer}>
+          <Link href="/settings" className={styles.navItem} onClick={onClose}>
+            <Icon icon="solar:settings-linear" className={styles.icon} />
+            설정
+          </Link>
+        </div>
       </aside>
     </>
   );

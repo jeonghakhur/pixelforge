@@ -6,67 +6,119 @@
   align-items: center;
   justify-content: center;
   gap: map-get($spacers, 2);
-  padding: map-get($spacers, 2) map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
   font-family: $font-family-base;
   font-size: $font-size-base;
   font-weight: $font-weight-medium;
   line-height: $line-height-base;
   text-decoration: none;
   border: 1px solid transparent;
-  border-radius: $border-radius;
+  border-radius: $border-radius-pill;
   cursor: pointer;
-  transition: $transition-fast;
+  transition: $transition-spring;
   user-select: none;
 
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
   &:disabled {
-    opacity: 0.65;
+    opacity: 0.5;
     pointer-events: none;
+    transform: none;
   }
 }
 
 .btn-sm {
-  padding: map-get($spacers, 1) map-get($spacers, 2);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
   font-size: $font-size-sm;
 }
 
 .btn-lg {
-  padding: map-get($spacers, 3) map-get($spacers, 4);
+  padding: map-get($spacers, 3) map-get($spacers, 5);
   font-size: $font-size-lg;
 }
 
 .btn-primary {
-  @include button-variant($primary);
+  background-color: $accent;
+  border-color: $accent;
+  color: $zinc-950;
+
+  &:hover {
+    background-color: $accent;
+    box-shadow: $box-shadow-glow;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($accent, 0.3);
+  }
 }
 
 .btn-secondary {
-  @include button-variant($secondary);
+  background-color: $zinc-800;
+  border-color: $glass-border;
+  color: $zinc-200;
+
+  &:hover {
+    background-color: $zinc-700;
+    border-color: $glass-highlight;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($zinc-500, 0.2);
+  }
 }
 
 .btn-success {
-  @include button-variant($success);
+  background-color: $success;
+  border-color: $success;
+  color: $zinc-950;
+
+  &:hover {
+    box-shadow: 0 0 20px rgba($success, 0.2);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($success, 0.3);
+  }
 }
 
 .btn-danger {
-  @include button-variant($danger);
+  background-color: $danger;
+  border-color: $danger;
+  color: $white;
+
+  &:hover {
+    box-shadow: 0 0 20px rgba($danger, 0.2);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($danger, 0.3);
+  }
 }
 
 .btn-outline-primary {
   background-color: transparent;
-  border-color: $primary;
-  color: $primary;
+  border-color: $glass-border;
+  color: $accent;
 
   &:hover {
-    background-color: $primary;
-    color: $white;
+    background-color: $accent-subtle;
+    border-color: rgba($accent, 0.3);
   }
 }
 
 .btn-ghost {
   background-color: transparent;
   border-color: transparent;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 
   &:hover {
-    background-color: var(--bg-surface);
+    background-color: $glass-bg;
+    color: var(--text-primary);
   }
 }
