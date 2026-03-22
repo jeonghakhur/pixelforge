@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
+import { extractTokensAction } from '@/lib/actions/project';
 import styles from './page.module.scss';
 
 const figmaUrlSchema = z.object({
@@ -44,30 +47,64 @@ const FEATURES = [
   },
 ];
 
-const SUMMARY_ITEMS = [
-  { title: '색상', icon: 'solar:palette-linear' },
-  { title: '타이포그래피', icon: 'solar:text-bold-linear' },
-  { title: '간격', icon: 'solar:ruler-angular-linear' },
-  { title: '반경', icon: 'solar:rounded-magnifer-linear' },
+interface SummaryItem {
+  title: string;
+  icon: string;
+  key: 'colors' | 'typography' | 'spacing' | 'radii';
+}
+
+const SUMMARY_ITEMS: SummaryItem[] = [
+  { title: '색상', icon: 'solar:palette-linear', key: 'colors' },
+  { title: '타이포그래피', icon: 'solar:text-bold-linear', key: 'typography' },
+  { title: '간격', icon: 'solar:ruler-angular-linear', key: 'spacing' },
+  { title: '반경', icon: 'solar:rounded-magnifer-linear', key: 'radii' },
 ];
 
+interface ExtractResult {
+  colors: number;
+  typography: number;
+  spacing: number;
+  radii: number;
+}
+
 export default function HomePage() {
+  const router = useRouter();
+  const [result, setResult] = useState<ExtractResult | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setFocus,
   } = useForm<FigmaUrlForm>({
     resolver: zodResolver(figmaUrlSchema),
   });
 
   const onSubmit = async (data: FigmaUrlForm) => {
-    // TODO: 토큰 추출 API 호출
-    void data;
+    setServerError(null);
+    const res = await extractTokensAction(data.url);
+    if (res.error) {
+      setServerError(res.error);
+      return;
+    }
+    setResult({
+      colors: res.colors,
+      typography: res.typography,
+      spacing: res.spacing,
+      radii: res.radii,
+    });
+    router.refresh();
+  };
+
+  const onError = () => {
+    const firstField = 'url' as const;
+    setFocus(firstField);
   };
 
   return (
     <div className={styles.home}>
-      {/* 히어로 — Split 레이아웃 */}
+      {/* 히어로 - Split 레이아웃 */}
       <section className={styles.hero}>
         <div className={styles.heroText}>
           <span className={styles.eyebrow}>Design Token Extractor</span>
@@ -90,7 +127,7 @@ export default function HomePage() {
 
       {/* Figma URL 입력 */}
       <Card className={styles.formCard}>
-        <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+        <form onSubmit={handleSubmit(onSubmit, onError)} className={styles.form} noValidate>
           <div className={styles.inputGroup}>
             <div className={styles.inputWrapper}>
               <Icon icon="solar:link-linear" className={styles.inputIcon} />
@@ -102,6 +139,8 @@ export default function HomePage() {
                 type="url"
                 placeholder="https://www.figma.com/file/..."
                 className={styles.input}
+                aria-invalid={!!errors.url}
+                aria-describedby={errors.url ? 'figma-url-error' : undefined}
                 {...register('url')}
               />
             </div>
@@ -110,12 +149,20 @@ export default function HomePage() {
             </Button>
           </div>
           {errors.url && (
-            <p className={styles.error} role="alert">{errors.url.message}</p>
+            <p id="figma-url-error" className={styles.error} role="alert">
+              {errors.url.message}
+            </p>
+          )}
+          {serverError && (
+            <p className={styles.error} role="alert">
+              <Icon icon="solar:danger-triangle-linear" width={14} height={14} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} />
+              {serverError}
+            </p>
           )}
         </form>
       </Card>
 
-      {/* 기능 소개 — Bento Grid */}
+      {/* 기능 소개 - Bento Grid */}
       <section className={styles.features}>
         <span className={styles.eyebrow}>Core Features</span>
         <h2 className={styles.sectionTitle}>강력한 토큰 추출 엔진</h2>
@@ -139,16 +186,23 @@ export default function HomePage() {
         <span className={styles.eyebrow}>Token Overview</span>
         <h2 className={styles.sectionTitle}>추출된 토큰</h2>
         <div className={styles.summary}>
-          {SUMMARY_ITEMS.map((item) => (
-            <Card
-              key={item.title}
-              title={item.title}
-              icon={<Icon icon={item.icon} width={16} height={16} />}
-              className={styles.summaryCard}
-            >
-              <p className={styles.emptyState}>추출된 토큰이 없습니다</p>
-            </Card>
-          ))}
+          {SUMMARY_ITEMS.map((item) => {
+            const count = result ? result[item.key] : 0;
+            return (
+              <Card
+                key={item.title}
+                title={item.title}
+                icon={<Icon icon={item.icon} width={16} height={16} />}
+                className={styles.summaryCard}
+              >
+                {count > 0 ? (
+                  <p className={styles.tokenCount}>{count}개</p>
+                ) : (
+                  <p className={styles.emptyState}>추출된 토큰이 없습니다</p>
+                )}
+              </Card>
+            );
+          })}
         </div>
       </section>
     </div>

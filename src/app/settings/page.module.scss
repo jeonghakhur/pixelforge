@@ -1,0 +1,124 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.page {
+  max-width: 720px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+.settingsCard {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.settingsLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: map-get($spacers, 3);
+  color: var(--text-muted);
+}
+
+.settingsTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.settingsDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.currentToken {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  font-size: $font-size-sm;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  border-radius: $border-radius-pill;
+}
+
+.inputRow {
+  display: flex;
+  gap: map-get($spacers, 2);
+
+  @include media-down(sm) {
+    flex-direction: column;
+  }
+}
+
+.inputWrapper {
+  flex: 1;
+}
+
+.input {
+  width: 100%;
+  padding: map-get($spacers, 3);
+  font-size: $font-size-base;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-xl;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: $transition-fast;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+
+  &::placeholder {
+    color: var(--text-muted);
+    font-family: $font-family-base;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle), var(--glass-shadow);
+  }
+}
+
+.error {
+  margin-top: map-get($spacers, 2);
+  color: $danger;
+  font-size: $font-size-sm;
+}
+
+.success {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  margin-top: map-get($spacers, 2);
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}

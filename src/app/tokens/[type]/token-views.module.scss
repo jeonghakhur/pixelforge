@@ -1,0 +1,257 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ===========================
+// 색상 그리드
+// ===========================
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: map-get($spacers, 3);
+
+  @include media-down(sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.colorCard {
+  @include double-bezel;
+}
+
+.colorCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+.colorSwatch {
+  width: 100%;
+  height: 80px;
+}
+
+.colorInfo {
+  padding: map-get($spacers, 3);
+}
+
+.colorName {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+  @include text-truncate;
+}
+
+.colorValues {
+  display: flex;
+  align-items: center;
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  background: none;
+  border: none;
+  padding: map-get($spacers, 1);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  color: var(--text-muted);
+
+  &:hover {
+    background: var(--glass-highlight);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.hexValue {
+  font-size: $font-size-xs;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 타이포그래피 목록
+// ===========================
+.typoList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.typoCard {
+  @include double-bezel;
+}
+
+.typoCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 5);
+}
+
+.typoSample {
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 3);
+  word-break: keep-all;
+  line-height: $line-height-snug;
+}
+
+.typoMeta {
+  border-top: 1px solid var(--glass-border);
+  padding-top: map-get($spacers, 3);
+}
+
+.typoName {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.typoDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 간격 목록
+// ===========================
+.spacingList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.spacingCard {
+  @include double-bezel;
+}
+
+.spacingCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 4) map-get($spacers, 5);
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 4);
+
+  @include media-down(sm) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.spacingVisual {
+  flex-shrink: 0;
+  width: 200px;
+  height: 20px;
+  background: var(--glass-bg);
+  border-radius: $border-radius-sm;
+  overflow: hidden;
+
+  @include media-down(sm) {
+    width: 100%;
+  }
+}
+
+.spacingBar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+  min-width: 4px;
+  opacity: 0.7;
+}
+
+.spacingMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.spacingName {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+  @include text-truncate;
+}
+
+.spacingDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 반경 목록
+// ===========================
+.radiusList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: map-get($spacers, 3);
+
+  @include media-down(sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.radiusCard {
+  @include double-bezel;
+}
+
+.radiusCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 5);
+  @include flex-center;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.radiusVisual {
+  @include flex-center;
+}
+
+.radiusBox {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--accent);
+  background: var(--accent-subtle);
+  transition: $transition-fast;
+}
+
+.radiusMeta {
+  text-align: center;
+}
+
+.radiusName {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+  @include text-truncate;
+}
+
+.radiusValue {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}

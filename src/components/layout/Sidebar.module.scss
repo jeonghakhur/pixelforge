@@ -132,6 +132,31 @@
   letter-spacing: 0.1em;
 }
 
+.dimmed {
+  opacity: 0.5;
+}
+
+.badge {
+  margin-left: auto;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-pill;
+  line-height: 1.4;
+}
+
+.lastSync {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 5);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: map-get($spacers, 1);
+}
+
 .addBtn {
   color: var(--accent);
 
