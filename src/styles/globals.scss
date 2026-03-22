@@ -20,7 +20,7 @@
 :root[data-theme="dark"] {
   --text-primary:     #{$zinc-100};
   --text-secondary:   #{$zinc-400};
-  --text-muted:       #{$zinc-600};
+  --text-muted:       #{$zinc-500};
   --bg-body:          #{$zinc-950};
   --bg-surface:       #{$zinc-900};
   --bg-elevated:      #{$zinc-800};
@@ -43,7 +43,7 @@
 :root[data-theme="light"] {
   --text-primary:     #{$zinc-950};
   --text-secondary:   #{$zinc-600};
-  --text-muted:       #{$zinc-400};
+  --text-muted:       #{$zinc-500};
   --bg-body:          #{$zinc-50};
   --bg-surface:       #{$white};
   --bg-elevated:      #{$zinc-100};
@@ -162,6 +162,7 @@ body::after {
   margin-left: var(--sidebar-width);
   padding-top: var(--header-height);
   min-width: 0;
+  background-color: var(--bg-body);
 
   @media (max-width: map-get($breakpoints, md) - 0.02px) {
     margin-left: 0;
@@ -171,6 +172,7 @@ body::after {
 .app-content {
   padding: map-get($spacers, 5) map-get($spacers, 6);
   max-width: 1200px;
+  background-color: var(--bg-body);
 
   @media (max-width: map-get($breakpoints, md) - 0.02px) {
     padding: map-get($spacers, 3);

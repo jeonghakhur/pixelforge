@@ -127,7 +127,7 @@
   padding: map-get($spacers, 1) map-get($spacers, 4) map-get($spacers, 2);
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }

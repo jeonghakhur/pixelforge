@@ -6,10 +6,10 @@ import { Icon } from '@iconify/react';
 import styles from './Sidebar.module.scss';
 
 const TOKEN_TYPES = [
-  { label: '색상', slug: 'color', icon: 'solar:palette-linear' },
-  { label: '타이포', slug: 'typography', icon: 'solar:text-bold-linear' },
-  { label: '간격', slug: 'spacing', icon: 'solar:ruler-angular-linear' },
-  { label: '반경', slug: 'radius', icon: 'solar:rounded-magnifer-linear' },
+  { label: '색상', slug: 'color', icon: 'solar:pallete-linear' },
+  { label: '타이포', slug: 'typography', icon: 'solar:text-field-linear' },
+  { label: '간격', slug: 'spacing', icon: 'solar:ruler-linear' },
+  { label: '반경', slug: 'radius', icon: 'solar:crop-linear' },
 ];
 
 interface SidebarProps {
@@ -45,7 +45,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className={`${styles.navItem} ${isActive('/') ? styles.active : ''}`}
             onClick={onClose}
           >
-            <Icon icon="solar:home-2-linear" className={styles.icon} />
+            <Icon icon="solar:home-linear" className={styles.icon} />
             개요
           </Link>
 
