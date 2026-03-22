@@ -2,22 +2,106 @@
 @use '../styles/mixins' as *;
 
 .home {
-  max-width: 900px;
+  max-width: 960px;
+}
+
+// ===========================
+// 히어로 섹션
+// ===========================
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: map-get($spacers, 6);
+  align-items: center;
+  padding: map-get($spacers, 6) 0 map-get($spacers, 8);
+
+  @include media-down(md) {
+    grid-template-columns: 1fr;
+    gap: map-get($spacers, 5);
+    padding: map-get($spacers, 4) 0 map-get($spacers, 6);
+  }
+}
+
+.heroText {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
 }
 
 .title {
-  font-size: 2rem;
+  font-size: $font-size-4xl;
   font-weight: $font-weight-bold;
-  margin-bottom: map-get($spacers, 2);
+  line-height: $line-height-snug;
+  letter-spacing: -0.03em;
+  color: $zinc-100;
+  margin-bottom: map-get($spacers, 4);
+
+  @include media-up(lg) {
+    font-size: $font-size-5xl;
+  }
+}
+
+.accent {
+  color: $accent;
 }
 
 .subtitle {
-  color: var(--text-secondary);
-  margin-bottom: map-get($spacers, 5);
+  font-size: $font-size-lg;
+  color: $zinc-400;
+  line-height: $line-height-base;
+  max-width: 50ch;
 }
 
+.heroVisual {
+  position: relative;
+  @include flex-center;
+  min-height: 280px;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+
+  @include media-down(md) {
+    min-height: 200px;
+  }
+}
+
+.heroIcon {
+  font-size: 5rem;
+  color: $zinc-500;
+  position: relative;
+  z-index: 2;
+  animation: float 6s ease-in-out infinite;
+}
+
+.orb {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba($accent, 0.15) 0%, transparent 70%);
+  filter: blur(40px);
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.orbSecondary {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba($info, 0.1) 0%, transparent 70%);
+  filter: blur(30px);
+  top: 20%;
+  right: 10%;
+  animation: pulseGlow 5s ease-in-out 1s infinite;
+}
+
+// ===========================
+// Figma URL 폼
+// ===========================
 .formCard {
-  margin-bottom: map-get($spacers, 5);
+  margin-bottom: map-get($spacers, 8);
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 .form {
@@ -33,19 +117,40 @@
   }
 }
 
+.inputWrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: map-get($spacers, 3);
+  color: $zinc-600;
+  font-size: 1.125rem;
+  pointer-events: none;
+}
+
 .input {
   flex: 1;
-  padding: map-get($spacers, 2) map-get($spacers, 3);
+  width: 100%;
+  padding: map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 6);
   font-size: $font-size-base;
-  border: 1px solid var(--border-color);
-  border-radius: $border-radius;
-  background-color: var(--bg-input);
-  color: var(--text-primary);
+  border: 1px solid $glass-border;
+  border-radius: $border-radius-xl;
+  background-color: $zinc-900;
+  color: $zinc-100;
   transition: $transition-fast;
 
+  &::placeholder {
+    color: $zinc-600;
+  }
+
   &:focus {
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba($primary, 0.15);
+    outline: none;
+    border-color: rgba($accent, 0.4);
+    box-shadow: 0 0 0 3px rgba($accent, 0.1), $glass-shadow;
   }
 }
 
@@ -55,10 +160,98 @@
   font-size: $font-size-sm;
 }
 
+// ===========================
+// 기능 소개 섹션
+// ===========================
+.features {
+  margin-bottom: map-get($spacers, 8);
+}
+
+.sectionTitle {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: $zinc-100;
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 5);
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: map-get($spacers, 3);
+
+  @include media-down(md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureCard {
+  &:nth-child(1) {
+    grid-column: span 7;
+  }
+  &:nth-child(2) {
+    grid-column: span 5;
+  }
+  &:nth-child(3) {
+    grid-column: span 5;
+  }
+  &:nth-child(4) {
+    grid-column: span 7;
+  }
+
+  @include media-down(md) {
+    grid-column: span 1 !important;
+  }
+}
+
+.featureContent {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--index) * 100ms) both;
+}
+
+.featureIcon {
+  @include flex-center;
+  width: 48px;
+  height: 48px;
+  border-radius: $border-radius-xl;
+  background: $accent-subtle;
+  color: $accent;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.featureTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $zinc-100;
+  margin-bottom: map-get($spacers, 2);
+}
+
+.featureDesc {
+  font-size: $font-size-sm;
+  color: $zinc-400;
+  line-height: $line-height-base;
+}
+
+// ===========================
+// 토큰 요약 섹션
+// ===========================
+.summarySection {
+  margin-bottom: map-get($spacers, 6);
+}
+
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: map-get($spacers, 3);
+
+  @include media-up(lg) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  @include media-down(sm) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .summaryCard {
@@ -66,7 +259,7 @@
 }
 
 .emptyState {
-  color: var(--text-muted);
+  color: $zinc-600;
   font-size: $font-size-sm;
-  padding: map-get($spacers, 3) 0;
+  padding: map-get($spacers, 4) 0;
 }
