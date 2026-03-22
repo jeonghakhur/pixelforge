@@ -75,7 +75,7 @@
   code {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: $font-size-sm;
-    color: $accent;
+    color: var(--accent);
     line-height: 1.7;
   }
 }

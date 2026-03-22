@@ -19,7 +19,8 @@ $white:    #fff;
 $black:    #0a0a0a;
 
 // 브랜드 액센트 — Emerald (단일 액센트 정책)
-$accent:        #34d399;
+$accent:        #34d399;       // 다크 모드용 (어두운 배경 대비 8:1+)
+$accent-light:  #0d7a4e;       // 라이트 모드용 (흰 배경 대비 7:1+)
 $accent-dim:    #059669;
 $accent-subtle: rgba(52, 211, 153, 0.1);
 

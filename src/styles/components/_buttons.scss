@@ -44,17 +44,17 @@
 }
 
 .btn-primary {
-  background-color: $accent;
-  border-color: $accent;
-  color: $zinc-950;
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: $white;
 
   &:hover {
-    background-color: $accent;
+    background-color: var(--accent-dim);
     box-shadow: $box-shadow-glow;
   }
 
   &:focus-visible {
-    box-shadow: 0 0 0 3px rgba($accent, 0.3);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
   }
 }
 
@@ -104,11 +104,11 @@
 .btn-outline-primary {
   background-color: transparent;
   border-color: var(--glass-border);
-  color: $accent;
+  color: var(--accent);
 
   &:hover {
-    background-color: $accent-subtle;
-    border-color: rgba($accent, 0.3);
+    background-color: var(--accent-subtle);
+    border-color: var(--accent);
   }
 }
 

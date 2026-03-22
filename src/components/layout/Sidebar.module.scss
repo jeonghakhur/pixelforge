@@ -61,7 +61,7 @@
 
 .brandIcon {
   font-size: 1.25rem;
-  color: $accent;
+  color: var(--accent);
 }
 
 .nav {
@@ -91,8 +91,8 @@
   }
 
   &.active {
-    color: $accent;
-    background-color: $accent-subtle;
+    color: var(--accent);
+    background-color: var(--accent-subtle);
 
     &::before {
       content: '';
@@ -102,7 +102,7 @@
       transform: translateY(-50%);
       width: 3px;
       height: 60%;
-      background: $accent;
+      background: var(--accent);
       border-radius: 0 $border-radius-pill $border-radius-pill 0;
     }
   }
@@ -133,11 +133,11 @@
 }
 
 .addBtn {
-  color: $accent;
+  color: var(--accent);
 
   &:hover {
-    color: $accent;
-    background-color: $accent-subtle;
+    color: var(--accent);
+    background-color: var(--accent-subtle);
   }
 }
 

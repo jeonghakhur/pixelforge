@@ -93,6 +93,6 @@
   text-transform: uppercase;
   letter-spacing: 0.15em;
   font-weight: $font-weight-medium;
-  background-color: $accent-subtle;
-  color: $accent;
+  background-color: var(--accent-subtle);
+  color: var(--accent);
 }
