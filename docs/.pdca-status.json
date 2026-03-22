@@ -1,0 +1,263 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-03-22T07:29:24.164Z",
+  "activeFeatures": [
+    "db",
+    "pixelforge",
+    "layout",
+    "figma",
+    "tokens",
+    "stores",
+    "[type]",
+    "new",
+    "[name]",
+    "settings"
+  ],
+  "primaryFeature": "db",
+  "features": {
+    "db": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:26:47.427Z",
+        "lastUpdated": "2026-03-22T07:26:49.822Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/lib/db/index.ts"
+    },
+    "pixelforge": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:26:50.838Z",
+        "lastUpdated": "2026-03-22T07:29:24.164Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/app/page.tsx"
+    },
+    "layout": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:27:22.269Z",
+        "lastUpdated": "2026-03-22T07:27:36.427Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/components/layout/Sidebar.tsx"
+    },
+    "figma": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:28:39.199Z",
+        "lastUpdated": "2026-03-22T07:28:39.199Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/lib/figma/api.ts"
+    },
+    "tokens": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:28:54.835Z",
+        "lastUpdated": "2026-03-22T07:28:54.835Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/lib/tokens/extractor.ts"
+    },
+    "stores": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:28:56.414Z",
+        "lastUpdated": "2026-03-22T07:28:56.414Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/stores/useUIStore.ts"
+    },
+    "[type]": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:29:00.146Z",
+        "lastUpdated": "2026-03-22T07:29:00.146Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/app/tokens/[type]/page.tsx"
+    },
+    "new": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:29:02.397Z",
+        "lastUpdated": "2026-03-22T07:29:02.397Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/app/components/new/page.tsx"
+    },
+    "[name]": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:29:04.133Z",
+        "lastUpdated": "2026-03-22T07:29:04.133Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/app/components/[name]/page.tsx"
+    },
+    "settings": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-22T07:29:05.613Z",
+        "lastUpdated": "2026-03-22T07:29:05.613Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/app/settings/page.tsx"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Dynamic",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-03-22T07:22:44.180Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-03-22T07:29:24.164Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-03-22T07:26:47.427Z",
+      "feature": "db",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:26:49.822Z",
+      "feature": "db",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:26:50.838Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:27:22.269Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:27:36.427Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:27:47.866Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:27:49.910Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:28:20.824Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:28:39.199Z",
+      "feature": "figma",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:28:54.835Z",
+      "feature": "tokens",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:28:56.414Z",
+      "feature": "stores",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:00.146Z",
+      "feature": "[type]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:02.397Z",
+      "feature": "new",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:04.133Z",
+      "feature": "[name]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:05.613Z",
+      "feature": "settings",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:14.346Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-22T07:29:24.164Z",
+      "feature": "pixelforge",
+      "phase": "do",
+      "action": "updated"
+    }
+  ]
+}

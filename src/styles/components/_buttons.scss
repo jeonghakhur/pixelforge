@@ -1,0 +1,72 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-base;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: $transition-fast;
+  user-select: none;
+
+  &:disabled {
+    opacity: 0.65;
+    pointer-events: none;
+  }
+}
+
+.btn-sm {
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  font-size: $font-size-sm;
+}
+
+.btn-lg {
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  font-size: $font-size-lg;
+}
+
+.btn-primary {
+  @include button-variant($primary);
+}
+
+.btn-secondary {
+  @include button-variant($secondary);
+}
+
+.btn-success {
+  @include button-variant($success);
+}
+
+.btn-danger {
+  @include button-variant($danger);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border-color: $primary;
+  color: $primary;
+
+  &:hover {
+    background-color: $primary;
+    color: $white;
+  }
+}
+
+.btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+
+  &:hover {
+    background-color: var(--bg-surface);
+  }
+}

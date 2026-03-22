@@ -1,0 +1,72 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.home {
+  max-width: 900px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: $font-weight-bold;
+  margin-bottom: map-get($spacers, 2);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin-bottom: map-get($spacers, 5);
+}
+
+.formCard {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.form {
+  width: 100%;
+}
+
+.inputGroup {
+  display: flex;
+  gap: map-get($spacers, 2);
+
+  @include media-down(sm) {
+    flex-direction: column;
+  }
+}
+
+.input {
+  flex: 1;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-base;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: $transition-fast;
+
+  &:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba($primary, 0.15);
+  }
+}
+
+.error {
+  margin-top: map-get($spacers, 2);
+  color: $danger;
+  font-size: $font-size-sm;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: map-get($spacers, 3);
+}
+
+.summaryCard {
+  text-align: center;
+}
+
+.emptyState {
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  padding: map-get($spacers, 3) 0;
+}

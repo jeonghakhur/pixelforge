@@ -1,0 +1,25 @@
+@use '../variables' as *;
+
+.card {
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow-sm;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: $font-weight-semibold;
+}
+
+.card-body {
+  padding: map-get($spacers, 4);
+}
+
+.card-footer {
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+}

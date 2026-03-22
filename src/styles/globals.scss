@@ -1,0 +1,114 @@
+@use 'variables' as *;
+@use 'accessibility';
+@use 'components/buttons';
+@use 'components/cards';
+
+// ===========================
+// CSS 변수 (시맨틱 색상)
+// ===========================
+:root {
+  --text-primary:     #{$gray-900};
+  --text-secondary:   #{$gray-600};
+  --text-muted:       #{$gray-500};
+  --bg-body:          #{$white};
+  --bg-surface:       #{$gray-50};
+  --bg-input:         #{$white};
+  --border-color:     #{$gray-300};
+  --border-focus:     #{$primary};
+  --success-subtle:   #{rgba($success, 0.08)};
+  --danger-subtle:    #{rgba($danger, 0.08)};
+  --warning-subtle:   #{rgba($warning, 0.08)};
+  --info-subtle:      #{rgba($info, 0.08)};
+  --sidebar-width:    260px;
+  --header-height:    56px;
+}
+
+[data-theme="dark"] {
+  --text-primary:     #{$gray-100};
+  --text-secondary:   #{$gray-400};
+  --text-muted:       #{$gray-600};
+  --bg-body:          #{$gray-900};
+  --bg-surface:       #{$gray-800};
+  --bg-input:         #{$gray-800};
+  --border-color:     #{$gray-700};
+  --border-focus:     #{lighten($primary, 10%)};
+}
+
+// ===========================
+// CSS 리셋
+// ===========================
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  color: var(--text-primary);
+  background-color: var(--bg-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: $primary;
+  text-decoration: none;
+
+  &:hover {
+    color: darken($primary, 15%);
+  }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+// ===========================
+// 앱 레이아웃
+// ===========================
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding-top: var(--header-height);
+  min-width: 0;
+
+  @media (max-width: map-get($breakpoints, md) - 0.02px) {
+    margin-left: 0;
+  }
+}
+
+.app-content {
+  padding: map-get($spacers, 4) map-get($spacers, 5);
+  max-width: 1200px;
+
+  @media (max-width: map-get($breakpoints, md) - 0.02px) {
+    padding: map-get($spacers, 3);
+  }
+}
