@@ -59,13 +59,13 @@
 }
 
 .btn-secondary {
-  background-color: $zinc-800;
-  border-color: $glass-border;
-  color: $zinc-200;
+  background-color: var(--bg-elevated);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
 
   &:hover {
-    background-color: $zinc-700;
-    border-color: $glass-highlight;
+    background-color: var(--glass-highlight);
+    border-color: var(--border-color);
   }
 
   &:focus-visible {
@@ -103,7 +103,7 @@
 
 .btn-outline-primary {
   background-color: transparent;
-  border-color: $glass-border;
+  border-color: var(--glass-border);
   color: $accent;
 
   &:hover {
@@ -118,7 +118,7 @@
   color: var(--text-secondary);
 
   &:hover {
-    background-color: $glass-bg;
+    background-color: var(--glass-bg);
     color: var(--text-primary);
   }
 }

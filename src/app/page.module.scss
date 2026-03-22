@@ -36,7 +36,7 @@
   font-weight: $font-weight-bold;
   line-height: $line-height-snug;
   letter-spacing: -0.03em;
-  color: $zinc-100;
+  color: var(--text-primary);
   margin-bottom: map-get($spacers, 4);
 
   @include media-up(lg) {
@@ -50,7 +50,7 @@
 
 .subtitle {
   font-size: $font-size-lg;
-  color: $zinc-400;
+  color: var(--text-secondary);
   line-height: $line-height-base;
   max-width: 50ch;
 }
@@ -68,7 +68,7 @@
 
 .heroIcon {
   font-size: 5rem;
-  color: $zinc-500;
+  color: var(--text-muted);
   position: relative;
   z-index: 2;
   animation: float 6s ease-in-out infinite;
@@ -127,7 +127,7 @@
 .inputIcon {
   position: absolute;
   left: map-get($spacers, 3);
-  color: $zinc-600;
+  color: var(--text-muted);
   font-size: 1.125rem;
   pointer-events: none;
 }
@@ -137,20 +137,20 @@
   width: 100%;
   padding: map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 6);
   font-size: $font-size-base;
-  border: 1px solid $glass-border;
+  border: 1px solid var(--glass-border);
   border-radius: $border-radius-xl;
-  background-color: $zinc-900;
-  color: $zinc-100;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   transition: $transition-fast;
 
   &::placeholder {
-    color: $zinc-600;
+    color: var(--text-muted);
   }
 
   &:focus {
     outline: none;
     border-color: rgba($accent, 0.4);
-    box-shadow: 0 0 0 3px rgba($accent, 0.1), $glass-shadow;
+    box-shadow: 0 0 0 3px rgba($accent, 0.1), var(--glass-shadow);
   }
 }
 
@@ -170,7 +170,7 @@
 .sectionTitle {
   font-size: $font-size-2xl;
   font-weight: $font-weight-bold;
-  color: $zinc-100;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: $line-height-snug;
   margin-top: map-get($spacers, 3);
@@ -223,13 +223,13 @@
 .featureTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $zinc-100;
+  color: var(--text-primary);
   margin-bottom: map-get($spacers, 2);
 }
 
 .featureDesc {
   font-size: $font-size-sm;
-  color: $zinc-400;
+  color: var(--text-secondary);
   line-height: $line-height-base;
 }
 
@@ -259,7 +259,7 @@
 }
 
 .emptyState {
-  color: $zinc-600;
+  color: var(--text-muted);
   font-size: $font-size-sm;
   padding: map-get($spacers, 4) 0;
 }

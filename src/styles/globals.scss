@@ -4,9 +4,20 @@
 @use 'components/cards';
 
 // ===========================
-// CSS 변수 — Vantablack Luxe 다크 테마
+// CSS 변수 — 공통
 // ===========================
 :root {
+  --sidebar-width:    260px;
+  --header-height:    64px;
+  --accent:           #{$accent};
+  --accent-dim:       #{$accent-dim};
+  --accent-subtle:    #{$accent-subtle};
+}
+
+// ===========================
+// 다크 테마 — Vantablack Luxe (기본)
+// ===========================
+:root[data-theme="dark"] {
   --text-primary:     #{$zinc-100};
   --text-secondary:   #{$zinc-400};
   --text-muted:       #{$zinc-600};
@@ -14,16 +25,39 @@
   --bg-surface:       #{$zinc-900};
   --bg-elevated:      #{$zinc-800};
   --bg-input:         #{$zinc-900};
-  --border-color:     #{$glass-border};
+  --border-color:     rgba(255, 255, 255, 0.08);
   --border-focus:     #{$accent};
-  --accent:           #{$accent};
-  --accent-dim:       #{$accent-dim};
-  --accent-subtle:    #{$accent-subtle};
-  --glass-bg:         #{$glass-bg};
-  --glass-border:     #{$glass-border};
-  --glass-highlight:  #{$glass-highlight};
-  --sidebar-width:    260px;
-  --header-height:    64px;
+  --glass-bg:         rgba(255, 255, 255, 0.05);
+  --glass-border:     rgba(255, 255, 255, 0.08);
+  --glass-highlight:  rgba(255, 255, 255, 0.1);
+  --glass-shadow:     inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb:  #{$zinc-700};
+  --scrollbar-hover:  #{$zinc-600};
+  --noise-opacity:    0.03;
+  --card-footer-bg:   rgba(39, 42, 45, 0.5);
+}
+
+// ===========================
+// 라이트 테마
+// ===========================
+:root[data-theme="light"] {
+  --text-primary:     #{$zinc-950};
+  --text-secondary:   #{$zinc-600};
+  --text-muted:       #{$zinc-400};
+  --bg-body:          #{$zinc-50};
+  --bg-surface:       #{$white};
+  --bg-elevated:      #{$zinc-100};
+  --bg-input:         #{$white};
+  --border-color:     rgba(0, 0, 0, 0.08);
+  --border-focus:     #{$accent-dim};
+  --glass-bg:         rgba(255, 255, 255, 0.8);
+  --glass-border:     rgba(0, 0, 0, 0.08);
+  --glass-highlight:  rgba(0, 0, 0, 0.04);
+  --glass-shadow:     inset 0 1px 1px rgba(0, 0, 0, 0.04);
+  --scrollbar-thumb:  #{$zinc-300};
+  --scrollbar-hover:  #{$zinc-400};
+  --noise-opacity:    0.015;
+  --card-footer-bg:   #{$zinc-50};
 }
 
 // ===========================
@@ -88,7 +122,7 @@ body::after {
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  opacity: 0.03;
+  opacity: var(--noise-opacity, 0.03);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
@@ -107,11 +141,11 @@ body::after {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: $zinc-700;
+  background: var(--scrollbar-thumb);
   border-radius: $border-radius-pill;
 
   &:hover {
-    background: $zinc-600;
+    background: var(--scrollbar-hover);
   }
 }
 

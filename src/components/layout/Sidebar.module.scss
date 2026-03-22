@@ -7,10 +7,10 @@
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: rgba($zinc-900, 0.6);
+  background: var(--glass-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid $glass-border;
+  border-right: 1px solid var(--glass-border);
   overflow-y: auto;
   z-index: 200;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -44,7 +44,7 @@
   align-items: center;
   height: var(--header-height);
   padding: 0 map-get($spacers, 4);
-  border-bottom: 1px solid $glass-border;
+  border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 
@@ -54,7 +54,7 @@
   gap: map-get($spacers, 2);
   font-size: $font-size-lg;
   font-weight: $font-weight-bold;
-  color: $zinc-100;
+  color: var(--text-primary);
   text-decoration: none;
   letter-spacing: -0.02em;
 }
@@ -74,7 +74,7 @@
   align-items: center;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 2) map-get($spacers, 4);
-  color: $zinc-500;
+  color: var(--text-muted);
   font-size: $font-size-sm;
   text-decoration: none;
   transition: $transition-fast;
@@ -82,8 +82,8 @@
   position: relative;
 
   &:hover {
-    color: $zinc-200;
-    background-color: rgba($white, 0.03);
+    color: var(--text-primary);
+    background-color: var(--glass-highlight);
 
     .icon {
       transform: scale(1.1);
@@ -127,7 +127,7 @@
   padding: map-get($spacers, 1) map-get($spacers, 4) map-get($spacers, 2);
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $zinc-600;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -142,7 +142,7 @@
 }
 
 .footer {
-  border-top: 1px solid $glass-border;
+  border-top: 1px solid var(--glass-border);
   padding: map-get($spacers, 2) 0;
   flex-shrink: 0;
 }

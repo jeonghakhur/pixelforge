@@ -18,7 +18,7 @@
 .title {
   font-size: $font-size-3xl;
   font-weight: $font-weight-bold;
-  color: $zinc-100;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: $line-height-snug;
   margin-top: map-get($spacers, 3);
@@ -27,7 +27,7 @@
 }
 
 .description {
-  color: $zinc-400;
+  color: var(--text-secondary);
   font-size: $font-size-lg;
 }
 
@@ -37,16 +37,16 @@
 }
 
 .previewStage {
-  background: $zinc-900;
+  background: var(--bg-surface);
   border-radius: calc(#{$border-radius-3xl} - 6px);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   padding: map-get($spacers, 8) map-get($spacers, 5);
   @include flex-center;
   min-height: 280px;
 }
 
 .empty {
-  color: $zinc-600;
+  color: var(--text-muted);
   font-size: $font-size-sm;
 }
 
@@ -57,7 +57,7 @@
 .sectionTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $zinc-200;
+  color: var(--text-primary);
   margin-bottom: map-get($spacers, 3);
 }
 
@@ -66,9 +66,9 @@
 }
 
 .pre {
-  background: $zinc-900;
+  background: var(--bg-surface);
   border-radius: calc(#{$border-radius-3xl} - 6px);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   padding: map-get($spacers, 4) map-get($spacers, 5);
   overflow-x: auto;
 

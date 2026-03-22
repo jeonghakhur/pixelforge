@@ -43,11 +43,11 @@
 // 글래스 효과
 // ===========================
 @mixin glass-effect {
-  background: $glass-bg;
+  background: var(--glass-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid $glass-border;
-  box-shadow: $glass-shadow;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 // ===========================
@@ -76,8 +76,8 @@
 // Double-Bezel 카드
 // ===========================
 @mixin double-bezel {
-  background: $glass-bg;
-  border: 1px solid $glass-border;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: $border-radius-3xl;
   padding: 6px;
 }

@@ -6,14 +6,14 @@
 
 // 외부 셸 — 알루미늄 트레이 느낌
 .card {
-  background-color: $glass-bg;
-  border: 1px solid $glass-border;
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: $border-radius-3xl;
   padding: 6px;
   transition: $transition-spring;
 
   &:hover {
-    border-color: $glass-highlight;
+    border-color: var(--glass-highlight);
   }
 }
 
@@ -21,13 +21,13 @@
 .card-inner {
   background-color: var(--bg-surface);
   border-radius: calc(#{$border-radius-3xl} - 6px);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   overflow: hidden;
 }
 
 .card-header {
   padding: map-get($spacers, 4) map-get($spacers, 5);
-  border-bottom: 1px solid $glass-border;
+  border-bottom: 1px solid var(--glass-border);
   font-weight: $font-weight-semibold;
   font-size: $font-size-sm;
   color: var(--text-secondary);
@@ -41,6 +41,6 @@
 
 .card-footer {
   padding: map-get($spacers, 3) map-get($spacers, 5);
-  border-top: 1px solid $glass-border;
-  background-color: rgba($zinc-800, 0.5);
+  border-top: 1px solid var(--glass-border);
+  background-color: var(--card-footer-bg);
 }
