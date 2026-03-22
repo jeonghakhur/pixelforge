@@ -1,0 +1,61 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tab-bar-height);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  flex-shrink: 0;
+  user-select: none;
+
+  // 스크롤바 숨기기
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 map-get($spacers, 3);
+  font-family: var(--font-mono);
+  font-size: var(--tab-font-size);
+  font-weight: $font-weight-normal;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: $transition-fast;
+  position: relative;
+
+  &:hover {
+    color: var(--text-secondary);
+    background-color: var(--glass-bg);
+  }
+
+  &.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+  }
+}
+
+.tabIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  padding: 0 map-get($spacers, 3);
+  font-family: var(--font-mono);
+  font-size: var(--tab-font-size);
+  color: var(--text-muted);
+}

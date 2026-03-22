@@ -4,11 +4,15 @@
 @use 'components/cards';
 
 // ===========================
-// CSS 변수 — 공통
+// CSS 변수 — IDE 레이아웃
 // ===========================
 :root {
-  --sidebar-width:    260px;
-  --header-height:    64px;
+  --activity-bar-width: 48px;
+  --tab-bar-height: 35px;
+  --status-bar-height: 24px;
+  --tab-font-size: 12px;
+  --content-padding: 12px;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 // ===========================
@@ -153,33 +157,34 @@ body::after {
 }
 
 // ===========================
-// 앱 레이아웃
+// IDE 레이아웃
 // ===========================
-.app-layout {
+.ide-layout {
   display: flex;
-  min-height: 100dvh;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-body);
 }
 
-.app-main {
+.ide-body {
+  display: flex;
   flex: 1;
-  margin-left: var(--sidebar-width);
-  padding-top: var(--header-height);
-  min-width: 0;
-  background-color: var(--bg-body);
-
-  @media (max-width: map-get($breakpoints, md) - 0.02px) {
-    margin-left: 0;
-  }
+  min-height: 0;
 }
 
-.app-content {
-  padding: map-get($spacers, 5) map-get($spacers, 6);
-  max-width: 1200px;
-  background-color: var(--bg-body);
+.ide-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 
-  @media (max-width: map-get($breakpoints, md) - 0.02px) {
-    padding: map-get($spacers, 3);
-  }
+.ide-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--content-padding);
+  background-color: var(--bg-body);
 }
 
 // ===========================

@@ -2,115 +2,36 @@
 @use '../styles/mixins' as *;
 
 .home {
-  max-width: 960px;
+  max-width: 720px;
+  padding: map-get($spacers, 4) 0;
 }
 
 // ===========================
-// 히어로 섹션
+// Figma URL 입력 영역
 // ===========================
-.hero {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: map-get($spacers, 6);
-  align-items: center;
-  padding: map-get($spacers, 6) 0 map-get($spacers, 8);
-
-  @include media-down(md) {
-    grid-template-columns: 1fr;
-    gap: map-get($spacers, 5);
-    padding: map-get($spacers, 4) 0 map-get($spacers, 6);
-  }
+.section {
+  margin-bottom: map-get($spacers, 5);
 }
 
-.heroText {
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.eyebrow {
-  @include eyebrow-tag;
-  margin-bottom: map-get($spacers, 3);
-}
-
-.title {
-  font-size: $font-size-4xl;
-  font-weight: $font-weight-bold;
-  line-height: $line-height-snug;
-  letter-spacing: -0.03em;
-  color: var(--text-primary);
-  margin-bottom: map-get($spacers, 4);
-
-  @include media-up(lg) {
-    font-size: $font-size-5xl;
-  }
-}
-
-.accent {
-  color: var(--accent);
-}
-
-.subtitle {
-  font-size: $font-size-lg;
-  color: var(--text-secondary);
-  line-height: $line-height-base;
-  max-width: 50ch;
-}
-
-.heroVisual {
-  position: relative;
-  @include flex-center;
-  min-height: 280px;
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
-
-  @include media-down(md) {
-    min-height: 200px;
-  }
-}
-
-.heroIcon {
-  font-size: 5rem;
+.sectionLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--tab-font-size);
+  font-weight: $font-weight-medium;
   color: var(--text-muted);
-  position: relative;
-  z-index: 2;
-  animation: float 6s ease-in-out infinite;
-}
-
-.orb {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-subtle) 0%, transparent 70%);
-  filter: blur(40px);
-  animation: pulseGlow 4s ease-in-out infinite;
-}
-
-.orbSecondary {
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba($info, 0.1) 0%, transparent 70%);
-  filter: blur(30px);
-  top: 20%;
-  right: 10%;
-  animation: pulseGlow 5s ease-in-out 1s infinite;
-}
-
-// ===========================
-// Figma URL 폼
-// ===========================
-.formCard {
-  margin-bottom: map-get($spacers, 8);
-  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: map-get($spacers, 2);
 }
 
 .form {
   width: 100%;
 }
 
-.inputGroup {
+.inputRow {
   display: flex;
   gap: map-get($spacers, 2);
+  align-items: stretch;
 
   @include media-down(sm) {
     flex-direction: column;
@@ -126,147 +47,169 @@
 
 .inputIcon {
   position: absolute;
-  left: map-get($spacers, 3);
+  left: map-get($spacers, 2);
   color: var(--text-muted);
-  font-size: 1.125rem;
+  font-size: 14px;
   pointer-events: none;
 }
 
 .input {
   flex: 1;
   width: 100%;
-  padding: map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 3) map-get($spacers, 6);
-  font-size: $font-size-base;
-  border: 1px solid var(--glass-border);
-  border-radius: $border-radius-xl;
+  padding: 6px 10px 6px 32px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
   background-color: var(--bg-input);
   color: var(--text-primary);
   transition: $transition-fast;
 
   &::placeholder {
     color: var(--text-muted);
+    font-family: var(--font-mono);
   }
 
   &:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-subtle), var(--glass-shadow);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+  }
+}
+
+.extractBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $zinc-950;
+  background-color: var(--accent);
+  border: none;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: $transition-fast;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
   }
 }
 
 .error {
-  margin-top: map-get($spacers, 2);
+  margin-top: map-get($spacers, 1);
   color: $danger;
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
+  font-family: var(--font-mono);
 }
 
 // ===========================
-// 기능 소개 섹션
+// 추출 결과
 // ===========================
-.features {
-  margin-bottom: map-get($spacers, 8);
-}
-
-.sectionTitle {
-  font-size: $font-size-2xl;
-  font-weight: $font-weight-bold;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-  line-height: $line-height-snug;
-  margin-top: map-get($spacers, 3);
-  margin-bottom: map-get($spacers, 5);
-}
-
-.featureGrid {
+.resultGrid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: map-get($spacers, 3);
+  grid-template-columns: repeat(4, 1fr);
+  gap: map-get($spacers, 2);
 
-  @include media-down(md) {
-    grid-template-columns: 1fr;
+  @include media-down(sm) {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.featureCard {
-  &:nth-child(1) {
-    grid-column: span 7;
-  }
-  &:nth-child(2) {
-    grid-column: span 5;
-  }
-  &:nth-child(3) {
-    grid-column: span 5;
-  }
-  &:nth-child(4) {
-    grid-column: span 7;
-  }
-
-  @include media-down(md) {
-    grid-column: span 1 !important;
-  }
+.resultItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
 }
 
-.featureContent {
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--index) * 100ms) both;
+.resultLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.featureIcon {
-  @include flex-center;
-  width: 48px;
-  height: 48px;
-  border-radius: $border-radius-xl;
-  background: var(--accent-subtle);
+.resultCount {
+  font-family: var(--font-mono);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
   color: var(--accent);
+}
+
+// ===========================
+// Welcome 상태
+// ===========================
+.welcome {
+  margin-top: map-get($spacers, 5);
+}
+
+.welcomeTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
   margin-bottom: map-get($spacers, 3);
 }
 
-.featureTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: var(--text-primary);
-  margin-bottom: map-get($spacers, 2);
+.shortcutList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
 }
 
-.featureDesc {
-  font-size: $font-size-sm;
-  color: var(--text-secondary);
-  line-height: $line-height-base;
-}
+.shortcutItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
 
-// ===========================
-// 토큰 요약 섹션
-// ===========================
-.summarySection {
-  margin-bottom: map-get($spacers, 6);
-}
-
-.summary {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: map-get($spacers, 3);
-
-  @include media-up(lg) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  @include media-down(sm) {
-    grid-template-columns: 1fr;
+  &:hover {
+    background-color: var(--bg-elevated);
+    border-color: var(--accent-subtle);
   }
 }
 
-.summaryCard {
-  text-align: center;
-}
-
-.tokenCount {
-  font-size: $font-size-3xl;
-  font-weight: $font-weight-bold;
+.shortcutIcon {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
   color: var(--accent);
-  padding: map-get($spacers, 3) 0;
+  flex-shrink: 0;
 }
 
-.emptyState {
-  color: var(--text-muted);
+.shortcutText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.shortcutLabel {
   font-size: $font-size-sm;
-  padding: map-get($spacers, 4) 0;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.shortcutDesc {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
 }

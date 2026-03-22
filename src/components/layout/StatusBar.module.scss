@@ -1,0 +1,71 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.statusBar {
+  @include flex-between;
+  height: var(--status-bar-height);
+  padding: 0 map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: $white;
+  flex-shrink: 0;
+  user-select: none;
+  gap: map-get($spacers, 3);
+}
+
+:root[data-theme="dark"] .statusBar {
+  background-color: #064e3b; // emerald-900
+}
+
+:root[data-theme="light"] .statusBar {
+  background-color: #047857; // emerald-700
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  flex-shrink: 0;
+}
+
+.brand {
+  font-weight: $font-weight-semibold;
+  letter-spacing: -0.01em;
+}
+
+.fileName {
+  @include text-truncate;
+  max-width: 200px;
+  opacity: 0.85;
+}
+
+.stat {
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.separator {
+  opacity: 0.4;
+}
+
+.themeBtn {
+  @include flex-center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,91 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.activityBar {
+  display: flex;
+  flex-direction: column;
+  width: var(--activity-bar-width);
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.topGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: map-get($spacers, 2);
+  gap: 2px;
+}
+
+.bottomGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: map-get($spacers, 2);
+  margin-top: auto;
+  gap: 2px;
+}
+
+.iconBtn {
+  position: relative;
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: $border-radius;
+  transition: $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  &.active {
+    color: var(--text-primary);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 24px;
+      background: var(--accent);
+      border-radius: 0 $border-radius-pill $border-radius-pill 0;
+    }
+  }
+}
+
+.tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  font-size: $font-size-xs;
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  .iconBtn:hover & {
+    opacity: 1;
+  }
+}
+
+.separator {
+  width: 24px;
+  height: 1px;
+  background: var(--border-color);
+  margin: map-get($spacers, 2) auto;
+}

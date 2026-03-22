@@ -2,8 +2,16 @@ import { create } from 'zustand';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
+type Section = 'home' | 'tokens' | 'components' | 'settings';
 
 const STORAGE_KEY = 'pixelforge-theme';
+
+const DEFAULT_TABS: Record<Section, string> = {
+  home: '',
+  tokens: 'color',
+  components: 'list',
+  settings: '',
+};
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'dark';
@@ -20,22 +28,21 @@ function applyTheme(resolved: ResolvedTheme): void {
 }
 
 interface UIState {
-  sidebarOpen: boolean;
   theme: Theme;
   resolvedTheme: ResolvedTheme;
-  toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
+  activeSection: Section;
+  activeTab: string;
   setTheme: (theme: Theme) => void;
   initTheme: () => void;
+  setSection: (section: Section) => void;
+  setTab: (tab: string) => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
-  sidebarOpen: false,
   theme: 'system',
   resolvedTheme: 'dark',
-
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  activeSection: 'home',
+  activeTab: '',
 
   setTheme: (theme) => {
     const resolved = resolveTheme(theme);
@@ -43,7 +50,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
-      // localStorage 접근 불가 시 무시
+      // ignore
     }
     set({ theme, resolvedTheme: resolved });
   },
@@ -56,14 +63,13 @@ export const useUIStore = create<UIState>((set, get) => ({
         stored = raw;
       }
     } catch {
-      // localStorage 접근 불가 시 기본값 사용
+      // ignore
     }
 
     const resolved = resolveTheme(stored);
     applyTheme(resolved);
     set({ theme: stored, resolvedTheme: resolved });
 
-    // 시스템 테마 변경 감지
     if (typeof window !== 'undefined') {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
       const handler = () => {
@@ -77,4 +83,15 @@ export const useUIStore = create<UIState>((set, get) => ({
       mql.addEventListener('change', handler);
     }
   },
+
+  setSection: (section) => {
+    const currentTab = get().activeTab;
+    const defaultTab = DEFAULT_TABS[section];
+    set({
+      activeSection: section,
+      activeTab: defaultTab || currentTab,
+    });
+  },
+
+  setTab: (tab) => set({ activeTab: tab }),
 }));
