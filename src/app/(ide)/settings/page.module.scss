@@ -2,7 +2,7 @@
 @use '../../../styles/mixins' as *;
 
 .page {
-  max-width: 720px;
+  width: 100%;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -76,6 +76,15 @@
   background: var(--accent-subtle);
   padding: map-get($spacers, 1) map-get($spacers, 3);
   border-radius: $border-radius-pill;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.figmaUrlPreview {
+  @include text-truncate;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: $font-size-xs;
+  opacity: 0.9;
 }
 
 // ===========================
@@ -194,17 +203,40 @@
 }
 
 .memberEmail {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   @include text-truncate;
 }
 
 .memberRole {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--accent);
   background: var(--accent-subtle);
   padding: 1px 8px;
   border-radius: $border-radius-pill;
   flex-shrink: 0;
+}
+
+.deleteBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 1px;
+  }
 }

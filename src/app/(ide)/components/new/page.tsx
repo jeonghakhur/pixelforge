@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import Button from '@/components/common/Button';
+import { generateComponentsAction } from '@/lib/actions/components';
 import styles from './page.module.scss';
 
 interface ComponentOption {
@@ -43,6 +44,8 @@ export default function NewComponentPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -60,11 +63,20 @@ export default function NewComponentPage() {
     ? COMPONENT_OPTIONS.filter((c) => c.category === filterCategory)
     : COMPONENT_OPTIONS;
 
-  const handleGenerate = () => {
-    // TODO: implement generation logic
-    if (selected.size > 0) {
-      router.push(`/components/${[...selected][0]}`);
+  const handleGenerate = async () => {
+    if (selected.size === 0) return;
+    setIsGenerating(true);
+    setServerError(null);
+
+    const res = await generateComponentsAction([...selected]);
+    setIsGenerating(false);
+
+    if (res.error) {
+      setServerError(res.error);
+      return;
     }
+
+    router.push(`/components/${[...selected][0]}`);
   };
 
   return (
@@ -131,6 +143,11 @@ export default function NewComponentPage() {
         })}
       </div>
 
+      {/* Error */}
+      {serverError && (
+        <p className={styles.serverError} role="alert">{serverError}</p>
+      )}
+
       {/* Action bar */}
       {selected.size > 0 && (
         <div className={styles.actionBar}>
@@ -140,9 +157,10 @@ export default function NewComponentPage() {
           <Button
             variant="primary"
             rightIcon="solar:arrow-right-linear"
+            loading={isGenerating}
             onClick={handleGenerate}
           >
-            생성
+            {isGenerating ? '생성 중...' : '생성'}
           </Button>
         </div>
       )}

@@ -23,8 +23,8 @@
   --activity-bar-width: 48px;
   --tab-bar-height: 35px;
   --status-bar-height: 24px;
-  --tab-font-size: 12px;
-  --content-padding: 12px;
+  --tab-font-size: 14px;
+  --content-padding: 20px;
   --font-mono: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -60,6 +60,12 @@
   --warning-subtle:   rgba(251, 191, 36, 0.1);
   --success-subtle:   rgba(52, 211, 153, 0.1);
   --info-subtle:      rgba(96, 165, 250, 0.1);
+  --accent-rgb:       59, 130, 246;
+  --danger-rgb:       248, 113, 113;
+  --warning-rgb:      251, 191, 36;
+  --success-rgb:      52, 211, 153;
+  --info-rgb:         96, 165, 250;
+  --text-primary-rgb: 244, 244, 245;
 }
 
 // ===========================
@@ -94,6 +100,12 @@
   --warning-subtle:   rgba(217, 119, 6, 0.08);
   --success-subtle:   rgba(5, 150, 105, 0.08);
   --info-subtle:      rgba(37, 99, 235, 0.08);
+  --accent-rgb:       37, 99, 235;
+  --danger-rgb:       220, 38, 38;
+  --warning-rgb:      217, 119, 6;
+  --success-rgb:      5, 150, 105;
+  --info-rgb:         37, 99, 235;
+  --text-primary-rgb: 9, 9, 11;
 }
 
 // ===========================
@@ -214,6 +226,13 @@ body::after {
   overflow-y: auto;
   padding: var(--content-padding);
   background-color: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+
+  > * {
+    width: 100%;
+    flex: 1;
+  }
 }
 
 // Auth layout — full screen, no IDE chrome

@@ -2,7 +2,7 @@
 @use '../../../styles/mixins' as *;
 
 .page {
-  max-width: 960px;
+  width: 100%;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -50,7 +50,7 @@
 
 .selectLabel {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -112,7 +112,7 @@
   gap: 4px;
   padding: 4px 10px;
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -171,13 +171,13 @@
 
 .diffType {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
 }
 
 .diffBadge {
   margin-left: auto;
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   padding: 1px 8px;
   border-radius: $border-radius-pill;
@@ -208,7 +208,7 @@
 
 .diffValueLabel {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -216,7 +216,7 @@
 
 .diffCode {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-secondary);
   background: var(--bg-elevated);
   padding: 4px 8px;
@@ -233,13 +233,13 @@
 }
 
 .affectedLabel {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
 }
 
 .affectedChip {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--accent);
   background: var(--accent-subtle);
   padding: 1px 8px;

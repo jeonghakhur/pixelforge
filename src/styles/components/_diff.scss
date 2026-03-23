@@ -20,7 +20,7 @@
   padding: map-get($spacers, 2) map-get($spacers, 3);
   background-color: var(--bg-elevated);
   border-bottom: 1px solid var(--border-color);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
 }
 

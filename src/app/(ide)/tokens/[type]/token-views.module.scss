@@ -2,6 +2,34 @@
 @use '../../../../styles/mixins' as *;
 
 // ===========================
+// 색상 그룹 섹션
+// ===========================
+.colorGroups {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 6);
+}
+
+.colorGroupSection {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.colorGroupHeader {
+  background: var(--bg-surface);
+  border-radius: $border-radius-lg;
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+}
+
+.colorGroupLabel {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+// ===========================
 // 색상 그리드
 // ===========================
 .colorGrid {
@@ -43,6 +71,46 @@
   @include text-truncate;
 }
 
+.tokenMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.collectionBadge {
+  display: inline-block;
+  padding: 1px map-get($spacers, 2);
+  border-radius: $border-radius-pill;
+  font-size: 10px;
+  font-weight: $font-weight-medium;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  @include text-truncate;
+  max-width: 100%;
+}
+
+.modeBadge {
+  display: inline-block;
+  padding: 1px map-get($spacers, 2);
+  border-radius: $border-radius-pill;
+  font-size: 10px;
+  font-weight: $font-weight-medium;
+}
+
+.modeLight {
+  background: rgba($warning, 0.1);
+  color: $warning;
+  border: 1px solid rgba($warning, 0.25);
+}
+
+.modeDark {
+  background: rgba(var(--text-primary-rgb), 0.06);
+  color: var(--text-secondary);
+  border: 1px solid rgba(var(--text-primary-rgb), 0.12);
+}
+
 .colorValues {
   display: flex;
   align-items: center;
@@ -72,7 +140,7 @@
 }
 
 .hexValue {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
@@ -120,7 +188,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: map-get($spacers, 2) map-get($spacers, 3);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
@@ -193,7 +261,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: map-get($spacers, 1) map-get($spacers, 3);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
@@ -251,7 +319,175 @@
 }
 
 .radiusValue {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 공통 액션 버튼
+// ===========================
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--glass-border);
+    color: var(--text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.actionBtnDelete {
+  &:hover {
+    background: rgba($danger, 0.1);
+    border-color: rgba($danger, 0.2);
+    color: $danger;
+  }
+
+}
+
+// ===========================
+// 편집 폼 (모달 내부)
+// ===========================
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.editLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editInput {
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-family: inherit;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-surface);
+  }
+
+  &[type='number'] {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+}
+
+.editColorRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.editColorSwatch {
+  width: 40px;
+  height: 40px;
+  border-radius: $border-radius;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+
+  &::-webkit-color-swatch-wrapper { padding: 0; }
+  &::-webkit-color-swatch { border: none; }
+}
+
+.editRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 2);
+}
+
+.editRow3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: map-get($spacers, 2);
+}
+
+.editFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: map-get($spacers, 2);
+  padding-top: map-get($spacers, 3);
+  border-top: 1px solid var(--glass-border);
+  margin-top: map-get($spacers, 2);
+}
+
+.editCancelBtn {
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    color: var(--text-primary);
+  }
+}
+
+.editSaveBtn {
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  color: #fff;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

@@ -2,12 +2,90 @@
 @use '../../../../styles/mixins' as *;
 
 .page {
-  max-width: 960px;
+  width: 100%;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .header {
   margin-bottom: map-get($spacers, 6);
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+  flex-wrap: wrap;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.exportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: map-get($spacers, 2);
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.deleteAllBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid rgba($danger, 0.35);
+  border-radius: $border-radius;
+  color: $danger;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: map-get($spacers, 2);
+
+  &:hover {
+    background: rgba($danger, 0.08);
+    border-color: $danger;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($danger, 0.5);
+    outline-offset: 2px;
+  }
 }
 
 .eyebrow {
@@ -54,4 +132,564 @@
 .empty {
   color: var(--text-muted);
   font-size: $font-size-sm;
+}
+
+.sourceBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 3);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  border-radius: $border-radius-pill;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  border: 1px solid transparent;
+}
+
+.sourceBannerVariables {
+  background: rgba($success, 0.08);
+  border-color: rgba($success, 0.25);
+  color: $success;
+}
+
+.sourceBannerScan {
+  background: rgba($warning, 0.08);
+  border-color: rgba($warning, 0.25);
+  color: $warning;
+}
+
+.sourceDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.sourceMeta {
+  margin-top: map-get($spacers, 2);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.sourceUrl {
+  opacity: 0.7;
+  word-break: break-all;
+}
+
+// ===========================
+// 검증 버튼
+// ===========================
+.verifyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: rgba($success, 0.08);
+  border: 1px solid rgba($success, 0.3);
+  border-radius: $border-radius;
+  color: $success;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: map-get($spacers, 2);
+
+  &:hover {
+    background: rgba($success, 0.15);
+    border-color: $success;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($success, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+// ===========================
+// 검증 결과
+// ===========================
+.verifyDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  line-height: $line-height-base;
+}
+
+.verifyResult {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.verifyStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  border-radius: $border-radius-pill;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  align-self: flex-start;
+}
+
+.verifyStatusPass {
+  background: rgba($success, 0.1);
+  border: 1px solid rgba($success, 0.3);
+  color: $success;
+}
+
+.verifyStatusFail {
+  background: rgba($danger, 0.1);
+  border: 1px solid rgba($danger, 0.3);
+  color: $danger;
+}
+
+.verifySummary {
+  display: flex;
+  gap: map-get($spacers, 4);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+}
+
+.verifyStatItem {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.verifyStatLabel {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-weight: $font-weight-medium;
+}
+
+.verifyStatValue {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.verifyStatPass {
+  color: $success;
+}
+
+.verifyStatFail {
+  color: $danger;
+}
+
+.verifyErrors {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.verifyErrorsTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $danger;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.verifyErrorList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.verifyErrorItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: map-get($spacers, 2);
+  background: rgba($danger, 0.05);
+  border-radius: $border-radius;
+  border: 1px solid rgba($danger, 0.15);
+}
+
+.verifyErrorName {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.verifyErrorReason {
+  font-size: $font-size-xs;
+  color: $danger;
+}
+
+.verifyTagMissing {
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+  background: rgba($danger, 0.12);
+  color: $danger;
+}
+
+.verifyTagExtra {
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+  background: rgba($warning, 0.15);
+  color: darken($warning, 20%);
+}
+
+.verifyScreenshotNote {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  margin-top: map-get($spacers, 1);
+}
+
+// ===========================
+// 추가하기 버튼
+// ===========================
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1);
+  border: 1px solid rgba(var(--accent-rgb, 99, 102, 241), 0.3);
+  border-radius: $border-radius;
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: map-get($spacers, 2);
+
+  &:hover {
+    background: rgba(var(--accent-rgb, 99, 102, 241), 0.2);
+    border-color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+// ===========================
+// 모달 폼 스타일
+// ===========================
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 3);
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+}
+
+.formInput {
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-input);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-family: inherit;
+  transition: $transition-fast;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.formInputError {
+  border-color: $danger;
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba($danger, 0.15);
+  }
+}
+
+.formHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.formError {
+  font-size: $font-size-xs;
+  color: $danger;
+}
+
+.extractProgress {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--glass-highlight);
+  border-radius: $border-radius;
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.extractDone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 5) 0;
+  text-align: center;
+}
+
+.extractDoneIcon {
+  color: $success;
+}
+
+.extractDoneText {
+  font-size: $font-size-base;
+  color: var(--text-primary);
+  font-weight: $font-weight-medium;
+}
+
+.extractError {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  color: $danger;
+  font-size: $font-size-sm;
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.extractBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  color: #fff;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+// ===========================
+// 디자인 비교 (Figma 원본 | PixelForge 렌더링)
+// ===========================
+.compareSection {
+  margin-top: map-get($spacers, 8);
+  padding-top: map-get($spacers, 6);
+  border-top: 1px solid var(--glass-border);
+}
+
+.compareTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 5);
+}
+
+.compareTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.compareMeta {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.compareActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-shrink: 0;
+}
+
+.compareRefreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    color: var(--text-secondary);
+    border-color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.compareDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  background: none;
+  border: 1px solid rgba($danger, 0.3);
+  border-radius: $border-radius;
+  color: $danger;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: rgba($danger, 0.08);
+    border-color: $danger;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($danger, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 4);
+
+  @include media-down(md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comparePanel {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.comparePanelLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.compareDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.compareFrame {
+  @include double-bezel;
+}
+
+.compareImg {
+  display: block;
+  width: 100%;
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  object-fit: contain;
 }

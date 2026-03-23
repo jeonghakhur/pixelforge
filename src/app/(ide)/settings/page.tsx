@@ -9,7 +9,9 @@ import { Icon } from '@iconify/react';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
-import { saveFigmaToken, checkFigmaToken } from '@/lib/actions/settings';
+import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
+import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
+import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './page.module.scss';
 
@@ -25,17 +27,24 @@ const projectSchema = z.object({
 
 type ProjectForm = z.infer<typeof projectSchema>;
 
-type SettingsTab = 'general' | 'team' | 'figma';
+const figmaUrlSchema = z.object({
+  figmaUrl: z
+    .string()
+    .min(1, 'Figma 파일 URL을 입력해주세요')
+    .url('올바른 URL 형식이 아닙니다')
+    .refine((v) => v.includes('figma.com'), 'Figma URL을 입력해주세요'),
+});
 
-interface TeamMember {
+type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
+
+type SettingsTab = 'general' | 'account' | 'team' | 'figma';
+
+interface UserRow {
   id: string;
-  name: string;
   email: string;
   role: string;
+  createdAt: Date;
 }
-
-// TODO: replace with real data
-const teamMembers: TeamMember[] = [];
 
 export default function SettingsPage() {
   const activeTab = useUIStore((s) => s.activeTab) as SettingsTab;
@@ -44,11 +53,22 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [projectSaved, setProjectSaved] = useState(false);
+  const [savedFigmaUrl, setSavedFigmaUrl] = useState<string | null>(null);
+  const [figmaUrlSaved, setFigmaUrlSaved] = useState(false);
+  const [figmaUrlError, setFigmaUrlError] = useState<string | null>(null);
 
-  const validTab = ['general', 'team', 'figma'].includes(activeTab) ? activeTab : 'general';
+  const validTab = ['general', 'account', 'team', 'figma'].includes(activeTab) ? activeTab : 'general';
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [addUserError, setAddUserError] = useState<string | null>(null);
+  const [changePwSuccess, setChangePwSuccess] = useState(false);
+  const [changePwError, setChangePwError] = useState<string | null>(null);
 
   const tokenForm = useForm<TokenForm>({
     resolver: zodResolver(tokenSchema),
+  });
+
+  const figmaUrlForm = useForm<FigmaUrlForm>({
+    resolver: zodResolver(figmaUrlSchema),
   });
 
   const projectForm = useForm<ProjectForm>({
@@ -56,13 +76,79 @@ export default function SettingsPage() {
     defaultValues: { name: 'PixelForge' },
   });
 
+  const addUserForm = useForm<AddUserForm>({
+    resolver: zodResolver(addUserSchema),
+  });
+
+  const changePwForm = useForm<ChangePasswordForm>({
+    resolver: zodResolver(changePasswordSchema),
+  });
+
   useEffect(() => {
     checkFigmaToken().then((res) => {
-      if (res.hasToken) {
-        setMaskedToken(res.maskedToken);
+      if (res.hasToken) setMaskedToken(res.maskedToken);
+    });
+    getProjectFigmaUrl().then((res) => {
+      if (res.url) {
+        setSavedFigmaUrl(res.url);
+        figmaUrlForm.reset({ figmaUrl: res.url });
       }
     });
+  // figmaUrlForm은 마운트 시 한 번만 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (validTab === 'team') {
+      getUsers().then(setUsers);
+    }
+  }, [validTab]);
+
+  const onAddUser = async (data: AddUserForm) => {
+    setAddUserError(null);
+    const result = await addUser(data);
+    if (result.error) {
+      setAddUserError(result.error);
+      return;
+    }
+    addUserForm.reset();
+    const updated = await getUsers();
+    setUsers(updated);
+  };
+
+  const onDeleteUser = async (userId: string) => {
+    const result = await deleteUser(userId);
+    if (!result.error) {
+      const updated = await getUsers();
+      setUsers(updated);
+    }
+  };
+
+  const onChangePassword = async (data: ChangePasswordForm) => {
+    setChangePwError(null);
+    setChangePwSuccess(false);
+    const result = await changePassword(data);
+    if (result.error) {
+      setChangePwError(result.error);
+      return;
+    }
+    setChangePwSuccess(true);
+    changePwForm.reset();
+    setTimeout(() => setChangePwSuccess(false), 3000);
+  };
+
+  const onFigmaUrlSubmit = async (data: FigmaUrlForm) => {
+    setFigmaUrlError(null);
+    setFigmaUrlSaved(false);
+    const res = await saveProjectFigmaUrl(data.figmaUrl);
+    if (res.error) {
+      setFigmaUrlError(res.error);
+      return;
+    }
+    setSavedFigmaUrl(data.figmaUrl);
+    setFigmaUrlSaved(true);
+    setTimeout(() => setFigmaUrlSaved(false), 3000);
+  };
 
   const onTokenSubmit = async (data: TokenForm) => {
     setServerError(null);
@@ -141,6 +227,96 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {validTab === 'account' && (
+        <div className={styles.tabContent}>
+          <Card className={styles.settingsCard}>
+            <div className={styles.settingsContent}>
+              <div className={styles.settingsLabel}>
+                <Icon icon="solar:shield-user-linear" width={20} height={20} />
+                <div>
+                  <h2 className={styles.settingsTitle}>비밀번호 변경</h2>
+                  <p className={styles.settingsDesc}>현재 비밀번호 확인 후 새 비밀번호로 변경합니다.</p>
+                </div>
+              </div>
+
+              <form
+                onSubmit={changePwForm.handleSubmit(onChangePassword, () =>
+                  changePwForm.setFocus('currentPassword')
+                )}
+                noValidate
+              >
+                <div className={styles.formGroup}>
+                  <label htmlFor="current-pw" className={styles.formLabel}>현재 비밀번호</label>
+                  <input
+                    id="current-pw"
+                    type="password"
+                    className={styles.input}
+                    autoComplete="current-password"
+                    aria-invalid={!!changePwForm.formState.errors.currentPassword}
+                    {...changePwForm.register('currentPassword')}
+                  />
+                  {changePwForm.formState.errors.currentPassword && (
+                    <p className={styles.error} role="alert">
+                      {changePwForm.formState.errors.currentPassword.message}
+                    </p>
+                  )}
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="new-pw" className={styles.formLabel}>새 비밀번호</label>
+                  <input
+                    id="new-pw"
+                    type="password"
+                    className={styles.input}
+                    autoComplete="new-password"
+                    aria-invalid={!!changePwForm.formState.errors.newPassword}
+                    {...changePwForm.register('newPassword')}
+                  />
+                  {changePwForm.formState.errors.newPassword && (
+                    <p className={styles.error} role="alert">
+                      {changePwForm.formState.errors.newPassword.message}
+                    </p>
+                  )}
+                </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="new-pw-confirm" className={styles.formLabel}>새 비밀번호 확인</label>
+                  <input
+                    id="new-pw-confirm"
+                    type="password"
+                    className={styles.input}
+                    autoComplete="new-password"
+                    aria-invalid={!!changePwForm.formState.errors.newPasswordConfirm}
+                    {...changePwForm.register('newPasswordConfirm')}
+                  />
+                  {changePwForm.formState.errors.newPasswordConfirm && (
+                    <p className={styles.error} role="alert">
+                      {changePwForm.formState.errors.newPasswordConfirm.message}
+                    </p>
+                  )}
+                </div>
+                {changePwError && (
+                  <p className={styles.error} role="alert">{changePwError}</p>
+                )}
+                {changePwSuccess && (
+                  <p className={styles.success} role="status">
+                    <Icon icon="solar:check-circle-bold" width={14} height={14} />
+                    비밀번호가 변경되었습니다.
+                  </p>
+                )}
+                <div className={styles.inputRow} style={{ marginTop: '16px' }}>
+                  <Button
+                    type="submit"
+                    disabled={changePwForm.formState.isSubmitting}
+                    leftIcon="solar:lock-check-linear"
+                  >
+                    {changePwForm.formState.isSubmitting ? '변경 중...' : '비밀번호 변경'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {validTab === 'team' && (
         <div className={styles.tabContent}>
           <Card className={styles.settingsCard}>
@@ -155,44 +331,96 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Invite form */}
-              <div className={styles.inviteForm}>
-                <div className={styles.inputRow}>
-                  <div className={styles.inputWrapper}>
-                    <input
-                      type="email"
-                      placeholder="team@pixelforge.dev"
-                      className={styles.input}
-                      aria-label="팀원 이메일"
-                    />
+              {/* 사용자 추가 폼 */}
+              <form
+                onSubmit={addUserForm.handleSubmit(onAddUser, () =>
+                  addUserForm.setFocus('email')
+                )}
+                noValidate
+              >
+                <div className={styles.formGroup}>
+                  <label htmlFor="invite-email" className={styles.formLabel}>이메일</label>
+                  <div className={styles.inputRow}>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="invite-email"
+                        type="email"
+                        placeholder="team@example.com"
+                        className={styles.input}
+                        aria-invalid={!!addUserForm.formState.errors.email}
+                        {...addUserForm.register('email')}
+                      />
+                    </div>
                   </div>
-                  <Button variant="primary" leftIcon="solar:user-plus-linear">
-                    초대
-                  </Button>
+                  {addUserForm.formState.errors.email && (
+                    <p className={styles.error} role="alert">
+                      {addUserForm.formState.errors.email.message}
+                    </p>
+                  )}
                 </div>
-              </div>
+                <div className={styles.formGroup}>
+                  <label htmlFor="invite-pw" className={styles.formLabel}>초기 비밀번호</label>
+                  <div className={styles.inputRow}>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="invite-pw"
+                        type="password"
+                        placeholder="8자 이상"
+                        className={styles.input}
+                        aria-invalid={!!addUserForm.formState.errors.password}
+                        {...addUserForm.register('password')}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={addUserForm.formState.isSubmitting}
+                      leftIcon="solar:user-plus-linear"
+                    >
+                      {addUserForm.formState.isSubmitting ? '추가 중...' : '추가'}
+                    </Button>
+                  </div>
+                  {addUserForm.formState.errors.password && (
+                    <p className={styles.error} role="alert">
+                      {addUserForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+                {addUserError && (
+                  <p className={styles.error} role="alert">{addUserError}</p>
+                )}
+              </form>
 
-              {/* Team list */}
-              {teamMembers.length === 0 ? (
+              {/* 사용자 목록 */}
+              {users.length === 0 ? (
                 <div className={styles.emptyTeam}>
                   <EmptyState
                     icon="solar:users-group-two-rounded-linear"
                     title="팀원이 없습니다"
-                    description="이메일을 입력하여 팀원을 초대하세요."
+                    description="이메일과 초기 비밀번호를 입력하여 팀원을 추가하세요."
                   />
                 </div>
               ) : (
                 <ul className={styles.memberList}>
-                  {teamMembers.map((member) => (
-                    <li key={member.id} className={styles.memberItem}>
+                  {users.map((user) => (
+                    <li key={user.id} className={styles.memberItem}>
                       <div className={styles.memberAvatar}>
                         <Icon icon="solar:user-circle-linear" width={24} height={24} />
                       </div>
                       <div className={styles.memberInfo}>
-                        <span className={styles.memberName}>{member.name}</span>
-                        <span className={styles.memberEmail}>{member.email}</span>
+                        <span className={styles.memberName}>{user.email}</span>
+                        <span className={styles.memberEmail}>
+                          {user.role === 'admin' ? '관리자' : '멤버'}
+                        </span>
                       </div>
-                      <span className={styles.memberRole}>{member.role}</span>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => onDeleteUser(user.id)}
+                        aria-label={`${user.email} 삭제`}
+                      >
+                        <Icon icon="solar:trash-bin-trash-linear" width={16} height={16} />
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -204,6 +432,81 @@ export default function SettingsPage() {
 
       {validTab === 'figma' && (
         <div className={styles.tabContent}>
+          {/* Figma 원본 파일 URL */}
+          <Card className={styles.settingsCard}>
+            <div className={styles.settingsContent}>
+              <div className={styles.settingsLabel}>
+                <Icon icon="solar:file-linear" width={20} height={20} />
+                <div>
+                  <h2 className={styles.settingsTitle}>Figma 원본 파일</h2>
+                  <p className={styles.settingsDesc}>
+                    디자인 원본 파일 URL을 등록하면 토큰 추출 시 자동으로 채워집니다.
+                  </p>
+                </div>
+              </div>
+
+              {savedFigmaUrl && (
+                <div className={styles.currentToken}>
+                  <Icon icon="solar:check-circle-linear" width={14} height={14} />
+                  <span
+                    className={styles.figmaUrlPreview}
+                    title={savedFigmaUrl}
+                  >
+                    {savedFigmaUrl.length > 60
+                      ? `${savedFigmaUrl.slice(0, 60)}…`
+                      : savedFigmaUrl}
+                  </span>
+                </div>
+              )}
+
+              <form
+                onSubmit={figmaUrlForm.handleSubmit(onFigmaUrlSubmit, () =>
+                  figmaUrlForm.setFocus('figmaUrl')
+                )}
+                noValidate
+              >
+                <div className={styles.inputRow}>
+                  <div className={styles.inputWrapper}>
+                    <label htmlFor="figma-file-url" className="sr-only">
+                      Figma 파일 URL
+                    </label>
+                    <input
+                      id="figma-file-url"
+                      type="url"
+                      placeholder="https://www.figma.com/design/..."
+                      className={styles.input}
+                      aria-invalid={!!figmaUrlForm.formState.errors.figmaUrl}
+                      aria-describedby={figmaUrlForm.formState.errors.figmaUrl ? 'figma-url-error' : undefined}
+                      {...figmaUrlForm.register('figmaUrl')}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={figmaUrlForm.formState.isSubmitting}
+                    leftIcon="solar:check-circle-linear"
+                  >
+                    {figmaUrlForm.formState.isSubmitting ? '저장 중...' : '저장'}
+                  </Button>
+                </div>
+                {figmaUrlForm.formState.errors.figmaUrl && (
+                  <p id="figma-url-error" className={styles.error} role="alert">
+                    {figmaUrlForm.formState.errors.figmaUrl.message}
+                  </p>
+                )}
+                {figmaUrlError && (
+                  <p className={styles.error} role="alert">{figmaUrlError}</p>
+                )}
+                {figmaUrlSaved && (
+                  <p className={styles.success} role="status">
+                    <Icon icon="solar:check-circle-bold" width={14} height={14} />
+                    Figma 파일 URL이 저장되었습니다.
+                  </p>
+                )}
+              </form>
+            </div>
+          </Card>
+
+          {/* Figma API 토큰 */}
           <Card className={styles.settingsCard}>
             <div className={styles.settingsContent}>
               <div className={styles.settingsLabel}>
@@ -260,6 +563,7 @@ export default function SettingsPage() {
               </form>
             </div>
           </Card>
+          {/* /Figma API 토큰 */}
         </div>
       )}
     </div>

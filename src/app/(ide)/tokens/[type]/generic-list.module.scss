@@ -1,0 +1,37 @@
+@use '../../../../styles/variables' as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+  gap: map-get($spacers, 3);
+}
+
+.name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value {
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+  font-family: 'Geist Mono', monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

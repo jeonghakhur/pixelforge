@@ -1,0 +1,249 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// 텍스트 최소 14px (font-size-sm) 이하 사용 금지
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: map-get($spacers, 4);
+  background-color: var(--bg-body);
+  position: relative;
+}
+
+.card {
+  @include double-bezel;
+  width: 100%;
+  max-width: 420px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 6) map-get($spacers, 5);
+}
+
+.logoArea {
+  text-align: center;
+  margin-bottom: map-get($spacers, 5);
+}
+
+.logoIcon {
+  @include flex-center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto map-get($spacers, 3);
+  border-radius: $border-radius-lg;
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.logoText {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.slogan {
+  margin-top: map-get($spacers, 1);
+  font-size: $font-size-sm; // 14px — 최소 기준
+  color: var(--text-secondary);
+}
+
+.notice {
+  margin-top: map-get($spacers, 1);
+  font-size: $font-size-sm; // 14px — 최소 기준
+  color: var(--text-muted);
+}
+
+.serverError {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 4);
+  padding: map-get($spacers, 3);
+  font-size: $font-size-sm; // 14px
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: $border-radius;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.label {
+  font-size: $font-size-sm; // 14px
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: map-get($spacers, 3);
+  color: var(--text-muted);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  font-size: $font-size-sm; // 14px
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: $transition-fast;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+}
+
+.inputError {
+  border-color: var(--danger);
+
+  &:focus {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+  }
+}
+
+// 에러 메시지도 14px 이상 유지
+.error {
+  font-size: $font-size-sm; // 14px — 사용자 요구사항: 최소 14px
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  width: 100%;
+  padding: 11px 20px;
+  font-size: $font-size-sm; // 14px
+  font-weight: $font-weight-semibold;
+  color: $white;
+  background-color: var(--accent);
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 24px var(--accent-dim);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: $white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.loadingSpinner {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.footer {
+  margin-top: map-get($spacers, 4);
+  text-align: center;
+  padding-top: map-get($spacers, 4);
+  border-top: 1px solid var(--border-color);
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  font-size: $font-size-sm; // 14px
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: $border-radius-sm;
+  }
+}
+
+.copyright {
+  margin-top: map-get($spacers, 4);
+  font-size: $font-size-sm; // 14px — 최소 기준
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}

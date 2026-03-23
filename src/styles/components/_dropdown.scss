@@ -73,7 +73,7 @@
 
 .dropdown-header {
   padding: map-get($spacers, 2) map-get($spacers, 3);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--text-muted);
   text-transform: uppercase;

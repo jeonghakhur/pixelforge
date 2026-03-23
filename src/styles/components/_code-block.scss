@@ -20,7 +20,7 @@
 }
 
 .code-block__lang {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -31,7 +31,7 @@
   @include flex-center;
   gap: map-get($spacers, 1);
   padding: map-get($spacers, 1) map-get($spacers, 2);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--text-muted);
   background: transparent;

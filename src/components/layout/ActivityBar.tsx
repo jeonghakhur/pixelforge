@@ -2,13 +2,15 @@
 
 import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
+import { logout } from '@/lib/actions/auth';
 import styles from './ActivityBar.module.scss';
 
-export type Section = 'home' | 'tokens' | 'components' | 'pages' | 'diff' | 'settings';
+export type Section = 'home' | 'tokens' | 'components' | 'pages' | 'screens' | 'diff' | 'settings' | 'admin';
 
 interface ActivityBarProps {
   activeSection: Section;
   onSectionChange: (section: Section) => void;
+  userRole: 'admin' | 'member';
 }
 
 const TOP_ITEMS: { section: Section; icon: string; label: string }[] = [
@@ -16,10 +18,11 @@ const TOP_ITEMS: { section: Section; icon: string; label: string }[] = [
 ];
 
 const MID_ITEMS: { section: Section; icon: string; label: string }[] = [
-  { section: 'tokens', icon: 'solar:pallete-linear', label: 'Tokens' },
+  { section: 'tokens', icon: 'solar:palette-linear', label: 'Tokens' },
   { section: 'components', icon: 'solar:widget-2-linear', label: 'Components' },
-  { section: 'pages', icon: 'solar:documents-linear', label: 'Pages' },
-  { section: 'diff', icon: 'solar:code-scan-linear', label: 'Diff' },
+  { section: 'pages',   icon: 'solar:documents-linear',             label: 'Pages'   },
+  { section: 'screens', icon: 'solar:layers-minimalistic-linear',   label: 'Screens' },
+  { section: 'diff',    icon: 'solar:code-scan-linear',             label: 'Diff'    },
 ];
 
 const BOTTOM_ITEMS: { section: Section; icon: string; label: string }[] = [
@@ -40,7 +43,7 @@ const THEME_LABELS: Record<string, string> = {
 
 const THEME_CYCLE = ['light', 'dark', 'system'] as const;
 
-export default function ActivityBar({ activeSection, onSectionChange }: ActivityBarProps) {
+export default function ActivityBar({ activeSection, onSectionChange, userRole }: ActivityBarProps) {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
 
@@ -106,6 +109,27 @@ export default function ActivityBar({ activeSection, onSectionChange }: Activity
             <span className={styles.tooltip}>{item.label}</span>
           </button>
         ))}
+        {userRole === 'admin' && (
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${activeSection === 'admin' ? styles.active : ''}`}
+            onClick={() => onSectionChange('admin')}
+            aria-label="관리자"
+            aria-current={activeSection === 'admin' ? 'page' : undefined}
+          >
+            <Icon icon="solar:shield-user-linear" width={20} height={20} />
+            <span className={styles.tooltip}>관리자</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className={`${styles.iconBtn} ${styles.logoutBtn}`}
+          onClick={() => logout()}
+          aria-label="로그아웃"
+        >
+          <Icon icon="solar:logout-3-linear" width={20} height={20} />
+          <span className={styles.tooltip}>로그아웃</span>
+        </button>
       </div>
     </aside>
   );

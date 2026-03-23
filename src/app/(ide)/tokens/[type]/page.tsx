@@ -1,50 +1,73 @@
 import { notFound } from 'next/navigation';
-import { getTokensByType } from '@/lib/actions/tokens';
+import { getTokensByType, getTokenSourceAction } from '@/lib/actions/tokens';
+import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 import ColorGrid from './ColorGrid';
 import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
 import RadiusList from './RadiusList';
+import GenericTokenList from './GenericTokenList';
+import TokenPageActions from './TokenPageActions';
+import CompareActions from './CompareActions';
 import styles from './page.module.scss';
-
-const VALID_TYPES = ['color', 'typography', 'spacing', 'radius'] as const;
-type TokenType = typeof VALID_TYPES[number];
-
-const TYPE_LABELS: Record<TokenType, string> = {
-  color: '색상',
-  typography: '타이포그래피',
-  spacing: '간격',
-  radius: '반경',
-};
-
-const TYPE_DESCRIPTIONS: Record<TokenType, string> = {
-  color: 'Figma 파일에서 추출된 색상 팔레트를 확인하고 관리합니다.',
-  typography: '텍스트 스타일과 타입 스케일을 체계적으로 관리합니다.',
-  spacing: '레이아웃 간격 시스템을 정의하고 일관성을 유지합니다.',
-  radius: '모서리 둥글기 토큰을 관리합니다.',
-};
 
 interface TokenPageProps {
   params: Promise<{ type: string }>;
 }
 
+function formatDate(d: Date | null): string {
+  if (!d) return '—';
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
 export default async function TokenPage({ params }: TokenPageProps) {
   const { type } = await params;
 
-  if (!VALID_TYPES.includes(type as TokenType)) {
-    notFound();
-  }
+  const typeConfig = TOKEN_TYPE_MAP[type];
+  if (!typeConfig) notFound();
 
-  const tokenType = type as TokenType;
-  const tokenRows = await getTokensByType(tokenType);
+  const [tokenRows, tokenSource] = await Promise.all([
+    getTokensByType(type),
+    getTokenSourceAction(type),
+  ]);
+
+  const extractionSource = tokenRows.length > 0 ? tokenRows[0].source : null;
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <span className={styles.eyebrow}>Design Tokens</span>
-        <h1 className={styles.title}>{TYPE_LABELS[tokenType]} 토큰</h1>
-        <p className={styles.description}>{TYPE_DESCRIPTIONS[tokenType]}</p>
-        {tokenRows.length > 0 && (
-          <p className={styles.count}>{tokenRows.length}개 추출됨</p>
+        <div className={styles.headerRow}>
+          <div className={styles.headerText}>
+            <span className={styles.eyebrow}>Design Tokens</span>
+            <h1 className={styles.title}>{typeConfig.label} 토큰</h1>
+            <p className={styles.description}>{typeConfig.description}</p>
+            {tokenRows.length > 0 && (
+              <p className={styles.count}>{tokenRows.length}개 추출됨</p>
+            )}
+            {tokenSource && (
+              <p className={styles.sourceMeta}>
+                마지막 추출: {formatDate(tokenSource.lastExtractedAt)}
+                {' · '}
+                <span className={styles.sourceUrl} title={tokenSource.figmaUrl}>
+                  {tokenSource.figmaUrl.length > 60
+                    ? `${tokenSource.figmaUrl.slice(0, 60)}…`
+                    : tokenSource.figmaUrl}
+                </span>
+              </p>
+            )}
+          </div>
+          <TokenPageActions type={type} count={tokenRows.length} />
+        </div>
+        {extractionSource && (
+          <div className={`${styles.sourceBanner} ${extractionSource === 'variables' ? styles.sourceBannerVariables : styles.sourceBannerScan}`}>
+            <span className={styles.sourceDot} />
+            {extractionSource === 'variables'
+              ? 'Variables API — 디자이너가 정의한 토큰'
+              : '노드 스캔 — Variables 없음'}
+          </div>
         )}
       </div>
 
@@ -55,12 +78,67 @@ export default async function TokenPage({ params }: TokenPageProps) {
           </div>
         </div>
       ) : (
-        <>
-          {tokenType === 'color' && <ColorGrid tokens={tokenRows} />}
-          {tokenType === 'typography' && <TypographyList tokens={tokenRows} />}
-          {tokenType === 'spacing' && <SpacingList tokens={tokenRows} />}
-          {tokenType === 'radius' && <RadiusList tokens={tokenRows} />}
-        </>
+        <div data-token-grid>
+          {type === 'color'      && <ColorGrid tokens={tokenRows} />}
+          {type === 'typography' && <TypographyList tokens={tokenRows} />}
+          {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
+          {type === 'radius'     && <RadiusList tokens={tokenRows} />}
+          {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
+            <GenericTokenList tokens={tokenRows} />
+          )}
+        </div>
+      )}
+
+      {(tokenSource?.figmaScreenshot || tokenSource?.uiScreenshot) && (
+        <section className={styles.compareSection}>
+          <div className={styles.compareTitleRow}>
+            <div>
+              <h2 className={styles.compareTitle}>디자인 비교</h2>
+              <p className={styles.compareMeta}>캡처: {formatDate(tokenSource.lastExtractedAt)}</p>
+            </div>
+            <CompareActions
+              type={type}
+              figmaKey={tokenSource.figmaKey}
+              figmaUrl={tokenSource.figmaUrl}
+            />
+          </div>
+          <div className={styles.compareGrid}>
+            {tokenSource.figmaScreenshot && (
+              <div className={styles.comparePanel}>
+                <div className={styles.comparePanelLabel}>
+                  <span className={styles.compareDot} style={{ background: '#a259ff' }} />
+                  Figma 원본
+                </div>
+                <div className={styles.compareFrame}>
+                  <img
+                    src={tokenSource.figmaScreenshot}
+                    alt={`${typeConfig.label} Figma 원본`}
+                    className={styles.compareImg}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
+            )}
+            {tokenSource.uiScreenshot && (
+              <div className={styles.comparePanel}>
+                <div className={styles.comparePanelLabel}>
+                  <span className={styles.compareDot} style={{ background: 'var(--accent)' }} />
+                  PixelForge 렌더링
+                </div>
+                <div className={styles.compareFrame}>
+                  <img
+                    src={tokenSource.uiScreenshot}
+                    alt={`${typeConfig.label} PixelForge 렌더링`}
+                    className={styles.compareImg}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );

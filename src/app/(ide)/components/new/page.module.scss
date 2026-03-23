@@ -2,7 +2,7 @@
 @use '../../../../styles/mixins' as *;
 
 .page {
-  max-width: 960px;
+  width: 100%;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -47,7 +47,7 @@
   gap: 4px;
   padding: 4px 10px;
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -132,7 +132,7 @@
 }
 
 .compDesc {
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -167,4 +167,14 @@
   font-size: $font-size-sm;
   color: var(--accent);
   font-weight: $font-weight-medium;
+}
+
+.serverError {
+  font-size: $font-size-sm;
+  color: $danger;
+  margin-bottom: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: rgba($danger, 0.08);
+  border: 1px solid rgba($danger, 0.2);
+  border-radius: $border-radius;
 }

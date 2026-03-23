@@ -70,7 +70,7 @@
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: $border-radius-sm;
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-primary);
   white-space: nowrap;
   pointer-events: none;
@@ -88,4 +88,10 @@
   height: 1px;
   background: var(--border-color);
   margin: map-get($spacers, 2) auto;
+}
+
+.logoutBtn {
+  &:hover {
+    color: var(--danger);
+  }
 }

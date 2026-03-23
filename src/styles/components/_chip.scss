@@ -10,7 +10,7 @@
   align-items: center;
   gap: map-get($spacers, 1);
   padding: 0.125rem map-get($spacers, 2);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   color: var(--text-secondary);
   background-color: var(--bg-elevated);

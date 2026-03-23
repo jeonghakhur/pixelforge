@@ -3,24 +3,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
+import { login } from '@/lib/actions/auth';
+import { loginSchema, type LoginForm } from '@/lib/auth/schema';
 import styles from './page.module.scss';
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, '이메일을 입력해주세요')
-    .email('올바른 이메일 형식이 아닙니다'),
-  password: z
-    .string()
-    .min(1, '비밀번호를 입력해주세요')
-    .min(8, '비밀번호는 8자 이상이어야 합니다'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,8 +32,11 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setServerError(null);
-    // TODO: implement actual auth
-    void data;
+    const result = await login(data);
+    if (result.error) {
+      setServerError(result.error);
+      return;
+    }
     router.push('/');
   };
 

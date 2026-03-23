@@ -6,7 +6,7 @@
   height: var(--status-bar-height);
   padding: 0 map-get($spacers, 2);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: $font-size-sm;
   color: $white;
   flex-shrink: 0;
   user-select: none;

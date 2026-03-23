@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
+import Sidebar from '@/components/layout/Sidebar';
 import TabBar from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
@@ -11,8 +12,10 @@ function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
   if (pathname.startsWith('/components')) return 'components';
   if (pathname.startsWith('/pages')) return 'pages';
+  if (pathname.startsWith('/screens')) return 'screens';
   if (pathname.startsWith('/diff')) return 'diff';
   if (pathname.startsWith('/settings')) return 'settings';
+  if (pathname.startsWith('/admin')) return 'admin';
   return 'home';
 }
 
@@ -32,7 +35,7 @@ function tabFromPath(pathname: string, section: Section): string {
   return '';
 }
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children, userRole }: { children: React.ReactNode; userRole: 'admin' | 'member' }) {
   const router = useRouter();
   const pathname = usePathname();
   const initTheme = useUIStore((s) => s.initTheme);
@@ -68,11 +71,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       case 'pages':
         router.push('/pages');
         break;
+      case 'screens':
+        router.push('/screens');
+        break;
       case 'diff':
         router.push('/diff');
         break;
       case 'settings':
         router.push('/settings');
+        break;
+      case 'admin':
+        router.push('/admin');
         break;
     }
   }, [router, setSection]);
@@ -96,7 +105,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <ActivityBar
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
+          userRole={userRole}
         />
+        <Sidebar activeSection={activeSection} />
         <div className="ide-content">
           <TabBar
             section={activeSection}

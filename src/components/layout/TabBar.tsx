@@ -23,12 +23,15 @@ const SECTION_TABS: Record<Section, TabItem[]> = {
     { id: 'new', label: '+ 추가', icon: 'solar:add-circle-linear' },
   ],
   pages: [],
+  screens: [],
   diff: [],
   settings: [
     { id: 'general', label: '일반', icon: 'solar:settings-linear' },
+    { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },
     { id: 'team', label: '팀원', icon: 'solar:users-group-two-rounded-linear' },
     { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
   ],
+  admin: [],
 };
 
 interface TabBarProps {
@@ -47,6 +50,7 @@ export default function TabBar({ section, activeTab, onTabChange }: TabBarProps)
           {section === 'home' && 'Welcome'}
           {section === 'pages' && 'Pages'}
           {section === 'diff' && 'Change Detection'}
+          {section === 'admin' && 'Admin'}
         </span>
       </div>
     );
@@ -63,7 +67,7 @@ export default function TabBar({ section, activeTab, onTabChange }: TabBarProps)
           aria-selected={activeTab === tab.id}
           onClick={() => onTabChange(tab.id)}
         >
-          <Icon icon={tab.icon} className={styles.tabIcon} />
+          <Icon icon={tab.icon} width={14} height={14} />
           {tab.label}
         </button>
       ))}

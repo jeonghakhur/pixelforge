@@ -1,110 +1,179 @@
-// @page Pages — 화면 목록
+// @page Pages — Figma 파일 관리
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
+import { getRecentProjects, deleteProject, type RecentProject } from '@/lib/actions/project';
+import { useUIStore } from '@/stores/useUIStore';
 import EmptyState from '@/components/common/EmptyState';
-import Button from '@/components/common/Button';
 import styles from './page.module.scss';
 
-interface PageItem {
-  id: string;
-  name: string;
-  category: string;
-  matchRate: number | null;
-  updatedAt: string;
-}
-
-const CATEGORIES = [
-  { id: 'auth', label: '인증', icon: 'solar:lock-linear' },
-  { id: 'dashboard', label: '대시보드', icon: 'solar:chart-square-linear' },
-  { id: 'crud', label: 'CRUD', icon: 'solar:database-linear' },
-  { id: 'settings', label: '설정', icon: 'solar:settings-linear' },
+const TOKEN_META = [
+  { key: 'colors'     as const, icon: 'solar:palette-linear',    label: '색상'  },
+  { key: 'typography' as const, icon: 'solar:text-field-linear', label: '타이포' },
+  { key: 'spacing'    as const, icon: 'solar:ruler-linear',      label: '간격'  },
+  { key: 'radius'     as const, icon: 'solar:crop-linear',       label: '반경'  },
 ];
 
-// TODO: replace with real data from DB
-const pages: PageItem[] = [];
-
-function groupByCategory(items: PageItem[]): Record<string, PageItem[]> {
-  return items.reduce<Record<string, PageItem[]>>((acc, item) => {
-    const key = item.category;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {});
+function formatDate(date: Date): string {
+  const d = new Date(date);
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return '오늘';
+  if (days === 1) return '어제';
+  if (days < 7) return `${days}일 전`;
+  return `${d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + '/' : ''}${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 export default function PagesPage() {
-  const grouped = groupByCategory(pages);
-  const isEmpty = pages.length === 0;
+  const router = useRouter();
+  const setPreloadUrl = useUIStore((s) => s.setPreloadUrl);
+  const setSection = useUIStore((s) => s.setSection);
+
+  const [projectList, setProjectList] = useState<RecentProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getRecentProjects().then(setProjectList).finally(() => setLoading(false));
+  }, []);
+
+  const handleReExtract = (project: RecentProject) => {
+    if (!project.figmaUrl) return;
+    setPreloadUrl(project.figmaUrl);
+    setSection('home');
+    router.push('/');
+  };
+
+  const handleDeleteConfirm = async (id: string) => {
+    setDeleting(true);
+    setDeleteError(null);
+    const res = await deleteProject(id);
+    if (res.error) {
+      setDeleteError(res.error);
+    } else {
+      setProjectList((prev) => prev.filter((p) => p.id !== id));
+      setDeleteConfirmId(null);
+    }
+    setDeleting(false);
+  };
+
+  const totalTokens = (p: RecentProject) => p.colors + p.typography + p.spacing + p.radius;
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <span className={styles.eyebrow}>Screen Management</span>
-        <h1 className={styles.title}>화면 목록</h1>
+        <span className={styles.eyebrow}>Figma Files</span>
+        <h1 className={styles.title}>파일 관리</h1>
         <p className={styles.description}>
-          Figma 디자인과 실제 구현 화면을 비교하고 일치율을 확인합니다.
+          분석된 Figma 파일 목록입니다. 다시 추출하거나 삭제할 수 있습니다.
         </p>
       </div>
 
-      {isEmpty ? (
+      {deleteError && (
+        <p className={styles.errorBanner} role="alert">{deleteError}</p>
+      )}
+
+      {loading ? (
+        <div className={styles.loadingWrap}>
+          <Icon icon="solar:spinner-linear" width={20} height={20} className={styles.spinIcon} />
+        </div>
+      ) : projectList.length === 0 ? (
         <div className={styles.stage}>
           <div className={styles.stageInner}>
             <EmptyState
-              icon="solar:documents-linear"
-              title="등록된 화면이 없습니다"
-              description="Figma에서 디자인을 추출하면 화면 목록이 자동으로 생성됩니다."
-              action={
-                <Button variant="primary" leftIcon="solar:link-linear">
-                  Figma URL 입력하기
-                </Button>
-              }
+              icon="solar:figma-linear"
+              title="분석된 파일이 없습니다"
+              description="홈에서 Figma URL을 입력하여 파일을 분석하세요."
             />
           </div>
         </div>
       ) : (
-        <div className={styles.categoryList}>
-          {CATEGORIES.map((cat) => {
-            const items = grouped[cat.id];
-            if (!items || items.length === 0) return null;
+        <div className={styles.projectList}>
+          {projectList.map((project) => (
+            <div key={project.id} className={styles.projectCard}>
+              <div className={styles.projectCardInner}>
+                {/* 아이콘 */}
+                <div className={styles.projectIconWrap}>
+                  <Icon icon="solar:figma-linear" width={18} height={18} />
+                </div>
 
-            return (
-              <section key={cat.id} className={styles.categorySection}>
-                <div className={styles.categoryHeader}>
-                  <Icon icon={cat.icon} width={16} height={16} />
-                  <h2 className={styles.categoryTitle}>{cat.label}</h2>
-                  <span className={styles.categoryCount}>{items.length}</span>
+                {/* 정보 */}
+                <div className={styles.projectInfo}>
+                  <span className={styles.projectName}>{project.name}</span>
+                  {project.figmaUrl && (
+                    <span className={styles.projectUrl}>
+                      {project.figmaUrl.replace('https://www.figma.com/', 'figma.com/')}
+                    </span>
+                  )}
+                  <div className={styles.tokenStats}>
+                    {TOKEN_META.map((m) => (
+                      project[m.key] > 0 ? (
+                        <span key={m.key} className={styles.tokenStat}>
+                          <Icon icon={m.icon} width={12} height={12} />
+                          {project[m.key]}
+                        </span>
+                      ) : null
+                    ))}
+                    {totalTokens(project) === 0 && (
+                      <span className={styles.noTokens}>토큰 없음</span>
+                    )}
+                  </div>
                 </div>
-                <div className={styles.cardGrid}>
-                  {items.map((item) => (
-                    <div key={item.id} className={styles.pageCard}>
-                      <div className={styles.pageCardInner}>
-                        <div className={styles.thumbnail}>
-                          <Icon icon="solar:gallery-linear" width={24} height={24} />
-                        </div>
-                        <div className={styles.pageInfo}>
-                          <span className={styles.pageName}>{item.name}</span>
-                          <span className={styles.pageDate}>{item.updatedAt}</span>
-                        </div>
-                        {item.matchRate !== null && (
-                          <div className={styles.matchRate}>
-                            <span
-                              className={`${styles.matchValue} ${
-                                item.matchRate >= 90 ? styles.matchHigh :
-                                item.matchRate >= 70 ? styles.matchMid : styles.matchLow
-                              }`}
-                            >
-                              {item.matchRate}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+
+                {/* 날짜 + 액션 */}
+                <div className={styles.projectRight}>
+                  <span className={styles.projectDate}>{formatDate(project.updatedAt)}</span>
+                  <div className={styles.projectActions}>
+                    {deleteConfirmId === project.id ? (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.confirmDeleteBtn}
+                          onClick={() => handleDeleteConfirm(project.id)}
+                          disabled={deleting}
+                        >
+                          삭제 확인
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.cancelBtn}
+                          onClick={() => setDeleteConfirmId(null)}
+                          disabled={deleting}
+                        >
+                          취소
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => handleReExtract(project)}
+                          title="다시 추출"
+                          aria-label="다시 추출"
+                        >
+                          <Icon icon="solar:refresh-linear" width={14} height={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                          onClick={() => setDeleteConfirmId(project.id)}
+                          title="삭제"
+                          aria-label="삭제"
+                        >
+                          <Icon icon="solar:trash-bin-minimalistic-linear" width={14} height={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </section>
-            );
-          })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

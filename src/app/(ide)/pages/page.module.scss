@@ -2,7 +2,7 @@
 @use '../../../styles/mixins' as *;
 
 .page {
-  max-width: 960px;
+  width: 100%;
   animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -45,55 +45,49 @@
 }
 
 // ===========================
-// Category sections
+// 로딩
 // ===========================
-.categoryList {
-  display: flex;
-  flex-direction: column;
-  gap: map-get($spacers, 6);
-}
-
-.categorySection {
-  display: flex;
-  flex-direction: column;
-  gap: map-get($spacers, 3);
-}
-
-.categoryHeader {
-  display: flex;
-  align-items: center;
-  gap: map-get($spacers, 2);
-  color: var(--text-secondary);
-}
-
-.categoryTitle {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: var(--text-secondary);
-}
-
-.categoryCount {
-  font-family: var(--font-mono);
-  font-size: $font-size-xs;
+.loadingWrap {
+  @include flex-center;
+  padding: map-get($spacers, 8) 0;
   color: var(--text-muted);
-  background: var(--bg-elevated);
-  padding: 1px 6px;
-  border-radius: $border-radius-sm;
 }
 
-.cardGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: map-get($spacers, 3);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
 }
 
 // ===========================
-// Page cards
+// 에러 배너
 // ===========================
-.pageCard {
+.errorBanner {
+  font-size: $font-size-sm;
+  color: $danger;
+  background: rgba($danger, 0.08);
+  border: 1px solid rgba($danger, 0.2);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 4);
+}
+
+// ===========================
+// 프로젝트 목록
+// ===========================
+.projectList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.projectCard {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: $border-radius-2xl;
+  border-radius: $border-radius-xl;
   padding: 4px;
   transition: $transition-fast;
 
@@ -102,62 +96,158 @@
   }
 }
 
-.pageCardInner {
-  background: var(--bg-surface);
-  border-radius: calc(#{$border-radius-2xl} - 4px);
-  box-shadow: var(--glass-shadow);
-  overflow: hidden;
-}
-
-.thumbnail {
-  @include flex-center;
-  height: 140px;
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-}
-
-.pageInfo {
+.projectCardInner {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-xl} - 4px);
+  box-shadow: var(--glass-shadow);
   padding: map-get($spacers, 3);
 }
 
-.pageName {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: var(--text-primary);
+.projectIconWrap {
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border-radius: $border-radius;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.pageDate {
+.projectInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.projectName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  @include text-truncate;
+}
+
+.projectUrl {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  @include text-truncate;
+}
+
+.tokenStats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 2);
+  margin-top: 2px;
+}
+
+.tokenStat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
   color: var(--text-muted);
 }
 
-.matchRate {
-  padding: 0 map-get($spacers, 3) map-get($spacers, 3);
+.noTokens {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
-.matchValue {
+// ===========================
+// 우측: 날짜 + 액션
+// ===========================
+.projectRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: map-get($spacers, 2);
+  flex-shrink: 0;
+}
+
+.projectDate {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  padding: 2px 8px;
-  border-radius: $border-radius-pill;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.matchHigh {
-  background: var(--success-subtle);
-  color: var(--success);
+.projectActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.matchMid {
-  background: var(--warning-subtle);
-  color: var(--warning);
+.actionBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border-radius: $border-radius-sm;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-subtle);
+    background: var(--bg-elevated);
+  }
 }
 
-.matchLow {
-  background: var(--danger-subtle);
-  color: var(--danger);
+.actionBtnDanger {
+  &:hover {
+    color: $danger;
+    border-color: rgba($danger, 0.3);
+    background: rgba($danger, 0.06);
+  }
+}
+
+.confirmDeleteBtn {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $danger;
+  background: rgba($danger, 0.08);
+  border: 1px solid rgba($danger, 0.25);
+  border-radius: $border-radius-sm;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: rgba($danger, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.cancelBtn {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 }

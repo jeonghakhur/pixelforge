@@ -74,7 +74,7 @@
 .invalid-feedback {
   display: block;
   margin-top: map-get($spacers, 1);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--danger);
 }
 
@@ -82,7 +82,7 @@
 .form-text {
   display: block;
   margin-top: map-get($spacers, 1);
-  font-size: $font-size-xs;
+  font-size: $font-size-sm;
   color: var(--text-muted);
 }
 

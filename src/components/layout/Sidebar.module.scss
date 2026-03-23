@@ -2,70 +2,54 @@
 @use '../../styles/mixins' as *;
 
 .sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: var(--sidebar-width);
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid var(--glass-border);
-  overflow-y: auto;
-  z-index: 200;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 220px;
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-
-  @include media-down(md) {
-    transform: translateX(-100%);
-
-    &.open {
-      transform: translateX(0);
-    }
-  }
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-.overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background-color: rgba($black, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 199;
-
-  @include media-down(md) {
-    display: block;
-  }
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  height: var(--header-height);
-  padding: 0 map-get($spacers, 4);
-  border-bottom: 1px solid var(--glass-border);
+// ===========================
+// 패널 헤더
+// ===========================
+.panelHeader {
+  @include flex-between;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
-.brandLink {
-  display: flex;
-  align-items: center;
-  gap: map-get($spacers, 2);
-  font-size: $font-size-lg;
-  font-weight: $font-weight-bold;
-  color: var(--text-primary);
-  text-decoration: none;
-  letter-spacing: -0.02em;
+.panelTitle {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.brandIcon {
-  font-size: 1.25rem;
-  color: var(--accent);
+.addBtn {
+  @include flex-center;
+  width: 22px;
+  height: 22px;
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+    background: var(--accent-subtle);
+  }
 }
 
+// ===========================
+// 네비게이션
+// ===========================
 .nav {
-  padding: map-get($spacers, 3) 0;
+  padding: map-get($spacers, 2) 0;
   flex: 1;
 }
 
@@ -73,13 +57,14 @@
   display: flex;
   align-items: center;
   gap: map-get($spacers, 2);
-  padding: map-get($spacers, 2) map-get($spacers, 4);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
   color: var(--text-muted);
   font-size: $font-size-sm;
   text-decoration: none;
   transition: $transition-fast;
   border-radius: 0;
   position: relative;
+  min-height: 32px;
 
   &:hover {
     color: var(--text-primary);
@@ -100,74 +85,107 @@
       left: 0;
       top: 50%;
       transform: translateY(-50%);
-      width: 3px;
+      width: 2px;
       height: 60%;
       background: var(--accent);
       border-radius: 0 $border-radius-pill $border-radius-pill 0;
     }
   }
-
-  &.nested {
-    padding-left: map-get($spacers, 5);
-  }
 }
 
 .icon {
-  font-size: 1.125rem;
   flex-shrink: 0;
   transition: $transition-fast;
 }
 
-.section {
-  margin-top: map-get($spacers, 4);
-}
-
-.sectionTitle {
-  display: block;
-  padding: map-get($spacers, 1) map-get($spacers, 4) map-get($spacers, 2);
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.dimmed {
-  opacity: 0.5;
+.navLabel {
+  flex: 1;
+  @include text-truncate;
 }
 
 .badge {
   margin-left: auto;
-  font-size: $font-size-xs;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: var(--accent);
   background: var(--accent-subtle);
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: $border-radius-pill;
   line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .lastSync {
   display: flex;
   align-items: center;
   gap: map-get($spacers, 1);
-  padding: map-get($spacers, 1) map-get($spacers, 5);
-  font-size: 0.6875rem;
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-sm;
   color: var(--text-muted);
   margin-top: map-get($spacers, 1);
 }
 
-.addBtn {
-  color: var(--accent);
-
-  &:hover {
-    color: var(--accent);
-    background-color: var(--accent-subtle);
-  }
+.dimmed {
+  opacity: 0.45;
 }
 
-.footer {
-  border-top: 1px solid var(--glass-border);
-  padding: map-get($spacers, 2) 0;
+// ===========================
+// 빈 상태 힌트
+// ===========================
+.emptyHint {
+  padding: map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+// ===========================
+// 파일 목록 (pages 섹션)
+// ===========================
+.projectNavLabel {
+  flex: 1;
+  @include text-truncate;
+}
+
+// ===========================
+// 컴포넌트 목록
+// ===========================
+.categoryGroup {
+  margin-bottom: map-get($spacers, 1);
+}
+
+.categoryTitle {
+  display: block;
+  padding: map-get($spacers, 2) map-get($spacers, 3) map-get($spacers, 1);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.componentItem {
+  padding-left: map-get($spacers, 4);
+}
+
+.compDot {
   flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-color);
+  transition: $transition-fast;
+}
+
+.compDotGenerated {
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+.compName {
+  flex: 1;
+  @include text-truncate;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
 }

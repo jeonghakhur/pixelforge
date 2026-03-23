@@ -82,7 +82,7 @@ export default function Modal({
             onClick={onClose}
             aria-label="닫기"
           >
-            <Icon icon="solar:close-circle-linear" width={18} height={18} />
+            <Icon icon="solar:close-line" width={20} height={20} />
           </button>
         </div>
         <div className="modal-body">{children}</div>

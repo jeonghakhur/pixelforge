@@ -1,0 +1,115 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-xl;
+  padding: 4px;
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-xl} - 4px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+// ===========================
+// 헤더 (점 + 라벨 + %)
+// ===========================
+.header {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotActive {
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.dotDone {
+  background: var(--success);
+  animation: none;
+}
+
+.label {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.percent {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+  min-width: 3ch;
+  text-align: right;
+}
+
+// ===========================
+// 프로그레스 바
+// ===========================
+.track {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: $border-radius-pill;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: $border-radius-pill;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+
+  // 선두에 흐르는 빛
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4));
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+.fillDone {
+  background: var(--success);
+
+  &::after {
+    display: none;
+  }
+}
+
+// ===========================
+// 키프레임
+// ===========================
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes shimmer {
+  0% { opacity: 0; transform: translateX(-100%); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(0); }
+}

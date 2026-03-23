@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.scss';
+import IconProvider from '@/components/providers/IconProvider';
 
 export const metadata: Metadata = {
   title: 'PixelForge',
@@ -35,7 +36,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body>
-        {children}
+        <IconProvider>{children}</IconProvider>
       </body>
     </html>
   );

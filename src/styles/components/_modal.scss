@@ -14,7 +14,6 @@
   justify-content: center;
   padding: map-get($spacers, 4);
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
   animation: modalOverlayIn 0.2s ease-out;
 }
 
@@ -53,8 +52,8 @@
 
 .modal-close {
   @include flex-center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   padding: 0;
   border: none;
   border-radius: $border-radius;
@@ -62,10 +61,16 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: $transition-fast;
+  flex-shrink: 0;
 
   &:hover {
-    background-color: var(--bg-elevated);
+    background-color: var(--glass-highlight);
     color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
   }
 }
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
-type Section = 'home' | 'tokens' | 'components' | 'pages' | 'diff' | 'settings';
+type Section = 'home' | 'tokens' | 'components' | 'pages' | 'screens' | 'diff' | 'settings' | 'admin';
 
 const STORAGE_KEY = 'pixelforge-theme';
 
@@ -11,8 +11,10 @@ const DEFAULT_TABS: Record<Section, string> = {
   tokens: 'color',
   components: 'list',
   pages: '',
+  screens: '',
   diff: '',
   settings: 'general',
+  admin: '',
 };
 
 function getSystemTheme(): ResolvedTheme {
@@ -34,10 +36,14 @@ interface UIState {
   resolvedTheme: ResolvedTheme;
   activeSection: Section;
   activeTab: string;
+  tokenRevision: number;
+  preloadUrl: string | null;
   setTheme: (theme: Theme) => void;
   initTheme: () => void;
   setSection: (section: Section) => void;
   setTab: (tab: string) => void;
+  invalidateTokens: () => void;
+  setPreloadUrl: (url: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -45,6 +51,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   resolvedTheme: 'dark',
   activeSection: 'home',
   activeTab: '',
+  tokenRevision: 0,
+  preloadUrl: null,
 
   setTheme: (theme) => {
     const resolved = resolveTheme(theme);
@@ -96,4 +104,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
 
   setTab: (tab) => set({ activeTab: tab }),
+
+  invalidateTokens: () => set((s) => ({ tokenRevision: s.tokenRevision + 1 })),
+  setPreloadUrl: (url) => set({ preloadUrl: url }),
 }));
