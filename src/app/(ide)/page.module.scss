@@ -636,3 +636,77 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+// ===========================
+// Drift 알림 배너
+// ===========================
+.driftBanner {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  width: 100%;
+  padding: map-get($spacers, 3);
+  border-radius: $border-radius;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  text-align: left;
+  transition: $transition-fast;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.driftBanner_warning {
+  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: var(--warning);
+
+  &:hover {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+}
+
+.driftBanner_critical {
+  background: rgba(251, 113, 133, 0.06);
+  border-color: rgba(251, 113, 133, 0.25);
+  color: var(--danger);
+
+  &:hover {
+    background: rgba(251, 113, 133, 0.1);
+    border-color: rgba(251, 113, 133, 0.4);
+  }
+}
+
+.driftBannerText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.driftBannerTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.driftBannerDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.driftBannerArrow {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: $transition-fast;
+
+  .driftBanner:hover & {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+}

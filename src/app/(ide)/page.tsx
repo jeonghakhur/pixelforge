@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import { useStageProgress } from '@/hooks/useStageProgress';
 import EmptyState from '@/components/common/EmptyState';
+import Badge from '@/components/common/Badge';
 import ProgressCard from '@/components/common/ProgressCard';
 import { TOKEN_TYPES, ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
 import styles from './page.module.scss';
@@ -74,6 +75,8 @@ export default function HomePage() {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const preloadUrl = useUIStore((s) => s.preloadUrl);
   const setPreloadUrl = useUIStore((s) => s.setPreloadUrl);
+  const driftSeverity = useUIStore((s) => s.driftSeverity);
+  const driftCounts = useUIStore((s) => s.driftCounts);
 
   const [step, setStep] = useState<'url' | 'select'>('url');
   const [analyzing, setAnalyzing] = useState(false);
@@ -376,6 +379,35 @@ export default function HomePage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* ── Drift 알림 배너 ─────────────────── */}
+      {step === 'url' && driftSeverity !== 'none' && driftCounts.total > 0 && (
+        <div className={styles.section}>
+          <button
+            type="button"
+            className={`${styles.driftBanner} ${styles[`driftBanner_${driftSeverity}`]}`}
+            onClick={() => { setSection('diff'); router.push('/diff'); }}
+          >
+            <Icon icon="solar:radar-2-linear" width={18} height={18} />
+            <div className={styles.driftBannerText}>
+              <span className={styles.driftBannerTitle}>
+                Drift 감지됨
+                <Badge variant={driftSeverity === 'critical' ? 'danger' : 'warning'}>
+                  {driftCounts.total}건
+                </Badge>
+              </span>
+              <span className={styles.driftBannerDesc}>
+                {driftCounts.newInFigma > 0 && `Figma 신규 ${driftCounts.newInFigma}개`}
+                {driftCounts.newInFigma > 0 && (driftCounts.removedFromFigma > 0 || driftCounts.valueChanged > 0) && ', '}
+                {driftCounts.removedFromFigma > 0 && `삭제됨 ${driftCounts.removedFromFigma}개`}
+                {driftCounts.removedFromFigma > 0 && driftCounts.valueChanged > 0 && ', '}
+                {driftCounts.valueChanged > 0 && `값 변경 ${driftCounts.valueChanged}개`}
+              </span>
+            </div>
+            <Icon icon="solar:arrow-right-linear" width={16} height={16} className={styles.driftBannerArrow} />
+          </button>
         </div>
       )}
 

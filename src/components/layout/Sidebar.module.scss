@@ -189,3 +189,52 @@
   font-family: var(--font-mono);
   font-size: $font-size-sm;
 }
+
+// ===========================
+// Drift Detection panel
+// ===========================
+.driftRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  min-height: 28px;
+}
+
+.driftCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  padding: 0 6px;
+  border-radius: $border-radius-pill;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.driftIconNew {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.driftIconRemoved {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.driftIconChanged {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.driftClean {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--success);
+}

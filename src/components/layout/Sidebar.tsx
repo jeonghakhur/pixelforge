@@ -69,7 +69,11 @@ export default function Sidebar({ activeSection }: SidebarProps) {
     }
   }, [activeSection, pathname, tokenRevision]);
 
-  if (!(['tokens', 'components', 'pages', 'screens'] as const).includes(activeSection as never)) {
+  const driftSeverity = useUIStore((s) => s.driftSeverity);
+  const driftCounts = useUIStore((s) => s.driftCounts);
+  const lastDriftCheck = useUIStore((s) => s.lastDriftCheck);
+
+  if (!(['tokens', 'components', 'pages', 'screens', 'diff'] as const).includes(activeSection as never)) {
     return null;
   }
 
@@ -207,6 +211,67 @@ export default function Sidebar({ activeSection }: SidebarProps) {
                 </div>
               );
             })}
+          </nav>
+        </>
+      )}
+
+      {/* ── Diff / Drift 패널 ── */}
+      {activeSection === 'diff' && (
+        <>
+          <div className={styles.panelHeader}>
+            <span className={styles.panelTitle}>Change Detection</span>
+          </div>
+          <nav className={styles.nav}>
+            <Link
+              href="/diff"
+              className={`${styles.navItem} ${pathname === '/diff' ? styles.active : ''}`}
+            >
+              <Icon icon="solar:history-linear" width={15} height={15} className={styles.icon} />
+              <span className={styles.navLabel}>스냅샷 히스토리</span>
+            </Link>
+            <div className={styles.categoryGroup}>
+              <span className={styles.categoryTitle}>Drift Detection</span>
+              {driftSeverity === 'none' && !lastDriftCheck && (
+                <span className={styles.emptyHint}>아직 감지 실행 전</span>
+              )}
+              {driftSeverity === 'none' && lastDriftCheck && (
+                <span className={styles.driftClean}>
+                  <Icon icon="solar:check-circle-linear" width={14} height={14} />
+                  동기화 완료
+                </span>
+              )}
+              {driftSeverity !== 'none' && (
+                <>
+                  {driftCounts.newInFigma > 0 && (
+                    <div className={styles.driftRow}>
+                      <Icon icon="solar:add-circle-linear" width={14} height={14} className={styles.driftIconNew} />
+                      <span className={styles.navLabel}>Figma 신규</span>
+                      <span className={styles.driftCount}>{driftCounts.newInFigma}</span>
+                    </div>
+                  )}
+                  {driftCounts.removedFromFigma > 0 && (
+                    <div className={styles.driftRow}>
+                      <Icon icon="solar:minus-circle-linear" width={14} height={14} className={styles.driftIconRemoved} />
+                      <span className={styles.navLabel}>Figma 삭제</span>
+                      <span className={styles.driftCount}>{driftCounts.removedFromFigma}</span>
+                    </div>
+                  )}
+                  {driftCounts.valueChanged > 0 && (
+                    <div className={styles.driftRow}>
+                      <Icon icon="solar:pen-new-square-linear" width={14} height={14} className={styles.driftIconChanged} />
+                      <span className={styles.navLabel}>값 변경</span>
+                      <span className={styles.driftCount}>{driftCounts.valueChanged}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {lastDriftCheck && (
+                <span className={styles.lastSync}>
+                  <Icon icon="solar:clock-circle-linear" width={13} height={13} />
+                  {formatDate(lastDriftCheck)}
+                </span>
+              )}
+            </div>
           </nav>
         </>
       )}

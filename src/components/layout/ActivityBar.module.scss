@@ -90,6 +90,35 @@
   margin: map-get($spacers, 2) auto;
 }
 
+// ===========================
+// Drift badge
+// ===========================
+.driftBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  line-height: 16px;
+  text-align: center;
+  border-radius: $border-radius-pill;
+  pointer-events: none;
+}
+
+.drift_warning {
+  background: var(--warning);
+  color: #000;
+}
+
+.drift_critical {
+  background: var(--danger);
+  color: #fff;
+}
+
 .logoutBtn {
   &:hover {
     color: var(--danger);

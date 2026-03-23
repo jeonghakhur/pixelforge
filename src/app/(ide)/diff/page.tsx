@@ -18,6 +18,7 @@ import {
   type DriftItem,
 } from '@/lib/actions/snapshots';
 import type { SnapshotDiffSummary, TokenDiffItem } from '@/lib/tokens/snapshot-engine';
+import { useUIStore } from '@/stores/useUIStore';
 import styles from './page.module.scss';
 
 // ===========================
@@ -177,6 +178,7 @@ export default function DiffPage() {
   const [driftError, setDriftError] = useState<string | null>(null);
   const [driftFilter, setDriftFilter] = useState<DriftStatus | 'all'>('all');
   const [driftTypeFilter, setDriftTypeFilter] = useState<string | null>(null);
+  const setGlobalDrift = useUIStore((s) => s.setDrift);
 
   const loadSnapshots = useCallback(async () => {
     setLoading(true);
@@ -226,6 +228,18 @@ export default function DiffPage() {
       setDriftError(result.error);
     } else {
       setDriftReport(result.report);
+      // Zustand에 drift 상태 반영 → ActivityBar, StatusBar, Sidebar, Home 페이지에 전파
+      if (result.report) {
+        setGlobalDrift(
+          {
+            newInFigma: result.report.newInFigma.length,
+            removedFromFigma: result.report.removedFromFigma.length,
+            valueChanged: result.report.valueChanged.length,
+            total: result.report.newInFigma.length + result.report.removedFromFigma.length + result.report.valueChanged.length,
+          },
+          result.report.checkedAt,
+        );
+      }
     }
     setDriftLoading(false);
   };
