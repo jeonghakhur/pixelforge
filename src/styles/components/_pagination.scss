@@ -1,0 +1,49 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 페이지네이션 — Bootstrap _pagination.scss 참조
+// ===========================
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  list-style: none;
+}
+
+.page-item {
+  display: flex;
+}
+
+.page-link {
+  @include flex-center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  background: transparent;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    background-color: var(--glass-bg);
+  }
+}
+
+.page-item.active .page-link {
+  color: $white;
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.page-item.disabled .page-link {
+  opacity: 0.4;
+  pointer-events: none;
+}

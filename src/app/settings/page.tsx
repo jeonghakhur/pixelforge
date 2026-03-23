@@ -103,7 +103,7 @@ export default function SettingsPage() {
                   {...register('token')}
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting} icon="solar:check-circle-linear">
+              <Button type="submit" disabled={isSubmitting} leftIcon="solar:check-circle-linear">
                 {isSubmitting ? '저장 중...' : '저장'}
               </Button>
             </div>

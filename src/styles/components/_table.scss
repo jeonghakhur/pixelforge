@@ -1,0 +1,62 @@
+@use '../variables' as *;
+
+// ===========================
+// 테이블 — Bootstrap _tables.scss 참조
+// ===========================
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-lg;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th,
+  td {
+    padding: map-get($spacers, 3) map-get($spacers, 4);
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  th {
+    font-weight: $font-weight-medium;
+    font-size: $font-size-xs;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: var(--bg-elevated);
+    white-space: nowrap;
+  }
+
+  td {
+    color: var(--text-primary);
+  }
+
+  tbody tr {
+    transition: $transition-fast;
+
+    &:hover {
+      background-color: var(--glass-bg);
+    }
+
+    &:last-child td {
+      border-bottom: 0;
+    }
+  }
+}
+
+.table-sm {
+  th,
+  td {
+    padding: map-get($spacers, 2) map-get($spacers, 3);
+  }
+}
+
+.table-striped tbody tr:nth-child(even) {
+  background-color: var(--glass-bg);
+}

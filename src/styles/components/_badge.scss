@@ -1,0 +1,53 @@
+@use '../variables' as *;
+
+// ===========================
+// 배지 — Bootstrap _badge.scss 참조
+// ===========================
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 0.125rem map-get($spacers, 2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: $line-height-base;
+  white-space: nowrap;
+  border-radius: $border-radius-pill;
+  transition: $transition-fast;
+}
+
+.badge-primary {
+  background-color: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.badge-secondary {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.badge-success {
+  background-color: var(--success-subtle);
+  color: var(--success);
+}
+
+.badge-danger {
+  background-color: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.badge-warning {
+  background-color: var(--warning-subtle);
+  color: var(--warning);
+}
+
+.badge-info {
+  background-color: var(--info-subtle);
+  color: var(--info);
+}
+
+.badge-gray {
+  background-color: var(--bg-elevated);
+  color: var(--text-muted);
+}

@@ -1,0 +1,56 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 칩 — 태그/필터 (신규)
+// ===========================
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 0.125rem map-get($spacers, 2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-pill;
+  transition: $transition-fast;
+  cursor: default;
+}
+
+.chip--active {
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  border-color: var(--accent);
+}
+
+.chip--removable {
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+}
+
+.chip__remove {
+  @include flex-center;
+  width: 0.875rem;
+  height: 0.875rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: $transition-fast;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+    background-color: var(--danger-subtle);
+    color: var(--danger);
+  }
+}

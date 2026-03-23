@@ -1,0 +1,99 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 모달 — Bootstrap _modal.scss 참조
+// ===========================
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: map-get($spacers, 4);
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: modalOverlayIn 0.2s ease-out;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - #{map-get($spacers, 8)});
+  overflow-y: auto;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-xl;
+  box-shadow: $box-shadow-lg;
+  animation: modalContentIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.modal-sm { max-width: 360px; }
+.modal-lg { max-width: 640px; }
+.modal-xl { max-width: 800px; }
+
+.modal-header {
+  @include flex-between;
+  padding: map-get($spacers, 4) map-get($spacers, 5);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  @include flex-center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: $border-radius;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+}
+
+.modal-body {
+  padding: map-get($spacers, 5);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3) map-get($spacers, 5);
+  border-top: 1px solid var(--border-color);
+}
+
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalContentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

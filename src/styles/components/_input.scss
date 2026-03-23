@@ -1,0 +1,136 @@
+@use '../variables' as *;
+
+// ===========================
+// 폼 컨트롤 — Bootstrap _form-control.scss 참조
+// ===========================
+
+.form-label {
+  display: block;
+  margin-bottom: map-get($spacers, 1);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  line-height: $line-height-base;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  transition: $transition-fast;
+  appearance: none;
+
+  &::placeholder {
+    color: var(--text-muted);
+    opacity: 0.65;
+  }
+
+  &:focus {
+    border-color: var(--border-focus);
+    outline: 0;
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+
+  &:disabled {
+    background-color: var(--bg-elevated);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.is-invalid {
+    border-color: var(--danger);
+
+    &:focus {
+      box-shadow: 0 0 0 3px var(--danger-subtle);
+    }
+  }
+}
+
+.form-control-sm {
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  font-size: $font-size-sm;
+  border-radius: $border-radius-sm;
+}
+
+.form-control-lg {
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  font-size: $font-size-lg;
+  border-radius: $border-radius-lg;
+}
+
+// 그룹 래퍼
+.form-group {
+  margin-bottom: map-get($spacers, 4);
+}
+
+// 에러 메시지
+.invalid-feedback {
+  display: block;
+  margin-top: map-get($spacers, 1);
+  font-size: $font-size-xs;
+  color: var(--danger);
+}
+
+// 도움 텍스트
+.form-text {
+  display: block;
+  margin-top: map-get($spacers, 1);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+// 셀렉트
+.form-select {
+  @extend .form-control;
+  padding-right: map-get($spacers, 5);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right map-get($spacers, 3) center;
+  background-size: 16px 12px;
+}
+
+// 체크박스 / 라디오
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  min-height: 1.5rem;
+}
+
+.form-check-input {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  background-color: var(--bg-input);
+  appearance: none;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+
+  &[type="radio"] {
+    border-radius: 50%;
+  }
+}
+
+.form-check-label {
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  cursor: pointer;
+}

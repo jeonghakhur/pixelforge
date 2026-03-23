@@ -1,0 +1,41 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 빈 상태 (신규)
+// ===========================
+
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 7) map-get($spacers, 4);
+  text-align: center;
+}
+
+.empty-state__icon {
+  @include flex-center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: $border-radius-xl;
+  background-color: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 1.5rem;
+}
+
+.empty-state__title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.empty-state__description {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  max-width: 32ch;
+  line-height: $line-height-base;
+}
+
+.empty-state__action {
+  margin-top: map-get($spacers, 2);
+}

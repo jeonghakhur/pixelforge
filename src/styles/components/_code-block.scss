@@ -1,0 +1,68 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 코드 블록 — IDE 스타일 (신규)
+// ===========================
+
+.code-block {
+  position: relative;
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.code-block__header {
+  @include flex-between;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background-color: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.code-block__lang {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.code-block__copy {
+  @include flex-center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    background-color: var(--glass-bg);
+  }
+
+  &.copied {
+    color: var(--success);
+    border-color: var(--success);
+  }
+}
+
+.code-block__pre {
+  margin: 0;
+  padding: map-get($spacers, 4);
+  overflow-x: auto;
+  background-color: var(--bg-body);
+}
+
+.code-block__code {
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre;
+  tab-size: 2;
+}

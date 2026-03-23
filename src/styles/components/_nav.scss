@@ -1,0 +1,94 @@
+@use '../variables' as *;
+
+// ===========================
+// 네비게이션/탭 — Bootstrap _nav.scss 참조
+// ===========================
+
+.nav {
+  display: flex;
+  gap: map-get($spacers, 1);
+  list-style: none;
+}
+
+.nav-item {
+  display: flex;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: $border-radius;
+  transition: $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-primary);
+    background-color: var(--glass-bg);
+  }
+
+  &.active {
+    color: var(--accent);
+    background-color: var(--accent-subtle);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+// 탭 스타일
+.nav-tabs {
+  border-bottom: 1px solid var(--border-color);
+  gap: 0;
+
+  .nav-link {
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+
+    &:hover {
+      border-bottom-color: var(--glass-highlight);
+      background-color: transparent;
+    }
+
+    &.active {
+      border-bottom-color: var(--accent);
+      background-color: transparent;
+      color: var(--accent);
+    }
+  }
+}
+
+// 언더라인 스타일
+.nav-underline {
+  gap: map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+
+  .nav-link {
+    padding: map-get($spacers, 2) 0;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+
+    &.active {
+      border-bottom-color: var(--accent);
+      background-color: transparent;
+      color: var(--accent);
+    }
+  }
+}
+
+// 필 스타일
+.nav-pills {
+  .nav-link.active {
+    background-color: var(--accent);
+    color: $white;
+  }
+}

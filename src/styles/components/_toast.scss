@@ -1,0 +1,107 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+
+// ===========================
+// 토스트 — Bootstrap _toasts.scss 참조
+// ===========================
+
+.toast-container {
+  position: fixed;
+  top: map-get($spacers, 4);
+  right: map-get($spacers, 4);
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: map-get($spacers, 3);
+  min-width: 280px;
+  max-width: 420px;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow-lg;
+  animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-leaving {
+  animation: toastSlideOut 0.2s ease-in forwards;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.toast-message {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  margin-top: map-get($spacers, 1);
+}
+
+.toast-close {
+  @include flex-center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+}
+
+// 변형별 좌측 강조선
+.toast-success { border-left: 3px solid var(--success); }
+.toast-danger  { border-left: 3px solid var(--danger); }
+.toast-warning { border-left: 3px solid var(--warning); }
+.toast-info    { border-left: 3px solid var(--accent); }
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

@@ -1,0 +1,92 @@
+@use '../variables' as *;
+
+// ===========================
+// 드롭다운 — Bootstrap _dropdown.scss 참조
+// ===========================
+
+.dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.dropdown-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + #{map-get($spacers, 1)});
+  left: 0;
+  min-width: 12rem;
+  padding: map-get($spacers, 1) 0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow-lg;
+  animation: dropdownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-menu-end {
+  left: auto;
+  right: 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  text-decoration: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background-color: var(--glass-bg);
+  }
+
+  &.active {
+    color: var(--accent);
+    background-color: var(--accent-subtle);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &.text-danger {
+    color: var(--danger);
+
+    &:hover {
+      background-color: var(--danger-subtle);
+    }
+  }
+}
+
+.dropdown-divider {
+  height: 0;
+  margin: map-get($spacers, 1) 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.dropdown-header {
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

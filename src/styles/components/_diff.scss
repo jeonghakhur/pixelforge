@@ -1,0 +1,78 @@
+@use '../variables' as *;
+
+// ===========================
+// Diff 뷰 — 변경 감지 (신규)
+// ===========================
+
+.diff {
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+  line-height: 1.7;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.diff__header {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background-color: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.diff__line {
+  display: flex;
+  padding: 0 map-get($spacers, 3);
+  min-height: 1.7em;
+}
+
+.diff__line-number {
+  flex-shrink: 0;
+  width: 3rem;
+  padding-right: map-get($spacers, 2);
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  opacity: 0.5;
+}
+
+.diff__line-content {
+  flex: 1;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.diff-added {
+  background-color: var(--success-subtle);
+  color: var(--success);
+
+  .diff__line-number {
+    color: var(--success);
+  }
+}
+
+.diff-removed {
+  background-color: var(--danger-subtle);
+  color: var(--danger);
+
+  .diff__line-number {
+    color: var(--danger);
+  }
+}
+
+.diff-changed {
+  background-color: var(--warning-subtle);
+  color: var(--warning);
+
+  .diff__line-number {
+    color: var(--warning);
+  }
+}
+
+.diff-same {
+  color: var(--text-primary);
+}

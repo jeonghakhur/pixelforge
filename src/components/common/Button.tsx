@@ -1,5 +1,6 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '@iconify/react';
+import Spinner from './Spinner';
 
 type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'outline-primary' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -7,7 +8,9 @@ type ButtonSize = 'sm' | 'md' | 'lg';
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  icon?: string;
+  loading?: boolean;
+  leftIcon?: string;
+  rightIcon?: string;
   children: ReactNode;
 }
 
@@ -20,8 +23,11 @@ const sizeClassMap: Record<ButtonSize, string> = {
 export default function Button({
   variant = 'primary',
   size = 'md',
-  icon,
+  loading = false,
+  leftIcon,
+  rightIcon,
   className = '',
+  disabled,
   children,
   ...props
 }: ButtonProps) {
@@ -33,9 +39,14 @@ export default function Button({
   ].filter(Boolean).join(' ');
 
   return (
-    <button className={classes} {...props}>
+    <button className={classes} disabled={disabled || loading} {...props}>
+      {loading ? (
+        <Spinner size="sm" />
+      ) : leftIcon ? (
+        <Icon icon={leftIcon} width={16} height={16} />
+      ) : null}
       {children}
-      {icon && (
+      {rightIcon && !loading && (
         <span
           style={{
             display: 'inline-flex',
@@ -48,7 +59,7 @@ export default function Button({
             transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <Icon icon={icon} width={14} height={14} />
+          <Icon icon={rightIcon} width={14} height={14} />
         </span>
       )}
     </button>
