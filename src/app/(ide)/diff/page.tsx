@@ -13,10 +13,14 @@ import {
   rollbackToSnapshotAction,
   deleteSnapshotAction,
   detectDriftAction,
+  getSnapshotDetailAction,
   type SnapshotListItem,
+  type SnapshotDetail,
   type DriftReport,
   type DriftItem,
 } from '@/lib/actions/snapshots';
+import { getProjectInfo } from '@/lib/actions/tokens';
+import { extractTokensAction } from '@/lib/actions/project';
 import type { SnapshotDiffSummary, TokenDiffItem } from '@/lib/tokens/snapshot-engine';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './page.module.scss';
@@ -153,6 +157,60 @@ function TypeFilterBar({
 }
 
 // ===========================
+// Snapshot Detail Panel
+// ===========================
+
+function SnapshotDetailPanel({
+  detail,
+  typeFilter,
+  onTypeFilter,
+}: {
+  detail: SnapshotDetail;
+  typeFilter: string | null;
+  onTypeFilter: (t: string | null) => void;
+}) {
+  const types = useMemo(() => {
+    const set = new Set(detail.tokensData.map((t) => t.type));
+    return Array.from(set).sort();
+  }, [detail.tokensData]);
+
+  const filtered = useMemo(() => {
+    if (!typeFilter) return detail.tokensData;
+    return detail.tokensData.filter((t) => t.type === typeFilter);
+  }, [detail.tokensData, typeFilter]);
+
+  return (
+    <div className={styles.detailPanel}>
+      <div className={styles.detailHeader}>
+        <span className={styles.detailTitle}>
+          v{detail.version} 토큰 목록
+        </span>
+        <span className={styles.detailCount}>
+          {detail.tokensData.length}개
+        </span>
+      </div>
+      <TypeFilterBar types={types} active={typeFilter} onSelect={onTypeFilter} />
+      <div className={styles.detailGrid}>
+        {filtered.map((token, idx) => {
+          const isColor = token.type === 'color';
+          const hex = isColor ? tryExtractHex(token.value) ?? tryExtractHex(token.raw) : null;
+          return (
+            <div key={`${token.type}-${token.name}-${idx}`} className={styles.detailItem}>
+              {isColor && hex && <ColorSwatch hex={hex} />}
+              <span className={styles.detailName}>{token.name}</span>
+              <span className={styles.detailType}>
+                {TOKEN_TYPE_LABELS[token.type] ?? token.type}
+              </span>
+              <code className={styles.detailValue}>{token.raw ?? '-'}</code>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ===========================
 // Main Page
 // ===========================
 
@@ -179,6 +237,17 @@ export default function DiffPage() {
   const [driftFilter, setDriftFilter] = useState<DriftStatus | 'all'>('all');
   const [driftTypeFilter, setDriftTypeFilter] = useState<string | null>(null);
   const setGlobalDrift = useUIStore((s) => s.setDrift);
+  const clearGlobalDrift = useUIStore((s) => s.clearDrift);
+  const invalidateTokens = useUIStore((s) => s.invalidateTokens);
+
+  // Sync (re-extract)
+  const [syncing, setSyncing] = useState(false);
+  const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
+
+  // Snapshot detail
+  const [detailSnap, setDetailSnap] = useState<SnapshotDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const [detailTypeFilter, setDetailTypeFilter] = useState<string | null>(null);
 
   const loadSnapshots = useCallback(async () => {
     setLoading(true);
@@ -242,6 +311,65 @@ export default function DiffPage() {
       }
     }
     setDriftLoading(false);
+  };
+
+  // Sync: Figma에서 재추출하여 drift 해소
+  const handleSync = async () => {
+    setSyncConfirmOpen(false);
+    setSyncing(true);
+    const projectInfo = await getProjectInfo();
+    if (!projectInfo?.figmaUrl) {
+      setSyncing(false);
+      return;
+    }
+    const result = await extractTokensAction(projectInfo.figmaUrl);
+    setSyncing(false);
+    if (!result.error) {
+      invalidateTokens();
+      clearGlobalDrift();
+      setDriftReport(null);
+      setDriftError(null);
+      await loadSnapshots();
+      // 재감지
+      await handleDetectDrift();
+    }
+  };
+
+  // Snapshot detail 로드
+  const handleViewDetail = async (snapId: string) => {
+    if (detailSnap?.id === snapId) {
+      setDetailSnap(null);
+      return;
+    }
+    setDetailLoading(snapId);
+    setDetailTypeFilter(null);
+    const result = await getSnapshotDetailAction(snapId);
+    if (!result.error && result.snapshot) {
+      setDetailSnap(result.snapshot);
+    }
+    setDetailLoading(null);
+  };
+
+  // Drift report JSON 내보내기
+  const handleExportDrift = () => {
+    if (!driftReport) return;
+    const data = {
+      checkedAt: driftReport.checkedAt,
+      summary: {
+        newInFigma: driftReport.newInFigma.length,
+        removedFromFigma: driftReport.removedFromFigma.length,
+        valueChanged: driftReport.valueChanged.length,
+      },
+      countsByType: driftReport.countsByType,
+      items: [...driftReport.newInFigma, ...driftReport.removedFromFigma, ...driftReport.valueChanged],
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `drift-report-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── Diff 결과 계산 ──
@@ -337,6 +465,27 @@ export default function DiffPage() {
               >
                 Drift 감지 실행
               </Button>
+              {driftReport && !driftReport.clean && (
+                <Button
+                  variant="primary"
+                  leftIcon="solar:refresh-circle-linear"
+                  loading={syncing}
+                  onClick={() => setSyncConfirmOpen(true)}
+                >
+                  Figma와 동기화
+                </Button>
+              )}
+              {driftReport && !driftReport.clean && (
+                <button
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={handleExportDrift}
+                  aria-label="Drift 리포트 내보내기"
+                >
+                  <Icon icon="solar:download-minimalistic-linear" width={14} height={14} />
+                  JSON 내보내기
+                </button>
+              )}
               {driftReport && (
                 <span className={styles.driftTimestamp}>
                   마지막 검사: {formatDate(driftReport.checkedAt)}
@@ -565,6 +714,19 @@ export default function DiffPage() {
                           </div>
                         )}
                         <div className={styles.snapshotActions}>
+                          <button
+                            type="button"
+                            className={styles.actionBtn}
+                            onClick={() => handleViewDetail(snap.id)}
+                            aria-label={`v${snap.version} 상세 보기`}
+                          >
+                            <Icon
+                              icon={detailSnap?.id === snap.id ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+                              width={14}
+                              height={14}
+                            />
+                            {detailLoading === snap.id ? '로딩...' : detailSnap?.id === snap.id ? '접기' : '상세'}
+                          </button>
                           {snap.version !== snapshots[0].version && (
                             <button
                               type="button"
@@ -577,6 +739,15 @@ export default function DiffPage() {
                             </button>
                           )}
                         </div>
+
+                        {/* ── 스냅샷 상세 ── */}
+                        {detailSnap?.id === snap.id && (
+                          <SnapshotDetailPanel
+                            detail={detailSnap}
+                            typeFilter={detailTypeFilter}
+                            onTypeFilter={setDetailTypeFilter}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -775,6 +946,18 @@ export default function DiffPage() {
           onClose={() => setRollbackTarget(null)}
         />
       )}
+
+      {/* ── 동기화 확인 다이얼로그 ── */}
+      <ConfirmDialog
+        isOpen={syncConfirmOpen}
+        title="Figma와 동기화"
+        message="Figma에서 토큰을 다시 추출하여 DB를 최신 상태로 업데이트합니다. 기존 토큰이 교체되며, 새 스냅샷이 자동 생성됩니다."
+        confirmLabel="동기화 실행"
+        variant="warning"
+        loading={syncing}
+        onConfirm={handleSync}
+        onClose={() => setSyncConfirmOpen(false)}
+      />
     </div>
   );
 }
