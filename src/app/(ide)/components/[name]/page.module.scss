@@ -1,0 +1,261 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.page {
+  max-width: 960px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+.categoryBadge {
+  display: inline-block;
+  margin-top: map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 10px;
+  border-radius: $border-radius-pill;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// ===========================
+// Section titles
+// ===========================
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  margin-bottom: map-get($spacers, 3);
+}
+
+// ===========================
+// Preview
+// ===========================
+.previewSection {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.variantTabs {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 3);
+  flex-wrap: wrap;
+}
+
+.variantTab {
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-pill;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-subtle);
+  }
+}
+
+.variantActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.previewStage {
+  @include double-bezel;
+}
+
+.previewStageInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 6) map-get($spacers, 5);
+  @include flex-center;
+  min-height: 200px;
+}
+
+.previewContent {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  flex-wrap: wrap;
+}
+
+.previewPlaceholder {
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+}
+
+// ===========================
+// Code section
+// ===========================
+.codeSection {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.codeTabs {
+  @include flex-between;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.codeTabBar {
+  display: flex;
+  gap: map-get($spacers, 1);
+}
+
+.codeTab {
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.codeTabActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.codeBlock {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  overflow: hidden;
+}
+
+.copyBtn {
+  position: absolute;
+  top: map-get($spacers, 2);
+  right: map-get($spacers, 2);
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+  z-index: 1;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent-subtle);
+  }
+}
+
+.pre {
+  padding: map-get($spacers, 4);
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+// ===========================
+// Props table
+// ===========================
+.propsSection {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+}
+
+.propsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    padding: map-get($spacers, 2) map-get($spacers, 3);
+    font-family: var(--font-mono);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  td {
+    padding: map-get($spacers, 2) map-get($spacers, 3);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.propName {
+  font-family: var(--font-mono);
+  font-weight: $font-weight-medium;
+  color: var(--accent);
+}
+
+.propType {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.propDefault {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}

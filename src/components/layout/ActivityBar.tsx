@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './ActivityBar.module.scss';
 
-export type Section = 'home' | 'tokens' | 'components' | 'settings';
+export type Section = 'home' | 'tokens' | 'components' | 'pages' | 'diff' | 'settings';
 
 interface ActivityBarProps {
   activeSection: Section;
@@ -18,6 +18,8 @@ const TOP_ITEMS: { section: Section; icon: string; label: string }[] = [
 const MID_ITEMS: { section: Section; icon: string; label: string }[] = [
   { section: 'tokens', icon: 'solar:pallete-linear', label: 'Tokens' },
   { section: 'components', icon: 'solar:widget-2-linear', label: 'Components' },
+  { section: 'pages', icon: 'solar:documents-linear', label: 'Pages' },
+  { section: 'diff', icon: 'solar:code-scan-linear', label: 'Diff' },
 ];
 
 const BOTTOM_ITEMS: { section: Section; icon: string; label: string }[] = [

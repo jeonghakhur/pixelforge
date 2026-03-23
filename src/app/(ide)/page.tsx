@@ -1,13 +1,17 @@
+// @page Home — Figma URL 입력 + 토큰 추출 + 히스토리
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import { extractTokensAction } from '@/lib/actions/project';
+import { getTokenSummary, type TokenSummary } from '@/lib/actions/tokens';
 import { useUIStore } from '@/stores/useUIStore';
+import EmptyState from '@/components/common/EmptyState';
+import Button from '@/components/common/Button';
 import styles from './page.module.scss';
 
 const figmaUrlSchema = z.object({
@@ -61,11 +65,23 @@ const SHORTCUTS = [
   },
 ];
 
+const RESULT_ITEMS = [
+  { key: 'colors' as const, label: 'Colors', icon: 'solar:pallete-linear' },
+  { key: 'typography' as const, label: 'Typography', icon: 'solar:text-field-linear' },
+  { key: 'spacing' as const, label: 'Spacing', icon: 'solar:ruler-linear' },
+  { key: 'radii' as const, label: 'Radii', icon: 'solar:crop-linear' },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const setSection = useUIStore((s) => s.setSection);
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<TokenSummary | null>(null);
+
+  useEffect(() => {
+    getTokenSummary().then(setSummary);
+  }, []);
 
   const {
     register,
@@ -100,6 +116,8 @@ export default function HomePage() {
     setSection(section);
     router.push(path);
   };
+
+  const hasExistingTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
 
   return (
     <div className={styles.home}>
@@ -145,27 +163,27 @@ export default function HomePage() {
         </form>
       </div>
 
-      {/* 추출 결과 */}
-      {result && (
+      {/* 추출 결과 or 기존 토큰 요약 */}
+      {(result || hasExistingTokens) && (
         <div className={styles.section}>
-          <span className={styles.sectionLabel}>Extracted Tokens</span>
+          <span className={styles.sectionLabel}>
+            {result ? 'Extracted Tokens' : 'Current Tokens'}
+          </span>
           <div className={styles.resultGrid}>
-            <div className={styles.resultItem}>
-              <span className={styles.resultLabel}>Colors</span>
-              <span className={styles.resultCount}>{result.colors}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span className={styles.resultLabel}>Typography</span>
-              <span className={styles.resultCount}>{result.typography}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span className={styles.resultLabel}>Spacing</span>
-              <span className={styles.resultCount}>{result.spacing}</span>
-            </div>
-            <div className={styles.resultItem}>
-              <span className={styles.resultLabel}>Radii</span>
-              <span className={styles.resultCount}>{result.radii}</span>
-            </div>
+            {RESULT_ITEMS.map((item) => {
+              const count = result
+                ? result[item.key]
+                : (summary ? summary[item.key === 'radii' ? 'radius' : item.key] : 0);
+              return (
+                <div key={item.key} className={styles.resultItem}>
+                  <div className={styles.resultIcon}>
+                    <Icon icon={item.icon} width={14} height={14} />
+                  </div>
+                  <span className={styles.resultLabel}>{item.label}</span>
+                  <span className={styles.resultCount}>{count}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -192,6 +210,17 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* Empty state when no tokens exist */}
+      {!hasExistingTokens && !result && (
+        <div className={styles.emptySection}>
+          <EmptyState
+            icon="solar:figma-linear"
+            title="아직 추출된 토큰이 없습니다"
+            description="Figma URL을 입력하여 디자인 토큰을 추출해보세요."
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,252 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.page {
+  max-width: 960px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+// ===========================
+// Controls
+// ===========================
+.controls {
+  display: flex;
+  align-items: flex-end;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 5);
+  flex-wrap: wrap;
+}
+
+.versionSelect {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.selectLabel {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.select {
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+  }
+}
+
+.arrow {
+  @include flex-center;
+  height: 34px;
+  color: var(--text-muted);
+}
+
+// ===========================
+// Empty state
+// ===========================
+.stage {
+  @include double-bezel;
+}
+
+.stageInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 8) map-get($spacers, 5);
+  @include flex-center;
+  min-height: 300px;
+}
+
+// ===========================
+// Status bar filter
+// ===========================
+.statusBar {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 4);
+  flex-wrap: wrap;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-pill;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-subtle);
+  }
+}
+
+.statusActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+// ===========================
+// Diff list
+// ===========================
+.diffList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 5);
+}
+
+.diffItem {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 3);
+  border-left: 3px solid transparent;
+  transition: $transition-fast;
+}
+
+.diff_changed { border-left-color: var(--warning); }
+.diff_added { border-left-color: var(--success); }
+.diff_removed { border-left-color: var(--danger); }
+.diff_unchanged { border-left-color: var(--text-muted); }
+
+.diffHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.diffName {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.diffType {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.diffBadge {
+  margin-left: auto;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+}
+
+.badge_changed { background: var(--warning-subtle); color: var(--warning); }
+.badge_added { background: var(--success-subtle); color: var(--success); }
+.badge_removed { background: var(--danger-subtle); color: var(--danger); }
+.badge_unchanged { background: var(--bg-elevated); color: var(--text-muted); }
+
+.diffValues {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+
+  @include media-down(sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diffOld,
+.diffNew {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diffValueLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.diffCode {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  padding: 4px 8px;
+  border-radius: $border-radius-sm;
+  word-break: break-all;
+}
+
+.affected {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.affectedLabel {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.affectedChip {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+}
+
+.actions {
+  display: flex;
+  gap: map-get($spacers, 3);
+}

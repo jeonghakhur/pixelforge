@@ -216,6 +216,18 @@ body::after {
   background-color: var(--bg-body);
 }
 
+// Auth layout — full screen, no IDE chrome
+.auth-layout {
+  min-height: 100dvh;
+  background-color: var(--bg-body);
+}
+
+// Viewer layout — standalone, no IDE chrome
+.viewer-layout {
+  min-height: 100dvh;
+  background-color: var(--bg-body);
+}
+
 // ===========================
 // 키프레임 애니메이션
 // ===========================

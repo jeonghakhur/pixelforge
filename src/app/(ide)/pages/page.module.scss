@@ -1,0 +1,163 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.page {
+  max-width: 960px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+.stage {
+  @include double-bezel;
+}
+
+.stageInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 8) map-get($spacers, 5);
+  @include flex-center;
+  min-height: 300px;
+}
+
+// ===========================
+// Category sections
+// ===========================
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 6);
+}
+
+.categorySection {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  color: var(--text-secondary);
+}
+
+.categoryTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+}
+
+.categoryCount {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: map-get($spacers, 3);
+}
+
+// ===========================
+// Page cards
+// ===========================
+.pageCard {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-2xl;
+  padding: 4px;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+  }
+}
+
+.pageCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-2xl} - 4px);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+.thumbnail {
+  @include flex-center;
+  height: 140px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.pageInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: map-get($spacers, 3);
+}
+
+.pageName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.pageDate {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.matchRate {
+  padding: 0 map-get($spacers, 3) map-get($spacers, 3);
+}
+
+.matchValue {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 2px 8px;
+  border-radius: $border-radius-pill;
+}
+
+.matchHigh {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+
+.matchMid {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+
+.matchLow {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}

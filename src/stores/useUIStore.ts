@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
-type Section = 'home' | 'tokens' | 'components' | 'settings';
+type Section = 'home' | 'tokens' | 'components' | 'pages' | 'diff' | 'settings';
 
 const STORAGE_KEY = 'pixelforge-theme';
 
@@ -10,7 +10,9 @@ const DEFAULT_TABS: Record<Section, string> = {
   home: '',
   tokens: 'color',
   components: 'list',
-  settings: '',
+  pages: '',
+  diff: '',
+  settings: 'general',
 };
 
 function getSystemTheme(): ResolvedTheme {

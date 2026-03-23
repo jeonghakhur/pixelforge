@@ -22,7 +22,13 @@ const SECTION_TABS: Record<Section, TabItem[]> = {
     { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
     { id: 'new', label: '+ 추가', icon: 'solar:add-circle-linear' },
   ],
-  settings: [],
+  pages: [],
+  diff: [],
+  settings: [
+    { id: 'general', label: '일반', icon: 'solar:settings-linear' },
+    { id: 'team', label: '팀원', icon: 'solar:users-group-two-rounded-linear' },
+    { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
+  ],
 };
 
 interface TabBarProps {
@@ -38,7 +44,9 @@ export default function TabBar({ section, activeTab, onTabChange }: TabBarProps)
     return (
       <div className={styles.tabBar}>
         <span className={styles.empty}>
-          {section === 'home' ? 'Welcome' : section === 'settings' ? 'Settings' : ''}
+          {section === 'home' && 'Welcome'}
+          {section === 'pages' && 'Pages'}
+          {section === 'diff' && 'Change Detection'}
         </span>
       </div>
     );

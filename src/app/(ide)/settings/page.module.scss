@@ -1,5 +1,5 @@
-@use '../../styles/variables' as *;
-@use '../../styles/mixins' as *;
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
 .page {
   max-width: 720px;
@@ -29,6 +29,13 @@
   color: var(--text-secondary);
   font-size: $font-size-lg;
   max-width: 55ch;
+}
+
+// ===========================
+// Tab content
+// ===========================
+.tabContent {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .settingsCard {
@@ -71,6 +78,21 @@
   border-radius: $border-radius-pill;
 }
 
+// ===========================
+// Forms
+// ===========================
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+}
+
 .inputRow {
   display: flex;
   gap: map-get($spacers, 2);
@@ -86,30 +108,28 @@
 
 .input {
   width: 100%;
-  padding: map-get($spacers, 3);
-  font-size: $font-size-base;
-  border: 1px solid var(--glass-border);
-  border-radius: $border-radius-xl;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
   background-color: var(--bg-input);
   color: var(--text-primary);
   transition: $transition-fast;
-  font-family: 'SF Mono', 'Fira Code', monospace;
 
   &::placeholder {
     color: var(--text-muted);
-    font-family: $font-family-base;
   }
 
   &:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-subtle), var(--glass-shadow);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
   }
 }
 
 .error {
   margin-top: map-get($spacers, 2);
-  color: $danger;
+  color: var(--danger);
   font-size: $font-size-sm;
 }
 
@@ -121,4 +141,70 @@
   color: var(--accent);
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Team
+// ===========================
+.inviteForm {
+  margin-bottom: map-get($spacers, 2);
+}
+
+.emptyTeam {
+  padding: map-get($spacers, 5) 0;
+}
+
+.memberList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.memberItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border-radius: $border-radius;
+}
+
+.memberAvatar {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.memberName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  @include text-truncate;
+}
+
+.memberEmail {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  @include text-truncate;
+}
+
+.memberRole {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
 }

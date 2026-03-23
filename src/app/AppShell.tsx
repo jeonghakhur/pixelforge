@@ -10,6 +10,8 @@ import { useUIStore } from '@/stores/useUIStore';
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
   if (pathname.startsWith('/components')) return 'components';
+  if (pathname.startsWith('/pages')) return 'pages';
+  if (pathname.startsWith('/diff')) return 'diff';
   if (pathname.startsWith('/settings')) return 'settings';
   return 'home';
 }
@@ -22,6 +24,10 @@ function tabFromPath(pathname: string, section: Section): string {
   if (section === 'components') {
     if (pathname === '/components/new') return 'new';
     return 'list';
+  }
+  if (section === 'settings') {
+    const match = pathname.match(/^\/settings\/?(\w*)/);
+    return match && match[1] ? match[1] : 'general';
   }
   return '';
 }
@@ -58,6 +64,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         break;
       case 'components':
         router.push('/components/new');
+        break;
+      case 'pages':
+        router.push('/pages');
+        break;
+      case 'diff':
+        router.push('/diff');
         break;
       case 'settings':
         router.push('/settings');

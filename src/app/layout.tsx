@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.scss';
-import AppShell from './AppShell';
 
 export const metadata: Metadata = {
   title: 'PixelForge',
@@ -36,7 +35,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

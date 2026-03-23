@@ -1,9 +1,10 @@
-@use '../styles/variables' as *;
-@use '../styles/mixins' as *;
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 
 .home {
   max-width: 720px;
   padding: map-get($spacers, 4) 0;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 // ===========================
@@ -135,6 +136,16 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: $border-radius-sm;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+  }
+}
+
+.resultIcon {
+  color: var(--text-muted);
+  margin-bottom: 2px;
 }
 
 .resultLabel {
@@ -153,7 +164,7 @@
 }
 
 // ===========================
-// Welcome 상태
+// Welcome / Quick Navigation
 // ===========================
 .welcome {
   margin-top: map-get($spacers, 5);
@@ -212,4 +223,12 @@
 .shortcutDesc {
   font-size: $font-size-xs;
   color: var(--text-muted);
+}
+
+// ===========================
+// Empty state
+// ===========================
+.emptySection {
+  margin-top: map-get($spacers, 6);
+  padding: map-get($spacers, 5) 0;
 }

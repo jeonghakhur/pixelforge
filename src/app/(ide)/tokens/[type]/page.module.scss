@@ -1,5 +1,5 @@
-@use '../../../styles/variables' as *;
-@use '../../../styles/mixins' as *;
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
 
 .page {
   max-width: 960px;
@@ -23,59 +23,35 @@
   line-height: $line-height-snug;
   margin-top: map-get($spacers, 3);
   margin-bottom: map-get($spacers, 2);
-  text-transform: capitalize;
 }
 
 .description {
   color: var(--text-secondary);
   font-size: $font-size-lg;
+  max-width: 55ch;
 }
 
-.preview {
+.count {
+  margin-top: map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+}
+
+.stage {
   @include double-bezel;
-  margin-bottom: map-get($spacers, 6);
 }
 
-.previewStage {
+.stageInner {
   background: var(--bg-surface);
   border-radius: calc(#{$border-radius-3xl} - 6px);
   box-shadow: var(--glass-shadow);
   padding: map-get($spacers, 8) map-get($spacers, 5);
   @include flex-center;
-  min-height: 280px;
+  min-height: 300px;
 }
 
 .empty {
   color: var(--text-muted);
   font-size: $font-size-sm;
-}
-
-.codeSection {
-  margin-bottom: map-get($spacers, 6);
-}
-
-.sectionTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: var(--text-primary);
-  margin-bottom: map-get($spacers, 3);
-}
-
-.codeBlock {
-  @include double-bezel;
-}
-
-.pre {
-  background: var(--bg-surface);
-  border-radius: calc(#{$border-radius-3xl} - 6px);
-  box-shadow: var(--glass-shadow);
-  padding: map-get($spacers, 4) map-get($spacers, 5);
-  overflow-x: auto;
-
-  code {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    font-size: $font-size-sm;
-    color: var(--accent);
-    line-height: 1.7;
-  }
 }
