@@ -32,8 +32,167 @@
 }
 
 // ===========================
-// Controls
+// Section title
 // ===========================
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.countBadge {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+}
+
+// ===========================
+// Snapshot Timeline
+// ===========================
+.timeline {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.snapshotList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.snapshotCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 3);
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+  }
+}
+
+.snapshotHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+  margin-bottom: map-get($spacers, 1);
+}
+
+.snapshotVersion {
+  font-family: var(--font-mono);
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: var(--accent);
+}
+
+.snapshotDate {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.snapshotSource {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.snapshotMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.snapshotCounts {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.snapshotFigmaVer {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.snapshotDiffChips {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 1);
+}
+
+.chipAdded {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--success);
+  background: var(--success-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.chipRemoved {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--danger);
+  background: var(--danger-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.chipChanged {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--warning);
+  background: var(--warning-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.snapshotActions {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent-subtle);
+    background: var(--accent-subtle);
+  }
+}
+
+// ===========================
+// Compare Section
+// ===========================
+.compareSection {
+  margin-bottom: map-get($spacers, 6);
+}
+
 .controls {
   display: flex;
   align-items: flex-end;
@@ -78,6 +237,18 @@
   @include flex-center;
   height: 34px;
   color: var(--text-muted);
+}
+
+.noDiff {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: var(--success-subtle);
+  color: var(--success);
+  border-radius: $border-radius;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
 }
 
 // ===========================
@@ -154,7 +325,6 @@
 .diff_changed { border-left-color: var(--warning); }
 .diff_added { border-left-color: var(--success); }
 .diff_removed { border-left-color: var(--danger); }
-.diff_unchanged { border-left-color: var(--text-muted); }
 
 .diffHeader {
   display: flex;
@@ -186,17 +356,12 @@
 .badge_changed { background: var(--warning-subtle); color: var(--warning); }
 .badge_added { background: var(--success-subtle); color: var(--success); }
 .badge_removed { background: var(--danger-subtle); color: var(--danger); }
-.badge_unchanged { background: var(--bg-elevated); color: var(--text-muted); }
 
 .diffValues {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: map-get($spacers, 2);
   margin-top: map-get($spacers, 2);
-
-  @include media-down(sm) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .diffOld,
@@ -204,14 +369,6 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.diffValueLabel {
-  font-family: var(--font-mono);
-  font-size: $font-size-sm;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .diffCode {
@@ -222,28 +379,6 @@
   padding: 4px 8px;
   border-radius: $border-radius-sm;
   word-break: break-all;
-}
-
-.affected {
-  display: flex;
-  align-items: center;
-  gap: map-get($spacers, 2);
-  margin-top: map-get($spacers, 2);
-  flex-wrap: wrap;
-}
-
-.affectedLabel {
-  font-size: $font-size-sm;
-  color: var(--text-muted);
-}
-
-.affectedChip {
-  font-family: var(--font-mono);
-  font-size: $font-size-sm;
-  color: var(--accent);
-  background: var(--accent-subtle);
-  padding: 1px 8px;
-  border-radius: $border-radius-pill;
 }
 
 .actions {

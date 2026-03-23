@@ -118,3 +118,24 @@ export const tokenSources = sqliteTable('token_sources', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (t) => [unique().on(t.projectId, t.type)]);
+
+// ===========================
+// 토큰 스냅샷 (버전 관리)
+// ===========================
+export const tokenSnapshots = sqliteTable('token_snapshots', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  /** 자동 증가 버전 번호 */
+  version: integer('version').notNull(),
+  /** 추출 방식 */
+  source: text('source', { enum: ['variables', 'styles-api', 'section-scan', 'node-scan'] }).notNull(),
+  /** Figma 파일 버전 (변경 추적용) */
+  figmaVersion: text('figma_version'),
+  /** 타입별 토큰 수 JSON: { color: 106, typography: 55, ... } */
+  tokenCounts: text('token_counts').notNull(),
+  /** 전체 토큰 데이터 JSON: Array<{ type, name, value, raw, mode, collectionName, alias }> */
+  tokensData: text('tokens_data').notNull(),
+  /** 이전 스냅샷 대비 변경 요약 JSON: { added: [...], removed: [...], changed: [...] } */
+  diffSummary: text('diff_summary'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});

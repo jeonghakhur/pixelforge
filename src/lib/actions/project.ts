@@ -12,6 +12,7 @@ import { eq, and, inArray, sql, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { createSnapshotAction } from '@/lib/actions/snapshots';
 
 import { ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
 export type { TokenType } from '@/lib/tokens/token-types';
@@ -518,6 +519,13 @@ export async function extractTokensAction(
         source: extractionSource, nodeIds,
       }),
     }).run();
+
+    // 스냅샷 자동 생성 (전체 타입 추출 시에만)
+    if (isAllTypes) {
+      const figmaVer = db.select({ figmaVersion: projects.figmaVersion })
+        .from(projects).where(eq(projects.id, projectId)).get();
+      await createSnapshotAction(projectId, extractionSource, figmaVer?.figmaVersion);
+    }
 
     return {
       error: null,
