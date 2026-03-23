@@ -55,6 +55,48 @@
 }
 
 // ===========================
+// Drift Detection Section
+// ===========================
+.driftSection {
+  margin-bottom: map-get($spacers, 6);
+  padding-bottom: map-get($spacers, 6);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.driftDesc {
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  margin-bottom: map-get($spacers, 3);
+  max-width: 55ch;
+}
+
+.driftActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.driftTimestamp {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.driftError {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-radius: $border-radius;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  margin-bottom: map-get($spacers, 3);
+}
+
+// ===========================
 // Snapshot Timeline
 // ===========================
 .timeline {
@@ -273,7 +315,7 @@
 .statusBar {
   display: flex;
   gap: map-get($spacers, 2);
-  margin-bottom: map-get($spacers, 4);
+  margin-bottom: map-get($spacers, 3);
   flex-wrap: wrap;
 }
 
@@ -301,6 +343,55 @@
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-subtle);
+}
+
+// ===========================
+// Type filter bar
+// ===========================
+.typeFilterBar {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 4);
+  flex-wrap: wrap;
+}
+
+.typeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+  }
+}
+
+.typeChipActive {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border-color: var(--text-muted);
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Color swatch
+// ===========================
+.colorSwatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 // ===========================
@@ -358,10 +449,33 @@
 .badge_removed { background: var(--danger-subtle); color: var(--danger); }
 
 .diffValues {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  align-items: center;
   gap: map-get($spacers, 2);
   margin-top: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.diffOldNew {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  min-width: 0;
+}
+
+.diffLabel {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.diffArrow {
+  @include flex-center;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .diffOld,
@@ -372,6 +486,9 @@
 }
 
 .diffCode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: $font-size-sm;
   color: var(--text-secondary);

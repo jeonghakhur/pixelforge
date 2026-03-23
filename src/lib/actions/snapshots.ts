@@ -270,3 +270,135 @@ export async function deleteSnapshotAction(snapshotId: string): Promise<{ error:
     return { error: err instanceof Error ? err.message : '삭제 실패' };
   }
 }
+
+// ===========================
+// Drift Detection (Figma 현재 상태 vs DB)
+// ===========================
+
+import { FigmaClient, extractFileKey } from '@/lib/figma/api';
+import { extractFromVariables } from '@/lib/tokens/variables-extractor';
+import { getFigmaToken } from '@/lib/config';
+import {
+  computeDrift,
+  type DriftReport,
+  type FigmaTokenForCompare,
+} from '@/lib/tokens/drift-detector';
+
+export type { DriftReport, DriftItem } from '@/lib/tokens/drift-detector';
+
+/** Figma Variables → FigmaTokenForCompare[] 변환 */
+function variablesToComparableTokens(
+  variablesRes: import('@/lib/figma/api').FigmaVariablesResponse,
+): FigmaTokenForCompare[] {
+  const result = extractFromVariables(variablesRes);
+  const items: FigmaTokenForCompare[] = [];
+
+  for (const c of result.colors) {
+    items.push({
+      type: 'color',
+      name: c.name,
+      value: JSON.stringify({ hex: c.hex, rgba: c.rgba }),
+      raw: c.hex,
+      mode: c.mode,
+    });
+  }
+  for (const t of result.typography) {
+    items.push({
+      type: 'typography',
+      name: t.name,
+      value: JSON.stringify({
+        fontFamily: t.fontFamily,
+        fontSize: t.fontSize,
+        fontWeight: t.fontWeight,
+        lineHeight: t.lineHeight,
+        letterSpacing: t.letterSpacing,
+      }),
+      raw: `${t.fontFamily} ${t.fontSize}px`,
+      mode: t.mode,
+    });
+  }
+  for (const s of result.spacing) {
+    items.push({
+      type: 'spacing',
+      name: s.name,
+      value: JSON.stringify({
+        paddingTop: s.paddingTop,
+        paddingRight: s.paddingRight,
+        paddingBottom: s.paddingBottom,
+        paddingLeft: s.paddingLeft,
+        gap: s.gap,
+      }),
+      raw: `gap:${s.gap ?? 0}`,
+      mode: s.mode,
+    });
+  }
+  for (const r of result.radius) {
+    items.push({
+      type: 'radius',
+      name: r.name,
+      value: JSON.stringify({ value: r.value, corners: r.corners }),
+      raw: `${r.value}px`,
+      mode: r.mode,
+    });
+  }
+
+  return items;
+}
+
+export async function detectDriftAction(): Promise<{
+  error: string | null;
+  report: DriftReport | null;
+}> {
+  const figmaToken = getFigmaToken();
+  if (!figmaToken) {
+    return { error: 'Figma API 토큰이 설정되지 않았습니다.', report: null };
+  }
+
+  const project = db.select({
+    id: projects.id,
+    figmaKey: projects.figmaKey,
+    figmaUrl: projects.figmaUrl,
+  }).from(projects).limit(1).get();
+
+  if (!project?.figmaKey) {
+    return { error: '프로젝트를 찾을 수 없습니다. 먼저 토큰을 추출해주세요.', report: null };
+  }
+
+  try {
+    const client = new FigmaClient(figmaToken);
+    const variablesRes = await client.getVariables(project.figmaKey);
+
+    if (!variablesRes) {
+      return {
+        error: 'Figma Variables API에 접근할 수 없습니다. 파일 권한을 확인해주세요.',
+        report: null,
+      };
+    }
+
+    const figmaTokens = variablesToComparableTokens(variablesRes);
+
+    // DB 현재 토큰 조회
+    const dbTokenRows = db.select({
+      id: tokens.id,
+      name: tokens.name,
+      type: tokens.type,
+      value: tokens.value,
+      raw: tokens.raw,
+      source: tokens.source,
+      mode: tokens.mode,
+      collectionName: tokens.collectionName,
+      alias: tokens.alias,
+    })
+      .from(tokens)
+      .where(eq(tokens.projectId, project.id))
+      .all() as TokenRow[];
+
+    const report = computeDrift(figmaTokens, dbTokenRows);
+    return { error: null, report };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Drift 감지 실패',
+      report: null,
+    };
+  }
+}
