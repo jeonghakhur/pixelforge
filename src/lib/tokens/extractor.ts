@@ -61,12 +61,12 @@ export interface ExtractResult {
 // ===========================
 // 유틸리티
 // ===========================
-function figmaColorToHex(color: FigmaColor): string {
+export function figmaColorToHex(color: FigmaColor): string {
   const toHex = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
   return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`;
 }
 
-function figmaColorToRgba(color: FigmaColor) {
+export function figmaColorToRgba(color: FigmaColor) {
   return {
     r: Math.round(color.r * 255),
     g: Math.round(color.g * 255),

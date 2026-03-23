@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "extract:dev": "tsx scripts/dev-extract.ts"
+    "extract:dev": "tsx scripts/dev-extract.ts",
+    "extract:tokens": "tsx scripts/extract-figma-tokens.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

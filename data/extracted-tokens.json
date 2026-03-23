@@ -1,0 +1,79 @@
+[
+  {
+    "category": "border",
+    "name": "default",
+    "hex": "#DCDEE3",
+    "rgba": {
+      "r": 220,
+      "g": 222,
+      "b": 227,
+      "a": 1
+    }
+  },
+  {
+    "category": "text",
+    "name": "primary",
+    "hex": "#2A3038",
+    "rgba": {
+      "r": 42,
+      "g": 48,
+      "b": 56,
+      "a": 1
+    }
+  },
+  {
+    "category": "text",
+    "name": "secondary",
+    "hex": "#555D6D",
+    "rgba": {
+      "r": 85,
+      "g": 93,
+      "b": 109,
+      "a": 1
+    }
+  },
+  {
+    "category": "background",
+    "name": "Primary",
+    "hex": "#FFFFFF",
+    "rgba": {
+      "r": 255,
+      "g": 255,
+      "b": 255,
+      "a": 1
+    }
+  },
+  {
+    "category": "background",
+    "name": "secondary",
+    "hex": "#F3F4F5",
+    "rgba": {
+      "r": 243,
+      "g": 244,
+      "b": 245,
+      "a": 1
+    }
+  },
+  {
+    "category": "brand",
+    "name": "primary",
+    "hex": "#FF6F0F",
+    "rgba": {
+      "r": 255,
+      "g": 111,
+      "b": 15,
+      "a": 1
+    }
+  },
+  {
+    "category": "brand",
+    "name": "secondary",
+    "hex": "#E68507",
+    "rgba": {
+      "r": 230,
+      "g": 133,
+      "b": 7,
+      "a": 1
+    }
+  }
+]

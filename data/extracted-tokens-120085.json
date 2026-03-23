@@ -1,0 +1,24 @@
+[
+  {
+    "category": "uncategorized",
+    "name": " ",
+    "hex": "#FFFFFF",
+    "rgba": {
+      "r": 255,
+      "g": 255,
+      "b": 255,
+      "a": 1
+    }
+  },
+  {
+    "category": "uncategorized",
+    "name": "Ghost BG",
+    "hex": "#BEC8C8",
+    "rgba": {
+      "r": 190,
+      "g": 200,
+      "b": 200,
+      "a": 1
+    }
+  }
+]
