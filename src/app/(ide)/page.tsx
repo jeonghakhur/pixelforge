@@ -195,6 +195,17 @@ export default function HomePage() {
 
   const hasAnyTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
 
+  const getTypePreviewCount = (typeId: string): number | null => {
+    if (!preview) return null;
+    const map: Record<string, number> = {
+      color:      preview.colors.length,
+      typography: preview.typography.length,
+      spacing:    preview.spacing.length,
+      radius:     preview.radius.length,
+    };
+    return map[typeId] ?? null;
+  };
+
   const toggleType = (id: string) => {
     setSelectedTypes((prev) =>
       prev.includes(id)
@@ -228,7 +239,7 @@ export default function HomePage() {
                 />
               </div>
               <button type="submit" className={styles.extractBtn} disabled={analyzing}>
-                <Icon icon="solar:magnifer-linear" width={14} height={14} />
+                <Icon icon="solar:magnifer-linear" width={15} height={15} />
                 분석
               </button>
             </div>
@@ -396,18 +407,26 @@ export default function HomePage() {
                 <div className={styles.filterBlock}>
                   <span className={styles.filterLabel}>추출 타입 선택</span>
                   <div className={styles.typeChips}>
-                    {TOKEN_TYPES.map(({ id, label, icon }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        className={`${styles.typeChip}${selectedTypes.includes(id) ? ` ${styles.typeChipActive}` : ''}`}
-                        onClick={() => toggleType(id)}
-                        aria-pressed={selectedTypes.includes(id)}
-                      >
-                        <Icon icon={icon} width={12} height={12} />
-                        {label}
-                      </button>
-                    ))}
+                    {TOKEN_TYPES.map(({ id, label, icon }) => {
+                      const cnt = getTypePreviewCount(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={`${styles.typeChip}${selectedTypes.includes(id) ? ` ${styles.typeChipActive}` : ''}${cnt === 0 ? ` ${styles.typeChipEmpty}` : ''}`}
+                          onClick={() => toggleType(id)}
+                          aria-pressed={selectedTypes.includes(id)}
+                        >
+                          <Icon icon={icon} width={12} height={12} />
+                          {label}
+                          {cnt !== null && (
+                            <span className={cnt > 0 ? styles.typeChipCount : styles.typeChipCountZero}>
+                              {cnt}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -417,11 +436,10 @@ export default function HomePage() {
               )}
               <button
                 type="button"
-                className={styles.extractBtn}
-                style={{ marginTop: '12px', width: '100%', justifyContent: 'center' }}
+                className={styles.extractBtnFull}
                 onClick={onExtract}
               >
-                <Icon icon="solar:download-minimalistic-linear" width={14} height={14} />
+                <Icon icon="solar:download-minimalistic-linear" width={16} height={16} />
                 {fileInfo?.nodeId ? '선택된 노드에서 추출' : '전체 문서에서 추출'}
               </button>
             </>
@@ -464,7 +482,7 @@ export default function HomePage() {
                     onClick={() => handleNav(item.path, item.section)}
                   >
                     <div className={styles.navIcon}>
-                      <Icon icon={item.icon} width={14} height={14} />
+                      <Icon icon={item.icon} width={17} height={17} />
                     </div>
                     <span className={styles.navLabel}>{item.label}</span>
                     {hasCount && (

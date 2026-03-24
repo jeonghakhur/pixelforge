@@ -6,56 +6,81 @@
 // ===========================
 .home {
   width: 100%;
-  padding: map-get($spacers, 4) 0 map-get($spacers, 6);
+  padding: 28px 0 48px;
   display: flex;
   flex-direction: column;
-  gap: map-get($spacers, 4);
-  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  gap: 20px;
+  animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
 }
 
 // ===========================
-// URL 입력 / Step 영역
+// URL 입력 / Step 영역 — Double-Bezel
 // ===========================
-
-// 외부 베젤 카드 — inputSection을 감싸는 Double-Bezel
 .inputSection {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
   padding: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 4px 16px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 8px 32px rgba(0, 0, 0, 0.28);
+  position: relative;
+  overflow: hidden;
+
+  // 배경 앰비언트 orb
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -40px;
+    width: 220px;
+    height: 180px;
+    background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+  }
 }
 
-// 내부 코어
 .inputSectionInner {
   background: var(--bg-surface);
-  border-radius: 12px;
-  padding: map-get($spacers, 3);
+  border-radius: 18px;
+  padding: 22px 24px 26px;
   display: flex;
   flex-direction: column;
-  gap: map-get($spacers, 2);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  gap: 16px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.04);
+  position: relative;
+  z-index: 1;
 }
 
+// 아이브로 태그
 .sectionLabel {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.09);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: $border-radius-pill;
+  padding: 3px 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  width: fit-content;
 }
 
-.form {
-  width: 100%;
-}
+.form { width: 100%; }
 
 .inputRow {
   display: flex;
-  gap: map-get($spacers, 2);
+  gap: 10px;
   align-items: stretch;
 }
 
@@ -68,36 +93,39 @@
 
 .inputIcon {
   position: absolute;
-  left: 11px;
+  left: 14px;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 16px;
   pointer-events: none;
+  opacity: 0.7;
 }
 
 .input {
   flex: 1;
   width: 100%;
-  padding: 9px 12px 9px 34px;
+  height: 52px;
+  padding: 0 16px 0 44px;
   font-family: var(--font-mono);
   font-size: $font-size-sm;
-  background: var(--bg-input);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: $border-radius;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
   color: var(--text-primary);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 3px rgba(0, 0, 0, 0.22),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 
   &::placeholder {
     color: var(--text-muted);
     font-family: var(--font-mono);
-    opacity: 0.5;
+    opacity: 0.4;
   }
 
   &:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.5);
+    border-color: rgba(59, 130, 246, 0.55);
+    background: rgba(59, 130, 246, 0.04);
     box-shadow:
       0 0 0 3px rgba(59, 130, 246, 0.1),
       inset 0 1px 3px rgba(0, 0, 0, 0.15);
@@ -107,32 +135,55 @@
 .extractBtn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 9px 16px;
+  justify-content: center;
+  gap: 7px;
+  height: 52px;
+  padding: 0 26px;
   font-family: var(--font-mono);
   font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
+  font-weight: $font-weight-semibold;
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: $border-radius-sm;
+  border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.2);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+  position: relative;
+  overflow: hidden;
 
-  &:hover {
-    transform: scale(1.02);
-    box-shadow: 0 0 24px rgba(59, 130, 246, 0.3);
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+    pointer-events: none;
   }
 
-  &:active { transform: scale(0.98); }
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 32px rgba(59, 130, 246, 0.4);
+  }
+
+  &:active { transform: scale(0.97); }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.35;
     pointer-events: none;
     box-shadow: none;
   }
+}
+
+// 전체 너비 추출 버튼 (step2)
+.extractBtnFull {
+  @extend .extractBtn;
+  width: 100%;
+  height: 54px;
+  font-size: $font-size-base;
+  border-radius: $border-radius-pill;
+  margin-top: 4px;
+  gap: 9px;
 }
 
 .error {
@@ -143,11 +194,11 @@
 }
 
 .progressWrap {
-  margin-top: map-get($spacers, 2);
+  margin-top: 4px;
 }
 
 // ===========================
-// Step 2 — 선택 UI
+// Step 2 — 헤더
 // ===========================
 .selectHeader {
   display: flex;
@@ -170,62 +221,65 @@
 .cacheTag {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: 11px;
   color: var(--accent);
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: $border-radius-pill;
-  padding: 1px 7px;
+  padding: 2px 9px;
 }
 
 .refreshBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: none;
   border: 1px solid $glass-border;
   font-size: $font-size-xs;
   font-family: var(--font-mono);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px 8px;
+  padding: 4px 10px;
+  height: 30px;
   border-radius: $border-radius-sm;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
     color: var(--accent);
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.05);
   }
 
-  &:disabled {
-    opacity: 0.4;
-    pointer-events: none;
-  }
+  &:disabled { opacity: 0.4; pointer-events: none; }
 }
 
 .backBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: none;
   border: none;
   font-size: $font-size-xs;
   font-family: var(--font-mono);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 8px;
+  height: 30px;
   border-radius: $border-radius-sm;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover { color: var(--text-secondary); }
 }
 
+// ===========================
+// 셀렉터 패널 — Step 2 내부
+// ===========================
 .selectorPanel {
   background: $glass-bg;
   border: 1px solid $glass-border;
-  border-radius: $border-radius;
+  border-radius: 14px;
   box-shadow: $glass-shadow;
   overflow: hidden;
 }
@@ -233,17 +287,17 @@
 .fileNameRow {
   display: flex;
   align-items: center;
-  gap: map-get($spacers, 2);
-  padding: map-get($spacers, 2) map-get($spacers, 3);
-  background: rgba(255, 255, 255, 0.03);
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.025);
   border-bottom: 1px solid $glass-border;
 }
 
-.fileIcon { color: var(--text-muted); flex-shrink: 0; }
+.fileIcon { color: var(--accent); flex-shrink: 0; opacity: 0.8; }
 
 .fileName {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   color: var(--text-primary);
   @include text-truncate;
 }
@@ -252,18 +306,17 @@
 // 페이지 목록
 // ===========================
 .pagesBlock {
-  border-top: 1px solid $glass-border;
   border-bottom: 1px solid $glass-border;
 }
 
 .pagesHeader {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px map-get($spacers, 3);
+  gap: 6px;
+  padding: 8px 18px;
   background: rgba(255, 255, 255, 0.02);
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: 11px;
   font-weight: $font-weight-semibold;
   color: var(--text-muted);
   letter-spacing: 0.08em;
@@ -273,51 +326,37 @@
 .pageCount {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: 11px;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid $glass-border;
   border-radius: $border-radius-pill;
-  padding: 0 6px;
-  line-height: 1.6;
+  padding: 1px 8px;
 }
 
 .pageList {
   list-style: none;
   margin: 0;
-  padding: map-get($spacers, 1) 0;
-  max-height: 160px;
+  padding: 4px 0;
+  max-height: 148px;
   overflow-y: auto;
 
-  &::-webkit-scrollbar {
-    width: 3px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: $glass-border;
-    border-radius: 2px;
-  }
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: $glass-border; border-radius: 2px; }
 }
 
 .pageItem {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px map-get($spacers, 3);
+  gap: 9px;
+  padding: 7px 18px;
   transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
-  &:hover {
-    background: $glass-bg;
-  }
+  &:hover { background: rgba(255, 255, 255, 0.03); }
 }
 
-.pageIcon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-  opacity: 0.6;
-}
+.pageIcon { color: var(--text-muted); flex-shrink: 0; opacity: 0.55; }
 
 .pageName {
   flex: 1;
@@ -332,7 +371,7 @@
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
   border-radius: $border-radius-sm;
-  padding: 1px 5px;
+  padding: 2px 7px;
   flex-shrink: 0;
 }
 
@@ -340,18 +379,27 @@
 // 토큰 미리보기
 // ===========================
 .previewBlock {
-  border-top: 1px solid $glass-border;
   border-bottom: 1px solid $glass-border;
-  padding: map-get($spacers, 3);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: map-get($spacers, 2);
+  gap: 14px;
 }
 
 .previewHeader {
   display: flex;
   align-items: center;
   gap: map-get($spacers, 2);
+}
+
+.filterLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .previewLoading {
@@ -363,32 +411,29 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 1;   }
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 1;    }
 }
 
 .previewRows {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .previewRow {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .previewRowMeta {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
 }
 
-.previewRowIcon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
+.previewRowIcon { color: var(--text-muted); flex-shrink: 0; }
 
 .previewRowLabel {
   font-family: var(--font-mono);
@@ -399,37 +444,38 @@
 
 .previewRowCount {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
+  font-size: 11px;
   font-weight: $font-weight-semibold;
   color: var(--accent);
   background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.22);
   border-radius: $border-radius-pill;
-  padding: 0 6px;
-  line-height: 1.6;
+  padding: 1px 8px;
   flex-shrink: 0;
 }
 
-// 색상 스와치 행
+// 색상 스와치
 .swatchRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
 }
 
 .swatch {
   display: inline-block;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
   cursor: default;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    transform: scale(1.3);
+    transform: scale(1.35);
     z-index: 1;
   }
 }
@@ -438,52 +484,45 @@
 .valueChips {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: 4px;
 }
 
 .valueChip {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid $glass-border;
   border-radius: $border-radius-sm;
-  padding: 1px 6px;
-  line-height: 1.6;
+  padding: 2px 8px;
 }
 
 .valueChipMore {
   @extend .valueChip;
   color: var(--accent);
-  border-color: rgba(59, 130, 246, 0.2);
-  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.22);
+  background: rgba(59, 130, 246, 0.07);
 }
 
+// ===========================
+// 추출 타입 선택
+// ===========================
 .filterBlock {
-  padding: map-get($spacers, 3);
-}
-
-.filterLabel {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  color: var(--text-secondary);
-  letter-spacing: 0.06em;
-  margin-bottom: map-get($spacers, 2);
+  padding: 16px 18px;
 }
 
 .typeChips {
   display: flex;
   flex-wrap: wrap;
-  gap: map-get($spacers, 1);
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .typeChip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
+  gap: 5px;
+  padding: 5px 13px;
   font-size: $font-size-xs;
   font-family: var(--font-mono);
   background: none;
@@ -491,37 +530,59 @@
   border-radius: $border-radius-pill;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.35);
     color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.03);
   }
 }
 
 .typeChipActive {
   background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.35);
+  border-color: rgba(59, 130, 246, 0.38);
   color: var(--accent);
+}
+
+.typeChipEmpty { opacity: 0.4; }
+
+.typeChipCount {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: $border-radius-pill;
+  background: rgba(59, 130, 246, 0.16);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+
+.typeChipCountZero {
+  @extend .typeChipCount;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border-color: $glass-border;
 }
 
 // ===========================
 // Double-Bezel 대시보드 카드
 // ===========================
 .dashboardCard {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid $glass-border;
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
   padding: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 28px rgba(0, 0, 0, 0.22);
 }
 
 .dashboardInner {
   background: var(--bg-surface);
-  border-radius: 12px;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -532,24 +593,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: map-get($spacers, 2) map-get($spacers, 3);
+  padding: 14px 20px;
   border-bottom: 1px solid $glass-border;
 }
 
 .cardLabel {
   font-family: var(--font-mono);
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
 }
 
 .deleteAllBtn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
+  gap: 4px;
+  padding: 4px 10px;
   font-size: $font-size-xs;
   font-family: var(--font-mono);
   color: var(--text-muted);
@@ -572,17 +633,17 @@
 .navList {
   display: flex;
   flex-direction: column;
-  padding: map-get($spacers, 1) 0;
+  padding: 6px 0;
 }
 
 .navDivider {
   height: 1px;
-  margin: map-get($spacers, 1) map-get($spacers, 3);
+  margin: 4px 20px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    $glass-border 30%,
-    $glass-border 70%,
+    $glass-border 25%,
+    $glass-border 75%,
     transparent 100%
   );
 }
@@ -590,26 +651,27 @@
 .navItem {
   display: flex;
   align-items: center;
-  gap: map-get($spacers, 2);
+  gap: 14px;
   width: 100%;
-  padding: 7px map-get($spacers, 3);
+  padding: 11px 20px;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    background: $glass-bg;
+    background: rgba(255, 255, 255, 0.03);
 
     .navArrow {
       opacity: 1;
-      transform: translateX(2px);
+      transform: translateX(3px);
     }
 
     .navIcon {
-      background: rgba(59, 130, 246, 0.14);
+      background: rgba(59, 130, 246, 0.16);
       color: var(--accent);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
     }
 
     .navLabel {
@@ -619,37 +681,38 @@
 
   &:active {
     transform: scale(0.99);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.025);
   }
 }
 
-// 토큰 그룹은 아이콘 컬러가 accent, 나머지는 muted
+// 토큰 그룹 아이콘 accent tint
 .navItemToken .navIcon {
   color: var(--accent);
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(59, 130, 246, 0.09);
 }
 
 .navIcon {
   @include flex-center;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: $border-radius-sm;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
   flex-shrink: 0;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .navLabel {
   flex: 1;
-  font-size: $font-size-sm;
+  font-size: 15px;
   font-weight: $font-weight-medium;
   color: var(--text-secondary);
   transition: color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 // ===========================
-// 인라인 토큰 카운트 뱃지
+// 인라인 토큰 카운트 배지
 // ===========================
 .countBadge {
   font-family: var(--font-mono);
@@ -659,23 +722,21 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid $glass-border;
   border-radius: $border-radius-pill;
-  padding: 1px 7px;
-  min-width: 28px;
+  padding: 2px 10px;
+  min-width: 34px;
   text-align: center;
-  line-height: 1.5;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
-// 토큰이 있을 때 accent 컬러로 강조
 .countBadgeActive {
   color: var(--accent);
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.09);
+  border-color: rgba(59, 130, 246, 0.22);
 
   .navItem:hover & {
-    background: rgba(59, 130, 246, 0.14);
-    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.38);
   }
 }
 
@@ -683,5 +744,5 @@
   color: var(--text-muted);
   opacity: 0;
   flex-shrink: 0;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
