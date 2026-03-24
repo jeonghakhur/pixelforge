@@ -1,0 +1,12 @@
+{
+  "sessionCount": 21,
+  "lastSession": {
+    "startedAt": "2026-03-23T10:09:06.150Z",
+    "platform": "claude",
+    "level": "Dynamic"
+  },
+  "currentFeature": "screen-dashboard",
+  "phase": "check",
+  "matchRate": 96,
+  "iterationCount": 1
+}

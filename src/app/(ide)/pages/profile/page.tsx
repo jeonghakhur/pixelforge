@@ -10,7 +10,7 @@ export default function ProfilePage() {
   return (
     <main>
       <h1>프로필</h1>
-      <p>샘플 페이지입니다.</p>
+      <p>사용자 정보를 조회하고 수정할 수 있는 페이지입니다.</p>
     </main>
   );
 }
