@@ -5,6 +5,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { Icon } from '@iconify/react';
 import {
   getScreenListAction,
+  refreshScreenDatesAction,
   syncScreensAction,
   updateScreenStatusAction,
   updateScreenVisibilityAction,
@@ -48,6 +49,10 @@ export default function ScreensPage() {
         setIsAdmin(user.role === 'admin');
         setCurrentUserEmail(user.email);
       }
+      // git 날짜 백그라운드 갱신 → 완료 후 목록 재조회
+      refreshScreenDatesAction().then(() =>
+        getScreenListAction().then(setScreens)
+      );
     }).finally(() => setLoading(false));
   }, []);
 

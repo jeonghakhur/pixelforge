@@ -252,6 +252,28 @@ export async function getScreenListAction(filters?: {
 }
 
 /**
+ * 모든 화면의 git 날짜(sinceDate / updatedDate)만 갱신한다.
+ * 전체 syncScreensAction보다 훨씬 가볍고, 화면 목록 진입 시 자동 호출된다.
+ */
+export async function refreshScreenDatesAction(): Promise<void> {
+  const rows = await db
+    .select({ id: screens.id, filePath: screens.filePath })
+    .from(screens);
+
+  for (const row of rows) {
+    const { sinceDate, updatedDate } = getFileGitDates(row.filePath);
+    if (sinceDate || updatedDate) {
+      await db.update(screens)
+        .set({
+          ...(sinceDate   ? { sinceDate }   : {}),
+          ...(updatedDate ? { updatedDate } : {}),
+        })
+        .where(eq(screens.id, row.id));
+    }
+  }
+}
+
+/**
  * 단건 화면 상세 조회.
  */
 export async function getScreenDetailAction(id: string): Promise<ScreenListItem | null> {
