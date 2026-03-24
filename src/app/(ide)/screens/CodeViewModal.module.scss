@@ -390,7 +390,7 @@ $gh-purple:     #d2a8ff;
     font-family: $font-family-mono !important;
     font-size: 12px !important;
     line-height: 20px !important;
-    background: $gh-bg;
+    background: $gh-bg !important;
     color: $gh-text;
   }
 
@@ -482,5 +482,12 @@ $gh-purple:     #d2a8ff;
 
   :global(.d2h-diff-tbody) tr td {
     border-color: $gh-border-alt;
+    background: $gh-bg;
+  }
+
+  // side-by-side 빈 셀 (추가/삭제 라인의 반대편) 흰 배경 제거
+  :global(.d2h-emptyplaceholder),
+  :global(.d2h-code-side-line):empty {
+    background: $gh-bg !important;
   }
 }
