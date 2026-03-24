@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { projects, tokens, histories, components, tokenSources } from '@/lib/db/schema';
+import { projects, tokens, histories, components, tokenSources, tokenSnapshots } from '@/lib/db/schema';
 import { FigmaClient, extractFileKey, extractNodeId, parseFileStructure, type FigmaPageInfo, type FigmaFileResponse } from '@/lib/figma/api';
 import { extractTokens as extractFromNode } from '@/lib/tokens/extractor';
 import type { ColorToken, TypographyToken, SpacingToken, RadiusToken, StyleMap } from '@/lib/tokens/extractor';
@@ -316,6 +316,8 @@ export async function deleteProject(id: string): Promise<{ error: string | null 
     db.delete(histories).where(eq(histories.projectId, id)).run();
     db.delete(tokens).where(eq(tokens.projectId, id)).run();
     db.delete(components).where(eq(components.projectId, id)).run();
+    db.delete(tokenSources).where(eq(tokenSources.projectId, id)).run();
+    db.delete(tokenSnapshots).where(eq(tokenSnapshots.projectId, id)).run();
     db.delete(projects).where(eq(projects.id, id)).run();
     return { error: null };
   } catch (err) {

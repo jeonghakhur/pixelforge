@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import { analyzeFileAction, extractTokensAction } from '@/lib/actions/project';
+import { previewTokensAction, type TokenPreviewResult } from '@/lib/actions/preview';
+import type { FigmaPageInfo } from '@/lib/figma/api';
 import { getTokenSummary, deleteAllTokensAction, type TokenSummary } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
@@ -72,13 +74,15 @@ export default function HomePage() {
   const [step, setStep] = useState<'url' | 'select'>('url');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null } | null>(null);
+  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null; pages: FigmaPageInfo[] } | null>(null);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(ALL_TOKEN_TYPE_IDS);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
   const [fromCache, setFromCache] = useState(false);
+  const [preview, setPreview] = useState<TokenPreviewResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const refreshRef = useRef(false);
@@ -107,8 +111,16 @@ export default function HomePage() {
     setAnalyzing(false);
 
     if (res.error) { setAnalyzeError(res.error); return; }
-    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId });
+    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId, pages: res.pages });
     setFromCache(res.fromCache);
+
+    // 캐시 파일로 토큰 미리보기 추출 (백그라운드)
+    setPreviewing(true);
+    previewTokensAction(data.url).then((p) => {
+      setPreview(p);
+      setPreviewing(false);
+    });
+
     setTimeout(() => setStep('select'), res.fromCache ? 0 : 400);
   };
 
@@ -139,6 +151,7 @@ export default function HomePage() {
     setAnalyzeError(null);
     setExtractError(null);
     setSelectedTypes(ALL_TOKEN_TYPE_IDS);
+    setPreview(null);
     analyzeProgress.reset();
     extractProgress.reset();
   };
@@ -270,12 +283,118 @@ export default function HomePage() {
           ) : (
             <>
               <div className={styles.selectorPanel}>
+                {/* 파일명 */}
                 <div className={styles.fileNameRow}>
                   <Icon icon="solar:figma-linear" width={13} height={13} className={styles.fileIcon} />
                   <span className={styles.fileName}>{fileInfo.fileName}</span>
                 </div>
+
+                {/* 페이지 목록 */}
+                {fileInfo.pages.length > 0 && (
+                  <div className={styles.pagesBlock}>
+                    <div className={styles.pagesHeader}>
+                      <Icon icon="solar:document-text-linear" width={11} height={11} />
+                      <span>Pages</span>
+                      <span className={styles.pageCount}>{fileInfo.pages.length}</span>
+                    </div>
+                    <ul className={styles.pageList} aria-label="Figma 페이지 목록">
+                      {fileInfo.pages.map((page) => (
+                        <li key={page.id} className={styles.pageItem}>
+                          <Icon icon="solar:layers-minimalistic-linear" width={11} height={11} className={styles.pageIcon} />
+                          <span className={styles.pageName}>{page.name}</span>
+                          {page.frames.length > 0 && (
+                            <span className={styles.frameCount}>{page.frames.length}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 토큰 미리보기 */}
+                <div className={styles.previewBlock}>
+                  <div className={styles.previewHeader}>
+                    <span className={styles.filterLabel}>발견된 토큰</span>
+                    {previewing && <span className={styles.previewLoading}>스캔 중...</span>}
+                  </div>
+                  {preview && (
+                    <div className={styles.previewRows}>
+                      {/* 색상 */}
+                      <div className={styles.previewRow}>
+                        <div className={styles.previewRowMeta}>
+                          <Icon icon="solar:pallete-linear" width={12} height={12} className={styles.previewRowIcon} />
+                          <span className={styles.previewRowLabel}>Colors</span>
+                          <span className={styles.previewRowCount}>{preview.colors.length}</span>
+                        </div>
+                        <div className={styles.swatchRow}>
+                          {preview.colors.slice(0, 10).map((c) => (
+                            <span
+                              key={`${c.category}/${c.name}`}
+                              className={styles.swatch}
+                              style={{ background: c.hex }}
+                              title={`${c.category}/${c.name} ${c.hex}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 타이포그래피 */}
+                      {preview.typography.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:text-field-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Typography</span>
+                            <span className={styles.previewRowCount}>{preview.typography.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.typography.filter((t) => t.category === 'size').map((t) => (
+                              <span key={t.name} className={styles.valueChip}>{t.value}px</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 간격 */}
+                      {preview.spacing.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:ruler-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Spacing</span>
+                            <span className={styles.previewRowCount}>{preview.spacing.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.spacing.slice(0, 8).map((s) => (
+                              <span key={s.name} className={styles.valueChip}>{s.value}</span>
+                            ))}
+                            {preview.spacing.length > 8 && (
+                              <span className={styles.valueChipMore}>+{preview.spacing.length - 8}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 반경 */}
+                      {preview.radius.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:crop-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Radius</span>
+                            <span className={styles.previewRowCount}>{preview.radius.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.radius.map((r) => (
+                              <span key={r.name} className={styles.valueChip}>{r.value}px</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Token Types */}
                 <div className={styles.filterBlock}>
-                  <span className={styles.filterLabel}>Token Types</span>
+                  <span className={styles.filterLabel}>추출 타입 선택</span>
                   <div className={styles.typeChips}>
                     {TOKEN_TYPES.map(({ id, label, icon }) => (
                       <button
@@ -292,6 +411,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+
               {extractError && (
                 <p className={styles.error} role="alert">{extractError}</p>
               )}
