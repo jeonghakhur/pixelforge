@@ -38,6 +38,7 @@ export interface ScreenListItem {
   reviewedAt: string | null;     // ISO date string (표시용)
   playwrightStatus: 'pending' | 'pass' | 'fail' | 'skip';
   playwrightScore: number | null;
+  displayOrder: number | null;
   updatedAt: Date;
 }
 
@@ -87,6 +88,7 @@ function rowToListItem(row: typeof screens.$inferSelect): ScreenListItem {
       : null,
     playwrightStatus: (row.playwrightStatus ?? 'pending') as ScreenListItem['playwrightStatus'],
     playwrightScore: row.playwrightScore ?? null,
+    displayOrder: row.displayOrder ?? null,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt : new Date(row.updatedAt),
   };
 }
@@ -248,7 +250,22 @@ export async function getScreenListAction(filters?: {
     items = items.filter((s) => s.category === filters.category);
   }
 
-  return items.sort((a, b) => a.route.localeCompare(b.route));
+  // display_order ASC (null은 맨 뒤), 같으면 route 알파벳 순
+  return items.sort((a, b) => {
+    if (a.displayOrder !== null && b.displayOrder !== null) return a.displayOrder - b.displayOrder;
+    if (a.displayOrder !== null) return -1;
+    if (b.displayOrder !== null) return 1;
+    return a.route.localeCompare(b.route);
+  });
+}
+
+/**
+ * 화면 노출 순위를 저장한다.
+ */
+export async function updateScreenOrderAction(id: string, order: number | null): Promise<void> {
+  await db.update(screens)
+    .set({ displayOrder: order, updatedAt: new Date() })
+    .where(eq(screens.id, id));
 }
 
 /**

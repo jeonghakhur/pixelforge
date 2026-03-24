@@ -151,6 +151,7 @@ function migrateColumns(): void {
     `ALTER TABLE screens ADD COLUMN reviewed_by TEXT;`,
     `ALTER TABLE screens ADD COLUMN reviewed_at INTEGER;`,
     `ALTER TABLE token_sources ADD COLUMN figma_screenshot TEXT;`,
+    `ALTER TABLE screens ADD COLUMN display_order INTEGER;`,
   ];
   for (const sql of alters) {
     try { sqlite.exec(sql); } catch { /* already exists — skip */ }

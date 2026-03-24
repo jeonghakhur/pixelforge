@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { ScreenListItem, ScreenStatus } from '@/lib/actions/screens';
-import { getFileGitLogAction } from '@/lib/actions/screens';
+import { getFileGitLogAction, updateScreenOrderAction } from '@/lib/actions/screens';
 import type { GitCommit } from '@/lib/screens/git-history';
 import FigmaCompare from './FigmaCompare';
 import styles from './page.module.scss';
@@ -47,6 +47,8 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
   const [gitLog, setGitLog] = useState<GitCommit[]>([]);
   const [gitLoading, setGitLoading] = useState(false);
   const [isWide, setIsWide] = useState(false);
+  const [orderInput, setOrderInput] = useState<string>('');
+  const [orderSaving, setOrderSaving] = useState(false);
 
   useEffect(() => {
     if (!screen) return;
@@ -74,6 +76,20 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
       .then(setGitLog)
       .finally(() => setGitLoading(false));
   }, [screen?.id]);
+
+  useEffect(() => {
+    setOrderInput(screen?.displayOrder != null ? String(screen.displayOrder) : '');
+  }, [screen?.id, screen?.displayOrder]);
+
+  const handleOrderSave = async () => {
+    if (!screen) return;
+    const parsed = orderInput.trim() === '' ? null : parseInt(orderInput, 10);
+    if (parsed !== null && isNaN(parsed)) return;
+    setOrderSaving(true);
+    await updateScreenOrderAction(screen.id, parsed);
+    onUpdate({ ...screen, displayOrder: parsed });
+    setOrderSaving(false);
+  };
 
   if (!screen) return null;
 
@@ -185,6 +201,35 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
                 </span>
               </div>
             )}
+            <div className={styles.metaRow}>
+              <span className={styles.metaKey}>노출 순위</span>
+              <span className={styles.metaVal}>
+                <div className={styles.orderInputGroup}>
+                  <input
+                    type="number"
+                    min={1}
+                    className={styles.orderInput}
+                    placeholder="미지정"
+                    value={orderInput}
+                    onChange={(e) => setOrderInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleOrderSave(); }}
+                    aria-label="노출 순위"
+                  />
+                  <button
+                    type="button"
+                    className={styles.orderSaveBtn}
+                    onClick={handleOrderSave}
+                    disabled={orderSaving}
+                  >
+                    {orderSaving
+                      ? <Icon icon="solar:refresh-linear" width={12} height={12} className={styles.spinning} />
+                      : <Icon icon="solar:check-circle-linear" width={12} height={12} />}
+                    저장
+                  </button>
+                </div>
+              </span>
+            </div>
+
             {screen.reviewedBy && (
               <div className={styles.metaRow}>
                 <span className={styles.metaKey}>검수자</span>

@@ -93,6 +93,9 @@ export const screens = sqliteTable('screens', {
   reviewedBy: text('reviewed_by'),   // 마지막으로 상태를 변경한 사용자 이메일
   reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
 
+  // 노출 순위 (낮을수록 앞에 표시, null = 미지정)
+  displayOrder: integer('display_order'),
+
   // Playwright 검수
   playwrightStatus: text('playwright_status', {
     enum: ['pending', 'pass', 'fail', 'skip'],
