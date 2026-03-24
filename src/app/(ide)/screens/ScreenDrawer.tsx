@@ -209,10 +209,10 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
               <span className={styles.metaVal}>
                 <div className={styles.orderInputGroup}>
                   <input
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
                     className={styles.orderInput}
-                    placeholder="미지정"
+                    placeholder="예: 1, 2-1"
                     value={orderInput}
                     onChange={(e) => setOrderInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleOrderSave(); }}
