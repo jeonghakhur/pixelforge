@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import type { ScreenListItem, ScreenStatus } from '@/lib/actions/screens';
 import styles from './page.module.scss';
@@ -75,7 +76,14 @@ export default function ScreenTable({
                 >
                   {/* 화면명 */}
                   <td>
-                    <div className={styles.screenName}>{screen.name}</div>
+                    <Link
+                      href={screen.route}
+                      className={styles.screenNameLink}
+                      onClick={(e) => e.stopPropagation()}
+                      title="미리보기"
+                    >
+                      {screen.name}
+                    </Link>
                     {screen.description && (
                       <div className={styles.screenDesc}>{screen.description}</div>
                     )}

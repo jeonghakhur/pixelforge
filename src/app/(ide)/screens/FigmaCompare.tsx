@@ -70,35 +70,7 @@ export default function FigmaCompare({
           <div className={styles.compareImgWrap}>
             <div className={styles.compareImgInner}>
               {figmaScreenshot ? (
-                <>
-                  <img src={figmaScreenshot} alt="Figma 원본" className={styles.compareImg} />
-                  <div className={styles.figmaUrlCurrent}>
-                    <Icon icon="solar:link-linear" width={11} height={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                    <span className={styles.figmaUrlText}>{figmaUrl}</span>
-                    <button
-                      type="button"
-                      className={styles.figmaUrlEditBtn}
-                      onClick={() => { setEditing(true); setUrlInput(figmaUrl ?? ''); }}
-                    >
-                      <Icon icon="solar:pen-linear" width={10} height={10} />
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.captureBtn}
-                      onClick={() => figmaUrl && handleCapture(figmaUrl)}
-                      disabled={capturing}
-                    >
-                      <Icon
-                        icon={capturing ? 'solar:refresh-linear' : 'solar:camera-linear'}
-                        width={12}
-                        height={12}
-                        className={capturing ? styles.spinning : undefined}
-                      />
-                      {capturing ? '중...' : '재캡처'}
-                    </button>
-                  </div>
-                </>
+                <img src={figmaScreenshot} alt="Figma 원본" className={styles.compareImg} />
               ) : (
                 <div className={styles.comparePlaceholder}>
                   <Icon icon="solar:figma-linear" width={24} height={24} />
@@ -161,9 +133,38 @@ export default function FigmaCompare({
               )}
             </div>
           </div>
-          {/* URL 수정 폼 (스크린샷 있는 상태에서 수정 클릭 시) */}
+          {/* URL 표시 + 수정/재캡처 — 이미지 하단 */}
+          {figmaScreenshot && !editing && (
+            <div className={styles.figmaUrlCurrent}>
+              <Icon icon="solar:link-linear" width={11} height={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+              <span className={styles.figmaUrlText}>{figmaUrl}</span>
+              <button
+                type="button"
+                className={styles.figmaUrlEditBtn}
+                onClick={() => { setEditing(true); setUrlInput(figmaUrl ?? ''); }}
+              >
+                <Icon icon="solar:pen-linear" width={10} height={10} />
+                수정
+              </button>
+              <button
+                type="button"
+                className={styles.captureBtn}
+                onClick={() => figmaUrl && handleCapture(figmaUrl)}
+                disabled={capturing}
+              >
+                <Icon
+                  icon={capturing ? 'solar:refresh-linear' : 'solar:camera-linear'}
+                  width={12}
+                  height={12}
+                  className={capturing ? styles.spinning : undefined}
+                />
+                {capturing ? '중...' : '재캡처'}
+              </button>
+            </div>
+          )}
+          {/* URL 수정 폼 — 이미지 하단 */}
           {editing && figmaScreenshot && (
-            <div className={styles.figmaUrlForm} style={{ marginTop: '8px' }}>
+            <div className={styles.figmaUrlForm}>
               <input
                 type="url"
                 className={styles.figmaUrlInput}

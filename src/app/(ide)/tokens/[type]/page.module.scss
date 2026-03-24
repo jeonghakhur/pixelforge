@@ -10,17 +10,42 @@
   margin-bottom: map-get($spacers, 6);
 }
 
-.headerRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: map-get($spacers, 3);
-  flex-wrap: wrap;
+.headerText {
+  width: 100%;
 }
 
-.headerText {
-  flex: 1;
-  min-width: 0;
+.headerActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 1);
+  margin-top: map-get($spacers, 3);
+}
+
+.copyUrlBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--glass-border);
+    color: var(--text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
 }
 
 .exportBtn {
@@ -37,7 +62,6 @@
   transition: $transition-fast;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: map-get($spacers, 2);
 
   &:hover {
     background: var(--glass-highlight);
@@ -70,7 +94,6 @@
   transition: $transition-fast;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: map-get($spacers, 2);
 
   &:hover {
     background: rgba($danger, 0.08);
@@ -172,9 +195,46 @@
   color: var(--text-muted);
 }
 
+.sourceUrlRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  max-width: 480px;
+}
+
 .sourceUrl {
   opacity: 0.7;
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyUrlIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    color: var(--text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
 }
 
 // ===========================
@@ -195,7 +255,6 @@
   transition: $transition-fast;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: map-get($spacers, 2);
 
   &:hover {
     background: rgba($success, 0.15);
@@ -377,7 +436,6 @@
   transition: $transition-fast;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: map-get($spacers, 2);
 
   &:hover {
     background: rgba(var(--accent-rgb, 99, 102, 241), 0.2);
@@ -406,9 +464,35 @@
   color: var(--text-secondary);
 }
 
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputClearBtn {
+  position: absolute;
+  right: map-get($spacers, 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+  line-height: 0;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
 .formInput {
   width: 100%;
-  padding: map-get($spacers, 2) map-get($spacers, 3);
+  padding: map-get($spacers, 2) 2rem map-get($spacers, 2) map-get($spacers, 3);
   background: var(--bg-input);
   border: 1px solid var(--glass-border);
   border-radius: $border-radius;

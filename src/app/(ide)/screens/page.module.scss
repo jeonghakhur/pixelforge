@@ -357,6 +357,19 @@
   font-weight: $font-weight-semibold;
 }
 
+.screenNameLink {
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 .screenDesc {
   font-size: $font-size-sm;
   color: var(--text-muted);
@@ -954,6 +967,7 @@
   gap: 6px;
   width: 100%;
   margin-top: map-get($spacers, 2);
+  padding: 0 2px;
 }
 
 .figmaUrlText {

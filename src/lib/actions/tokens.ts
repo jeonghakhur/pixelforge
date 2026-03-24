@@ -156,7 +156,7 @@ export async function exportTokensCssAction(): Promise<CssExportResult> {
     return { error: '내보낼 토큰이 없습니다.', css: null, tokenCount: 0 };
   }
 
-  const project = db.select({ name: projects.name }).from(projects).limit(1).get();
+  const project = db.select({ name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   const css = generateTokensCss(allTokens as TokenRow[], {
     fileName: project?.name ?? 'Design Tokens',
     extractedAt: new Date().toISOString(),
@@ -193,7 +193,7 @@ export interface TokenSource {
 }
 
 export async function getTokenSourceAction(type: string): Promise<TokenSource | null> {
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return null;
 
   const row = db.select()
@@ -219,6 +219,8 @@ export interface ExtractByTypeResult {
   count: number;
   type: string;
   screenshotPath: string | null;
+  /** true면 Figma 데이터가 이전과 동일해 DB 쓰기/스크린샷을 건너뜀 */
+  unchanged?: boolean;
 }
 
 export async function extractTokensByTypeAction(
@@ -249,6 +251,8 @@ export async function extractTokensByTypeAction(
     radius: result.radii,
   };
   const count = countMap[type] ?? 0;
+  const isUnchanged = result.unchanged?.[type as 'color' | 'typography' | 'spacing' | 'radius'] === true;
+  const newHash = result.hashes?.[type as 'color' | 'typography' | 'spacing' | 'radius'];
 
   // token_sources upsert
   const sourceId = crypto.randomUUID();
@@ -264,6 +268,7 @@ export async function extractTokensByTypeAction(
         figmaKey: fileKey,
         lastExtractedAt: new Date(),
         tokenCount: count,
+        ...(newHash ? { contentHash: newHash } : {}),
         updatedAt: new Date(),
       })
       .where(eq(tokenSources.id, existing.id))
@@ -277,7 +282,23 @@ export async function extractTokensByTypeAction(
       figmaKey: fileKey,
       lastExtractedAt: new Date(),
       tokenCount: count,
+      ...(newHash ? { contentHash: newHash } : {}),
     }).run();
+  }
+
+  // 변경 없으면 스크린샷 스킵
+  if (isUnchanged) {
+    const src = db.select({ uiScreenshot: tokenSources.uiScreenshot, figmaScreenshot: tokenSources.figmaScreenshot })
+      .from(tokenSources)
+      .where(and(eq(tokenSources.projectId, projectId), eq(tokenSources.type, type)))
+      .get();
+    return {
+      error: null,
+      count,
+      type,
+      unchanged: true,
+      screenshotPath: src?.uiScreenshot ?? null,
+    };
   }
 
   // PixelForge UI 스크린샷 + Figma 원본 동시 캡처 (non-blocking)
@@ -323,7 +344,7 @@ export async function extractTokensByTypeAction(
 export async function deleteTokenScreenshotsAction(
   type: string,
 ): Promise<{ error: string | null }> {
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return { error: '프로젝트를 찾을 수 없습니다.' };
 
   const source = db.select({
@@ -431,7 +452,7 @@ export async function verifyTokensAction(type: string): Promise<VerifyTokensResu
   };
 
   // token_sources에서 figmaKey 조회
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return { ...blank, error: '프로젝트를 찾을 수 없습니다.' };
 
   const source = db.select({ figmaKey: tokenSources.figmaKey })
@@ -553,11 +574,12 @@ export async function captureTokenPageScreenshotAction(
     const page = await browser.newPage();
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
     // 토큰 그리드 렌더 대기
+    const tokenGrid = page.locator('[data-token-grid]');
     try {
-      await page.waitForSelector('[data-token-grid]', { timeout: 10000 });
+      await tokenGrid.waitFor({ timeout: 10000 });
     } catch {
       // 토큰 없는 상태(EmptyState)도 캡처
     }
@@ -567,7 +589,22 @@ export async function captureTokenPageScreenshotAction(
 
     const fileName = `${type}.png`;
     const filePath = path.join(outputDir, fileName);
-    await page.screenshot({ path: filePath, fullPage: false });
+
+    // 토큰 그리드 요소만 캡처 — 없으면 전체 페이지 fallback
+    const gridEl = await tokenGrid.elementHandle();
+    if (gridEl) {
+      // 요소의 전체 scrollHeight/scrollWidth를 구해 뷰포트를 맞춤 → 잘림 방지
+      const fullHeight = await tokenGrid.evaluate((el) => el.scrollHeight);
+      const fullWidth  = await tokenGrid.evaluate((el) => el.scrollWidth);
+      await page.setViewportSize({
+        width:  Math.max(1440, fullWidth),
+        height: Math.max(900,  fullHeight + 100), // 여백 100px
+      });
+      await page.waitForTimeout(300); // 리플로우 대기
+      await gridEl.screenshot({ path: filePath });
+    } else {
+      await page.screenshot({ path: filePath, fullPage: true });
+    }
     await browser.close();
 
     return { error: null, screenshotPath: `/token-screenshots/${fileName}` };

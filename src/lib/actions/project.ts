@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { projects, tokens, histories, components } from '@/lib/db/schema';
+import { projects, tokens, histories, components, tokenSources } from '@/lib/db/schema';
 import { FigmaClient, extractFileKey, extractNodeId, parseFileStructure, type FigmaPageInfo, type FigmaFileResponse } from '@/lib/figma/api';
 import { extractTokens as extractFromNode } from '@/lib/tokens/extractor';
 import type { ColorToken, TypographyToken, SpacingToken, RadiusToken, StyleMap } from '@/lib/tokens/extractor';
@@ -33,6 +33,10 @@ export interface ExtractResult {
   spacing: number;
   radii: number;
   projectId: string | null;
+  /** 타입별 토큰 데이터 해시 (변경 감지용) */
+  hashes?: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', string>>;
+  /** 이전 추출과 동일해서 DB 쓰기를 건너뛴 타입 */
+  unchanged?: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', boolean>>;
 }
 
 export interface FileStructureResult {
@@ -158,6 +162,15 @@ function serializeSpacingValue(token: SpacingToken): string {
 
 function serializeRadiusValue(token: RadiusToken): string {
   return JSON.stringify({ value: token.value, corners: token.corners });
+}
+
+/**
+ * 토큰 배열을 이름순 정렬 후 SHA-256 해시로 변환.
+ * 이전 추출과 동일한 데이터인지 비교하는 용도.
+ */
+function computeTokenHash(items: Array<{ name: string; value: string }>): string {
+  const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
+  return crypto.createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
 }
 
 // ===========================
@@ -347,6 +360,7 @@ export async function extractTokensAction(
     let radius: (RadiusToken | RadiusTokenV)[];
     let extractionSource: ExtSource;
     let fileName: string;
+    let sourceByType: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', ExtSource>> = {};
 
     // ── 1. Variables API 우선 시도 (nodeIds 유무와 무관 — 파일 전체 변수 반환)
     const variablesRes = await client.getVariables(fileKey);
@@ -382,20 +396,24 @@ export async function extractTokensAction(
         spacing: [] as SpacingToken[],
         radius: [] as RadiusToken[],
       };
-      let lastSource: ExtSource = 'node-scan';
+      // 타입별 source 개별 추적 — 마지막 노드로 덮어쓰기 방지
       for (const node of rootNodes) {
         const { tokens: e, source } = extractFromNode(node, styleMap);
-        merged.colors.push(...e.colors);
-        merged.typography.push(...e.typography);
-        merged.spacing.push(...e.spacing);
-        merged.radius.push(...e.radius);
-        lastSource = source;
+        if (e.colors.length > 0)     { merged.colors.push(...e.colors);         sourceByType['color']      = source; }
+        if (e.typography.length > 0) { merged.typography.push(...e.typography); sourceByType['typography'] = source; }
+        if (e.spacing.length > 0)    { merged.spacing.push(...e.spacing);       sourceByType['spacing']    = source; }
+        if (e.radius.length > 0)     { merged.radius.push(...e.radius);         sourceByType['radius']     = source; }
       }
       colors = merged.colors;
       typography = merged.typography;
       spacing = merged.spacing;
       radius = merged.radius;
-      extractionSource = lastSource;
+      // 전체 대표 source는 가장 많이 쓰인 값으로 (히스토리/스냅샷용)
+      const sourceCounts = Object.values(sourceByType).reduce<Record<string, number>>((acc, s) => {
+        if (s) acc[s] = (acc[s] ?? 0) + 1;
+        return acc;
+      }, {});
+      extractionSource = (Object.entries(sourceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as ExtSource) ?? 'node-scan';
     } else {
       // ── 3. 전체 문서 노드 순회 폴백 (3-Layer)
       const file = await loadFileCached(client, fileKey);
@@ -434,66 +452,114 @@ export async function extractTokensAction(
       db.insert(projects).values({ id: projectId, name: fileName, figmaUrl, figmaKey: fileKey, pagesCache: null }).run();
     }
 
-    // ── 5. 선택된 타입의 기존 토큰만 삭제 후 재삽입 (나머지 타입 보존)
+    // ── 5. 타입별 해시 계산 → 변경 없으면 해당 타입 스킵
+    const newHashes: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', string>> = {};
+    const unchangedTypes: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', boolean>> = {};
+
+    if (selectedTypes.includes('color')) {
+      newHashes['color'] = computeTokenHash(
+        finalColors.map((c) => ({ name: c.name, value: serializeColorValue(c as ColorToken) })),
+      );
+    }
+    if (selectedTypes.includes('typography')) {
+      newHashes['typography'] = computeTokenHash(
+        finalTypo.map((t) => ({ name: t.name || `${t.fontFamily}-${t.fontSize}`, value: serializeTypographyValue(t as TypographyToken) })),
+      );
+    }
+    if (selectedTypes.includes('spacing')) {
+      newHashes['spacing'] = computeTokenHash(
+        finalSpacing.map((s) => ({ name: s.name || `${s.paddingTop}-${s.gap}`, value: serializeSpacingValue(s as SpacingToken) })),
+      );
+    }
+    if (selectedTypes.includes('radius')) {
+      newHashes['radius'] = computeTokenHash(
+        finalRadius.map((r) => ({ name: r.name || String((r as RadiusToken).value), value: serializeRadiusValue(r as RadiusToken) })),
+      );
+    }
+
+    // 기존 저장된 해시와 비교
+    for (const type of selectedTypes as Array<'color' | 'typography' | 'spacing' | 'radius'>) {
+      if (!newHashes[type]) continue;
+      const stored = db.select({ contentHash: tokenSources.contentHash })
+        .from(tokenSources)
+        .where(and(eq(tokenSources.projectId, projectId), eq(tokenSources.type, type)))
+        .get();
+      if (stored?.contentHash && stored.contentHash === newHashes[type]) {
+        unchangedTypes[type] = true;
+      }
+    }
+
+    // 변경된 타입만 DELETE + INSERT (unchanged 타입은 보존)
+    const changedTypes = selectedTypes.filter(
+      (t) => !unchangedTypes[t as keyof typeof unchangedTypes],
+    );
+
     const isAllTypes = selectedTypes.length === ALL_TYPES.length &&
       ALL_TYPES.every((t) => selectedTypes.includes(t));
-    if (isAllTypes) {
-      db.delete(tokens).where(eq(tokens.projectId, projectId)).run();
-    } else {
-      db.delete(tokens).where(
-        and(eq(tokens.projectId, projectId), inArray(tokens.type, selectedTypes))
-      ).run();
+
+    if (changedTypes.length > 0) {
+      if (isAllTypes && changedTypes.length === ALL_TYPES.length) {
+        db.delete(tokens).where(eq(tokens.projectId, projectId)).run();
+      } else {
+        db.delete(tokens).where(
+          and(eq(tokens.projectId, projectId), inArray(tokens.type, changedTypes))
+        ).run();
+      }
     }
 
     const version = 1;
 
-    if (selectedTypes.includes('color')) {
+    if (changedTypes.includes('color')) {
+      const colorSource = sourceByType?.['color'] ?? extractionSource;
       for (const color of finalColors) {
         const c = color as ColorToken & Partial<ColorTokenV>;
         db.insert(tokens).values({
           id: generateId(), projectId, version, type: 'color',
           name: c.name, value: serializeColorValue(c), raw: c.hex,
-          source: extractionSource,
+          source: colorSource,
           mode: c.mode ?? null,
           collectionName: c.collectionName ?? null,
           alias: c.alias ?? null,
         }).run();
       }
     }
-    if (selectedTypes.includes('typography')) {
+    if (changedTypes.includes('typography')) {
+      const typoSource = sourceByType?.['typography'] ?? extractionSource;
       for (const typo of finalTypo) {
         const t = typo as TypographyToken & Partial<TypographyTokenV>;
         db.insert(tokens).values({
           id: generateId(), projectId, version, type: 'typography',
           name: t.name, value: serializeTypographyValue(t), raw: `${t.fontFamily} ${t.fontSize}px`,
-          source: extractionSource,
+          source: typoSource,
           mode: t.mode ?? null,
           collectionName: t.collectionName ?? null,
           alias: t.alias ?? null,
         }).run();
       }
     }
-    if (selectedTypes.includes('spacing')) {
+    if (changedTypes.includes('spacing')) {
+      const spacingSource = sourceByType?.['spacing'] ?? extractionSource;
       for (const sp of finalSpacing) {
         const s = sp as SpacingToken & Partial<SpacingTokenV>;
         db.insert(tokens).values({
           id: generateId(), projectId, version, type: 'spacing',
           name: s.name, value: serializeSpacingValue(s),
           raw: `${s.paddingTop ?? 0}/${s.paddingRight ?? 0}/${s.paddingBottom ?? 0}/${s.paddingLeft ?? 0} gap:${s.gap ?? 0}`,
-          source: extractionSource,
+          source: spacingSource,
           mode: s.mode ?? null,
           collectionName: s.collectionName ?? null,
           alias: s.alias ?? null,
         }).run();
       }
     }
-    if (selectedTypes.includes('radius')) {
+    if (changedTypes.includes('radius')) {
+      const radiusSource = sourceByType?.['radius'] ?? extractionSource;
       for (const rad of finalRadius) {
         const r = rad as RadiusToken & Partial<RadiusTokenV>;
         db.insert(tokens).values({
           id: generateId(), projectId, version, type: 'radius',
           name: r.name, value: serializeRadiusValue(r), raw: `${r.value}px`,
-          source: extractionSource,
+          source: radiusSource,
           mode: r.mode ?? null,
           collectionName: r.collectionName ?? null,
           alias: r.alias ?? null,
@@ -534,6 +600,8 @@ export async function extractTokensAction(
       spacing: selectedTypes.includes('spacing') ? finalSpacing.length : 0,
       radii: selectedTypes.includes('radius') ? finalRadius.length : 0,
       projectId,
+      hashes: newHashes,
+      unchanged: unchangedTypes,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';

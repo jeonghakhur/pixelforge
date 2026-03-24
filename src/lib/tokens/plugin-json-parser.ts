@@ -1,5 +1,3 @@
-'use server';
-
 import type { FigmaTokenForCompare } from '@/lib/tokens/drift-detector';
 
 // ===========================

@@ -29,6 +29,7 @@ interface TokenExtractModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (count: number) => void;
+  initialUrl?: string;
 }
 
 export default function TokenExtractModal({
@@ -37,9 +38,11 @@ export default function TokenExtractModal({
   isOpen,
   onClose,
   onSuccess,
+  initialUrl,
 }: TokenExtractModalProps) {
   const [step, setStep] = useState<Step>('idle');
   const [resultCount, setResultCount] = useState(0);
+  const [isUnchanged, setIsUnchanged] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -47,28 +50,38 @@ export default function TokenExtractModal({
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  // 프로젝트에 저장된 Figma URL 자동 채우기
+  const figmaUrlValue = watch('figmaUrl');
+
+  // 타입별 마지막 추출 URL 우선, 없으면 프로젝트 공통 URL fallback
   useEffect(() => {
     if (isOpen) {
-      getProjectFigmaUrl().then(({ url }) => {
-        if (url) reset({ figmaUrl: url });
-      });
+      if (initialUrl) {
+        reset({ figmaUrl: initialUrl });
+      } else {
+        getProjectFigmaUrl().then(({ url }) => {
+          if (url) reset({ figmaUrl: url });
+        });
+      }
     }
-  }, [isOpen, reset]);
+  }, [isOpen, initialUrl, reset]);
 
   const handleClose = () => {
     if (step === 'extracting' || step === 'capturing') return;
     reset();
     setStep('idle');
     setServerError(null);
+    setIsUnchanged(false);
     onClose();
   };
 
   const onValid = async ({ figmaUrl }: FormData) => {
     setStep('extracting');
     setServerError(null);
+    setIsUnchanged(false);
 
     const result = await extractTokensByTypeAction(type, figmaUrl);
 
@@ -78,9 +91,15 @@ export default function TokenExtractModal({
       return;
     }
 
+    if (result.unchanged) {
+      // 변경 없음 — 스크린샷 대기 없이 바로 done
+      setResultCount(result.count);
+      setIsUnchanged(true);
+      setStep('done');
+      return;
+    }
+
     setStep('capturing');
-    // 스크린샷은 서버 액션 내부에서 이미 처리됨
-    // capturing 상태를 잠깐 표시 후 done으로 이동
     await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
     setResultCount(result.count);
@@ -126,8 +145,16 @@ export default function TokenExtractModal({
     >
       {step === 'done' ? (
         <div className={styles.extractDone}>
-          <Icon icon="solar:check-circle-linear" width={32} height={32} className={styles.extractDoneIcon} />
-          <p className={styles.extractDoneText}>{resultCount}개 토큰이 추출되었습니다.</p>
+          <Icon
+            icon={isUnchanged ? 'solar:check-read-linear' : 'solar:check-circle-linear'}
+            width={32} height={32}
+            className={styles.extractDoneIcon}
+          />
+          {isUnchanged ? (
+            <p className={styles.extractDoneText}>변경된 내용이 없습니다. ({resultCount}개 토큰)</p>
+          ) : (
+            <p className={styles.extractDoneText}>{resultCount}개 토큰이 추출되었습니다.</p>
+          )}
         </div>
       ) : step === 'error' ? (
         <div className={styles.extractError}>
@@ -159,16 +186,29 @@ export default function TokenExtractModal({
             <label htmlFor="figma-url" className={styles.formLabel}>
               Figma URL
             </label>
-            <input
-              id="figma-url"
-              type="url"
-              className={`${styles.formInput} ${errors.figmaUrl ? styles.formInputError : ''}`}
-              placeholder="https://www.figma.com/design/..."
-              disabled={isBusy}
-              aria-invalid={!!errors.figmaUrl}
-              aria-describedby={errors.figmaUrl ? 'url-error' : 'url-hint'}
-              {...register('figmaUrl')}
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                id="figma-url"
+                type="url"
+                className={`${styles.formInput} ${errors.figmaUrl ? styles.formInputError : ''}`}
+                placeholder="https://www.figma.com/design/..."
+                disabled={isBusy}
+                aria-invalid={!!errors.figmaUrl}
+                aria-describedby={errors.figmaUrl ? 'url-error' : 'url-hint'}
+                {...register('figmaUrl')}
+              />
+              {figmaUrlValue && !isBusy && (
+                <button
+                  type="button"
+                  className={styles.inputClearBtn}
+                  onClick={() => setValue('figmaUrl', '', { shouldValidate: false })}
+                  aria-label="입력값 지우기"
+                  tabIndex={-1}
+                >
+                  <Icon icon="solar:close-circle-bold" width={16} height={16} />
+                </button>
+              )}
+            </div>
             {errors.figmaUrl ? (
               <p id="url-error" className={styles.formError} role="alert">
                 {errors.figmaUrl.message}

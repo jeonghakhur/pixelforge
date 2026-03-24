@@ -3,7 +3,7 @@
 import { db } from '@/lib/db';
 import { components, tokens, projects, histories } from '@/lib/db/schema';
 import { generateComponents, buildTokenContext } from '@/lib/generators/react';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
 function generateId(): string {
@@ -30,7 +30,7 @@ export async function generateComponentsAction(
     return { error: '생성할 컴포넌트를 선택해주세요.', generated: [] };
   }
 
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) {
     return {
       error: 'Figma 토큰을 먼저 추출해주세요. 프로젝트 정보가 없습니다.',
@@ -126,7 +126,7 @@ export async function getComponentByName(name: string): Promise<ComponentRow | n
 }
 
 export async function getComponentsByProject(): Promise<ComponentRow[]> {
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return [];
 
   return db.select({

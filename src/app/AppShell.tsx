@@ -11,7 +11,7 @@ import { useUIStore } from '@/stores/useUIStore';
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
   if (pathname.startsWith('/components')) return 'components';
-  if (pathname.startsWith('/pages')) return 'pages';
+  if (pathname === '/pages') return 'pages';
   if (pathname.startsWith('/screens')) return 'screens';
   if (pathname.startsWith('/diff')) return 'diff';
   if (pathname.startsWith('/settings')) return 'settings';

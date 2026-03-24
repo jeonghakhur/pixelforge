@@ -16,9 +16,10 @@ import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 interface TokenPageActionsProps {
   type: string;
   count: number;
+  figmaUrl?: string;
 }
 
-export default function TokenPageActions({ type, count }: TokenPageActionsProps) {
+export default function TokenPageActions({ type, count, figmaUrl }: TokenPageActionsProps) {
   const router = useRouter();
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -149,6 +150,7 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
         isOpen={extractOpen}
         onClose={() => setExtractOpen(false)}
         onSuccess={handleExtractSuccess}
+        initialUrl={figmaUrl}
       />
 
       <TokenVerifyModal

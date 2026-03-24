@@ -121,7 +121,7 @@ export async function getSnapshotsAction(): Promise<{
   error: string | null;
   snapshots: SnapshotListItem[];
 }> {
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return { error: null, snapshots: [] };
 
   const rows = db.select({
@@ -358,7 +358,7 @@ export async function detectDriftAction(): Promise<{
     id: projects.id,
     figmaKey: projects.figmaKey,
     figmaUrl: projects.figmaUrl,
-  }).from(projects).limit(1).get();
+  }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
 
   if (!project?.figmaKey) {
     return { error: '프로젝트를 찾을 수 없습니다. 먼저 토큰을 추출해주세요.', report: null };
@@ -421,7 +421,7 @@ export async function detectDriftFromJsonAction(jsonString: string): Promise<{
   }
 
   const project = db.select({ id: projects.id })
-    .from(projects).limit(1).get();
+    .from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
 
   if (!project) {
     return {

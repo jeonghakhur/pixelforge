@@ -1,45 +1,13 @@
 import type { FigmaNode, FigmaColor } from '@/lib/figma/api';
 import { TOKEN_TYPES } from './token-types';
+import { extractColorNodes } from './extractors/color';
+import { extractTypographyNodes } from './extractors/typography';
+import { extractSpacingNodes } from './extractors/spacing';
+import { extractRadiusNodes } from './extractors/radius';
 
-// ===========================
-// 토큰 타입 정의
-// ===========================
-export interface ColorToken {
-  name: string;
-  hex: string;
-  rgba: { r: number; g: number; b: number; a: number };
-}
-
-export interface TypographyToken {
-  name: string;
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: number;
-  lineHeight?: number;
-  letterSpacing?: number;
-}
-
-export interface SpacingToken {
-  name: string;
-  paddingTop?: number;
-  paddingRight?: number;
-  paddingBottom?: number;
-  paddingLeft?: number;
-  gap?: number;
-}
-
-export interface RadiusToken {
-  name: string;
-  value: number;
-  corners?: number[];
-}
-
-export interface ExtractedTokens {
-  colors: ColorToken[];
-  typography: TypographyToken[];
-  spacing: SpacingToken[];
-  radius: RadiusToken[];
-}
+// 타입은 extractors/types.ts에서 중앙 관리 — 내부 사용 + 하위 호환 re-export
+import type { ColorToken, TypographyToken, SpacingToken, RadiusToken, ExtractedTokens } from './extractors/types';
+export type { ColorToken, TypographyToken, SpacingToken, RadiusToken, ExtractedTokens };
 
 // ===========================
 // StyleMap 타입 (Named Styles용)
@@ -337,10 +305,10 @@ function extractBySectionScope(rootNode: FigmaNode): { hasData: boolean; tokens:
   const dispatchExtract = (typeId: string, node: FigmaNode) => {
     const key = TYPE_TO_RESULT_KEY[typeId];
     if (!key) return;
-    if (typeId === 'color') extractSingleNodeColor(node, result.colors);
-    else if (typeId === 'typography') extractSingleNodeTypo(node, result.typography);
-    else if (typeId === 'spacing') extractSingleNodeSpacing(node, result.spacing);
-    else if (typeId === 'radius') extractSingleNodeRadius(node, result.radius);
+    if (typeId === 'color') extractColorNodes(node, result.colors);
+    else if (typeId === 'typography') extractTypographyNodes(node, result.typography);
+    else if (typeId === 'spacing') extractSpacingNodes(node, result.spacing);
+    else if (typeId === 'radius') extractRadiusNodes(node, result.radius);
   };
 
   // rootNode 자체가 섹션인 경우 (특정 프레임을 직접 선택했을 때)

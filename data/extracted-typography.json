@@ -1,0 +1,44 @@
+[
+  {
+    "category": "letter-spacing",
+    "name": "0",
+    "value": 0,
+    "fullPath": "type/letter-spacing/0"
+  },
+  {
+    "category": "line-height",
+    "name": "20",
+    "value": 20,
+    "fullPath": "type/line-height/20"
+  },
+  {
+    "category": "line-height",
+    "name": "24",
+    "value": 24,
+    "fullPath": "type/line-height/24"
+  },
+  {
+    "category": "line-height",
+    "name": "38",
+    "value": 38,
+    "fullPath": "type/line-height/38"
+  },
+  {
+    "category": "size",
+    "name": "14",
+    "value": 14,
+    "fullPath": "type/size/14"
+  },
+  {
+    "category": "size",
+    "name": "16",
+    "value": 16,
+    "fullPath": "type/size/16"
+  },
+  {
+    "category": "size",
+    "name": "38",
+    "value": 38,
+    "fullPath": "type/size/38"
+  }
+]

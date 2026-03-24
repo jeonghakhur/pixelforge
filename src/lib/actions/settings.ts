@@ -4,7 +4,7 @@ import { getFigmaToken, setFigmaToken } from '@/lib/config';
 import { db } from '@/lib/db';
 import { projects } from '@/lib/db/schema';
 import { extractFileKey } from '@/lib/figma/api';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 interface SaveTokenResult {
   error: string | null;
@@ -40,7 +40,7 @@ export async function saveProjectFigmaUrl(url: string): Promise<{ error: string 
     return { error: 'Figma 파일 키를 찾을 수 없습니다. URL을 확인해주세요.' };
   }
 
-  const project = db.select({ id: projects.id }).from(projects).limit(1).get();
+  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) {
     return { error: '프로젝트가 없습니다. 먼저 토큰을 한 번 추출해주세요.' };
   }
@@ -55,7 +55,7 @@ export async function saveProjectFigmaUrl(url: string): Promise<{ error: string 
 
 export async function getProjectFigmaUrl(): Promise<{ url: string | null; fileKey: string | null }> {
   const project = db.select({ figmaUrl: projects.figmaUrl, figmaKey: projects.figmaKey })
-    .from(projects).limit(1).get();
+    .from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   return { url: project?.figmaUrl ?? null, fileKey: project?.figmaKey ?? null };
 }
 
