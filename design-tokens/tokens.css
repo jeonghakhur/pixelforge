@@ -16,27 +16,4 @@
   /* brand */
   --color-brand-primary:         #ff6f0f;
   --color-brand-secondary:       #e68507;
-
-  /* ── Typography ── */
-  /* size */
-  --font-size-38:          38px;
-  --font-size-16:          16px;
-  --font-size-14:          14px;
-
-  /* line-height */
-  --font-line-height-38:   0px;
-
-  /* ── Spacing ── */
-  --spacing-2:     0/0/0/0 gap:2;
-  --spacing-4:     0/0/0/0 gap:4;
-  --spacing-6:     0/0/0/0 gap:6;
-  --spacing-10:    0/0/0/0 gap:10;
-  --spacing-12:    0/0/0/0 gap:12;
-  --spacing-14:    0/0/0/0 gap:14;
-  --spacing-16:    0/0/0/0 gap:16;
-  --spacing-20:    0/0/0/0 gap:20;
-  --spacing-32:    0/0/0/0 gap:32;
-  --spacing-80:    0/0/0/0 gap:80;
-  --spacing-260:   0/0/0/0 gap:260;
-  --spacing-1000:  0/0/0/0 gap:1000;
 }
