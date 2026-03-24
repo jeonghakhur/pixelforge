@@ -12,6 +12,7 @@ interface FigmaCompareProps {
   implScreenshot: string | null;
   onCaptured: (path: string) => void;
   onUrlSaved: (url: string) => void;
+  isWide?: boolean;
 }
 
 export default function FigmaCompare({
@@ -21,6 +22,7 @@ export default function FigmaCompare({
   implScreenshot,
   onCaptured,
   onUrlSaved,
+  isWide = false,
 }: FigmaCompareProps) {
   const [capturing, setCapturing] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function FigmaCompare({
   return (
     <div>
       <p className={styles.sectionTitle}>Figma 원본 vs 실제 구현</p>
-      <div className={styles.compareGrid}>
+      <div className={`${styles.compareGrid}${isWide ? ` ${styles.compareGridWide}` : ''}`}>
         {/* 왼쪽: Figma 원본 */}
         <div className={styles.comparePanel}>
           <span className={styles.compareLabel}>Figma 원본</span>

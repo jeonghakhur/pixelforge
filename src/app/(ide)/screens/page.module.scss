@@ -478,6 +478,11 @@
   flex-direction: column;
   animation: drawerIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawerWide {
+  width: min(900px, 90vw);
 }
 
 @keyframes drawerIn {
@@ -506,6 +511,13 @@
   color: var(--text-primary);
   letter-spacing: -0.01em;
   @include text-truncate;
+}
+
+.drawerHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  flex-shrink: 0;
 }
 
 .drawerCloseBtn {
@@ -699,6 +711,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: map-get($spacers, 3);
+}
+
+.compareGridWide {
+  gap: map-get($spacers, 4);
+
+  .compareImgInner {
+    aspect-ratio: 16 / 10;
+  }
 }
 
 .comparePanel {

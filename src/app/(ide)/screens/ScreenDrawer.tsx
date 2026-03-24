@@ -46,6 +46,7 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
   const closeRef = useRef<HTMLButtonElement>(null);
   const [gitLog, setGitLog] = useState<GitCommit[]>([]);
   const [gitLoading, setGitLoading] = useState(false);
+  const [isWide, setIsWide] = useState(false);
 
   useEffect(() => {
     if (!screen) return;
@@ -82,7 +83,7 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
     <>
       <div className={styles.drawerOverlay} onClick={onClose} aria-hidden="true" />
       <aside
-        className={styles.drawer}
+        className={`${styles.drawer}${isWide ? ` ${styles.drawerWide}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={`${screen.name} 상세`}
@@ -98,15 +99,30 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
             />
             <span className={styles.drawerTitle}>{screen.name}</span>
           </div>
-          <button
-            ref={closeRef}
-            type="button"
-            className={styles.drawerCloseBtn}
-            onClick={onClose}
-            aria-label="닫기"
-          >
-            <Icon icon="solar:close-linear" width={16} height={16} />
-          </button>
+          <div className={styles.drawerHeaderActions}>
+            <button
+              type="button"
+              className={styles.drawerCloseBtn}
+              onClick={() => setIsWide((w) => !w)}
+              aria-label={isWide ? '좁게 보기' : '넓게 보기'}
+              title={isWide ? '좁게 보기' : '넓게 보기'}
+            >
+              <Icon
+                icon={isWide ? 'solar:arrow-right-linear' : 'solar:arrow-left-linear'}
+                width={16}
+                height={16}
+              />
+            </button>
+            <button
+              ref={closeRef}
+              type="button"
+              className={styles.drawerCloseBtn}
+              onClick={onClose}
+              aria-label="닫기"
+            >
+              <Icon icon="solar:close-circle-linear" width={16} height={16} />
+            </button>
+          </div>
         </div>
 
         {/* 본문 */}
@@ -193,6 +209,7 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
             implScreenshot={screen.implScreenshot}
             onCaptured={(path) => onUpdate({ ...screen, figmaScreenshot: path })}
             onUrlSaved={(url) => onUpdate({ ...screen, figmaUrl: url })}
+            isWide={isWide}
           />
 
           {/* Playwright 섹션 */}
