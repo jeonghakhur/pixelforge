@@ -552,7 +552,6 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 500px;
   height: 100vh;
   background: var(--bg-surface);
   border-left: 1px solid var(--border-color);
@@ -561,16 +560,66 @@
   flex-direction: column;
   animation: drawerIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.drawerWide {
-  width: min(900px, 90vw);
 }
 
 @keyframes drawerIn {
   from { transform: translateX(100%); }
   to   { transform: translateX(0);    }
+}
+
+// 드래그 리사이즈 핸들
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 10;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // 2×3 그립 도트
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    box-shadow:
+      0px  -8px 0 var(--text-muted),
+      0px   8px 0 var(--text-muted),
+      4px  -8px 0 var(--text-muted),
+      4px   0px 0 var(--text-muted),
+      4px   8px 0 var(--text-muted);
+    opacity: 0.55;
+    transition: opacity 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+
+    &::after {
+      opacity: 1;
+      background: var(--accent);
+      box-shadow:
+        0px  -8px 0 var(--accent),
+        0px   8px 0 var(--accent),
+        4px  -8px 0 var(--accent),
+        4px   0px 0 var(--accent),
+        4px   8px 0 var(--accent);
+    }
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
 }
 
 .drawerHeader {

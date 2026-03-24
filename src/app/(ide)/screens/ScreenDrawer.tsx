@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import type { ScreenListItem, ScreenStatus } from '@/lib/actions/screens';
 import { getFileGitLogAction, updateScreenOrderAction } from '@/lib/actions/screens';
@@ -32,6 +32,10 @@ const PW_STATUS_CONFIG = {
   pending: { icon: 'solar:clock-circle-linear',  color: 'var(--text-muted)' },
 };
 
+const MIN_WIDTH = 500;
+const MAX_WIDTH = 1200;
+const DEFAULT_WIDTH = 900;
+
 function ScoreBar({ score }: { score: number }) {
   const fillCls = score >= 80 ? styles.scorePass : score >= 50 ? styles.scoreWarn : styles.scoreFail;
   return (
@@ -48,10 +52,13 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
   const closeRef = useRef<HTMLButtonElement>(null);
   const [gitLog, setGitLog] = useState<GitCommit[]>([]);
   const [gitLoading, setGitLoading] = useState(false);
-  const [isWide, setIsWide] = useState(false);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [orderInput, setOrderInput] = useState<string>('');
   const [orderSaving, setOrderSaving] = useState(false);
   const [modalHash, setModalHash] = useState<string | null>(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
 
   useEffect(() => {
     if (!screen) return;
@@ -72,7 +79,6 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
     return () => { document.body.style.overflow = ''; };
   }, [screen]);
 
-  // screen이 바뀌면 모달 상태 초기화
   useEffect(() => {
     setModalHash(null);
   }, [screen?.id]);
@@ -89,9 +95,38 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
     setOrderInput(screen?.displayOrder ?? '');
   }, [screen?.id, screen?.displayOrder]);
 
-  const handleCommitClick = (hash: string) => {
-    setModalHash(hash);
-  };
+  // 드래그 리사이즈
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = width;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  }, [width]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = dragStartX.current - e.clientX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + delta));
+      setWidth(newWidth);
+    };
+    const onUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  const handleCommitClick = (hash: string) => setModalHash(hash);
 
   const handleOrderSave = async () => {
     if (!screen) return;
@@ -109,7 +144,6 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
 
   const pwCfg = PW_STATUS_CONFIG[screen.playwrightStatus];
 
-  // 좁은/넓은 모드 공통 본문 콘텐츠
   const drawerBodyContent = (
     <>
       {/* 메타 정보 */}
@@ -222,7 +256,7 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
         implScreenshot={screen.implScreenshot}
         onCaptured={(path) => onUpdate({ ...screen, figmaScreenshot: path })}
         onUrlSaved={(url) => onUpdate({ ...screen, figmaUrl: url })}
-        isWide={isWide}
+        isWide={width > 700}
       />
 
       {/* Playwright 섹션 */}
@@ -306,11 +340,19 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
     <>
       <div className={styles.drawerOverlay} onClick={onClose} aria-hidden="true" />
       <aside
-        className={`${styles.drawer}${isWide ? ` ${styles.drawerWide}` : ''}`}
+        className={styles.drawer}
+        style={{ width }}
         role="dialog"
         aria-modal="true"
         aria-label={`${screen.name} 상세`}
       >
+        {/* 드래그 리사이즈 핸들 */}
+        <div
+          className={styles.resizeHandle}
+          onMouseDown={handleResizeStart}
+          aria-hidden="true"
+        />
+
         {/* 헤더 */}
         <div className={styles.drawerHeader}>
           <div className={styles.drawerTitleGroup}>
@@ -323,19 +365,6 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
             <span className={styles.drawerTitle}>{screen.name}</span>
           </div>
           <div className={styles.drawerHeaderActions}>
-            <button
-              type="button"
-              className={styles.drawerCloseBtn}
-              onClick={() => setIsWide((w) => !w)}
-              aria-label={isWide ? '좁게 보기' : '넓게 보기'}
-              title={isWide ? '좁게 보기' : '넓게 보기'}
-            >
-              <Icon
-                icon={isWide ? 'solar:arrow-right-linear' : 'solar:arrow-left-linear'}
-                width={16}
-                height={16}
-              />
-            </button>
             <button
               ref={closeRef}
               type="button"
