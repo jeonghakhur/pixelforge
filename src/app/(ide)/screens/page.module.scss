@@ -381,6 +381,17 @@
   margin: 0 auto;
 }
 
+.figmaRegistered {
+  @include flex-center;
+  width: 28px;
+  height: 20px;
+  border-radius: $border-radius-sm;
+  border: 1px solid var(--success);
+  color: var(--success);
+  margin: 0 auto;
+  background: var(--success-subtle);
+}
+
 // QA 점수
 .qaScore {
   display: flex;

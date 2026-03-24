@@ -73,7 +73,7 @@ export default function Sidebar({ activeSection }: SidebarProps) {
   const driftCounts = useUIStore((s) => s.driftCounts);
   const lastDriftCheck = useUIStore((s) => s.lastDriftCheck);
 
-  if (!(['tokens', 'components', 'pages', 'screens', 'diff'] as const).includes(activeSection as never)) {
+  if (!(['tokens', 'components', 'pages', 'diff'] as const).includes(activeSection as never)) {
     return null;
   }
 
