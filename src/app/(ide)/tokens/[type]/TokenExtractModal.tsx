@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Icon } from '@iconify/react';
 import Modal from '@/components/common/Modal';
 import Spinner from '@/components/common/Spinner';
-import { extractTokensByTypeAction } from '@/lib/actions/tokens';
-import { getProjectFigmaUrl } from '@/lib/actions/settings';
+import { extractTokensByTypeAction, type TokenDiff } from '@/lib/actions/tokens';
 import styles from './page.module.scss';
 
 const schema = z.object({
@@ -28,8 +27,7 @@ interface TokenExtractModalProps {
   typeLabel: string;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (count: number) => void;
-  initialUrl?: string;
+  onSuccess: (count: number, diff?: TokenDiff) => void;
 }
 
 export default function TokenExtractModal({
@@ -38,11 +36,11 @@ export default function TokenExtractModal({
   isOpen,
   onClose,
   onSuccess,
-  initialUrl,
 }: TokenExtractModalProps) {
   const [step, setStep] = useState<Step>('idle');
   const [resultCount, setResultCount] = useState(0);
   const [isUnchanged, setIsUnchanged] = useState(false);
+  const [resultDiff, setResultDiff] = useState<TokenDiff | undefined>(undefined);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -56,18 +54,11 @@ export default function TokenExtractModal({
 
   const figmaUrlValue = watch('figmaUrl');
 
-  // 타입별 마지막 추출 URL 우선, 없으면 프로젝트 공통 URL fallback
   useEffect(() => {
     if (isOpen) {
-      if (initialUrl) {
-        reset({ figmaUrl: initialUrl });
-      } else {
-        getProjectFigmaUrl().then(({ url }) => {
-          if (url) reset({ figmaUrl: url });
-        });
-      }
+      reset({ figmaUrl: '' });
     }
-  }, [isOpen, initialUrl, reset]);
+  }, [isOpen, reset]);
 
   const handleClose = () => {
     if (step === 'extracting' || step === 'capturing') return;
@@ -75,8 +66,19 @@ export default function TokenExtractModal({
     setStep('idle');
     setServerError(null);
     setIsUnchanged(false);
+    setResultDiff(undefined);
     onClose();
   };
+
+  // 추출 완료(변경 있음) 시 1.5초 후 자동 닫기 — 페이지 갱신은 onSuccess에서 처리
+  useEffect(() => {
+    if (step === 'done' && !isUnchanged) {
+      const t = setTimeout(handleClose, 1500);
+      return () => clearTimeout(t);
+    }
+  // handleClose는 렌더마다 새 참조이나, step/isUnchanged 변화 시에만 타이머 필요
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, isUnchanged]);
 
   const onValid = async ({ figmaUrl }: FormData) => {
     setStep('extracting');
@@ -103,8 +105,9 @@ export default function TokenExtractModal({
     await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
     setResultCount(result.count);
+    setResultDiff(result.diff);
     setStep('done');
-    onSuccess(result.count);
+    onSuccess(result.count, result.diff);
   };
 
   const isBusy = step === 'extracting' || step === 'capturing';
@@ -154,6 +157,19 @@ export default function TokenExtractModal({
             <p className={styles.extractDoneText}>변경된 내용이 없습니다. ({resultCount}개 토큰)</p>
           ) : (
             <p className={styles.extractDoneText}>{resultCount}개 토큰이 추출되었습니다.</p>
+          )}
+          {!isUnchanged && resultDiff && (resultDiff.added > 0 || resultDiff.changed > 0 || resultDiff.removed > 0) && (
+            <div className={styles.diffChips}>
+              {resultDiff.added > 0 && (
+                <span className={styles.chipAdded}>+{resultDiff.added} 추가</span>
+              )}
+              {resultDiff.changed > 0 && (
+                <span className={styles.chipChanged}>~{resultDiff.changed} 변경</span>
+              )}
+              {resultDiff.removed > 0 && (
+                <span className={styles.chipRemoved}>-{resultDiff.removed} 삭제</span>
+              )}
+            </div>
           )}
         </div>
       ) : step === 'error' ? (

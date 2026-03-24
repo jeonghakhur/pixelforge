@@ -12,7 +12,6 @@ import { eq, and, inArray, sql, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createSnapshotAction } from '@/lib/actions/snapshots';
 
 import { ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
 export type { TokenType } from '@/lib/tokens/token-types';
@@ -586,11 +585,24 @@ export async function extractTokensAction(
       }),
     }).run();
 
-    // 스냅샷 자동 생성 (전체 타입 추출 시에만)
-    if (isAllTypes) {
-      const figmaVer = db.select({ figmaVersion: projects.figmaVersion })
-        .from(projects).where(eq(projects.id, projectId)).get();
-      await createSnapshotAction(projectId, extractionSource, figmaVer?.figmaVersion);
+    // tokens.css git auto-commit (변경이 있을 때 항상)
+    const hasChanges = finalColors.length > 0 || finalTypo.length > 0
+      || finalSpacing.length > 0 || finalRadius.length > 0;
+
+    if (hasChanges) {
+      const { getAllTokensForProject } = await import('@/lib/db/queries');
+      const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
+      const { commitTokensCss, buildCommitMessage } = await import('@/lib/git/token-commits');
+
+      const allTokens = getAllTokensForProject(projectId);
+      const css = generateAllCssCode(allTokens);
+      const message = buildCommitMessage({
+        colors: finalColors.length,
+        typography: finalTypo.length,
+        spacing: finalSpacing.length,
+        radii: finalRadius.length,
+      });
+      commitTokensCss(css, message); // 에러 무시 — 추출 성공을 막지 않음
     }
 
     return {

@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'wide';
 
 interface ModalProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ const sizeClassMap: Record<ModalSize, string> = {
   md: '',
   lg: 'modal-lg',
   xl: 'modal-xl',
+  wide: 'modal-wide',
 };
 
 export default function Modal({
@@ -82,7 +83,7 @@ export default function Modal({
             onClick={onClose}
             aria-label="닫기"
           >
-            <Icon icon="solar:close-line" width={20} height={20} />
+            <Icon icon="solar:close-circle-linear" width={18} height={18} />
           </button>
         </div>
         <div className="modal-body">{children}</div>

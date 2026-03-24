@@ -1128,7 +1128,7 @@
   &::before {
     content: '';
     position: absolute;
-    left: 6px;
+    left: 36px;
     top: 10px;
     bottom: 10px;
     width: 1px;
@@ -1161,6 +1161,19 @@
   &[data-first='true'] {
     background: var(--accent);
     border-color: var(--accent);
+  }
+
+  // wide 모드: 비교 선택됨
+  &[data-selected='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  }
+
+  // wide 모드: 현재 소스 보기 중
+  &[data-active='true'] {
+    background: rgba(56, 139, 253, 0.3);
+    border-color: rgba(56, 139, 253, 0.6);
   }
 }
 
@@ -1202,6 +1215,192 @@
   color: var(--text-primary);
   margin: 0;
   @include text-truncate;
+}
+
+// 커밋 선택 체크박스
+.commitCheckbox {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  z-index: 1;
+  position: relative;
+}
+
+// 커밋 선택 상태
+.gitCommitSelected {
+  .gitDot {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .gitCommitBtn {
+    background: var(--accent-subtle);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+}
+
+// 클릭 가능한 커밋 버튼
+.gitCommitBtn {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2);
+  text-align: left;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-color);
+  }
+}
+
+// 비교 선택 바
+.compareBar {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.compareBarLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.compareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: $border-radius-sm;
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.compareClearBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border-radius: $border-radius-sm;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger-subtle);
+    background: var(--danger-subtle);
+  }
+}
+
+// ===========================
+// Drawer 2-column (Wide 모드)
+// ===========================
+.drawerCols {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drawerLeft {
+  width: 380px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+}
+
+.drawerRight {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerRightEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #6e7681;
+  font-size: 13px;
+  background: #0d1117;
+}
+
+.drawerRightHint {
+  font-size: 11px;
+  color: #6e7681;
+  opacity: 0.6;
+}
+
+// ─── 커밋 활성 상태 (wide 모드에서 현재 소스 보기 중) ──
+.gitCommitActive {
+  .gitCommitBtn {
+    background: rgba(56, 139, 253, 0.06);
+    border-color: rgba(56, 139, 253, 0.2);
+  }
+}
+
+// dot을 체크박스 레이블로 감싸기 (wide 모드)
+.commitDotLabel {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+
+  &:hover .gitDot {
+    border-color: var(--accent);
+  }
+}
+
+.commitCheckboxHidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 
 // ===========================

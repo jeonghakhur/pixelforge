@@ -1,0 +1,263 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.section {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.fileBadge {
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-sm;
+  padding: 2px 8px;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 5);
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  border: 1px dashed var(--glass-border);
+  border-radius: $border-radius-lg;
+  justify-content: center;
+}
+
+.commitList {
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.commitRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  transition: background 0.2s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.hash {
+  font-family: $font-family-mono;
+  font-size: 12px;
+  color: var(--accent);
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+.message {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.date {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+  }
+
+  &.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+  }
+}
+
+.diffPanel {
+  background: #0d1117;
+  border-top: 1px solid var(--glass-border);
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+
+  // diff2html 스타일 오버라이드 (dark 배경)
+  :global(.d2h-wrapper) {
+    margin: 0;
+  }
+
+  :global(.d2h-file-header) {
+    display: none;
+  }
+
+  :global(.d2h-code-line) {
+    font-size: 12px;
+    font-family: $font-family-mono;
+  }
+}
+
+.diffEmpty {
+  padding: map-get($spacers, 4);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  text-align: center;
+  font-family: $font-family-mono;
+}
+
+.diffLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 4);
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+}
+
+// ===========================
+// CSS 보기 모달 (createPortal)
+// ===========================
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: map-get($spacers, 4);
+}
+
+.modal {
+  background: $zinc-900;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-lg;
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.modalTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  font-family: $font-family-mono;
+  flex: 1;
+}
+
+.modalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+}
+
+.modalBody {
+  flex: 1;
+  overflow: auto;
+  background: $zinc-950;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: $font-family-mono;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  td {
+    padding: 0;
+    vertical-align: top;
+  }
+}
+
+.lineNum {
+  user-select: none;
+  color: $zinc-600;
+  text-align: right;
+  padding: 0 12px 0 16px;
+  min-width: 40px;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.codeLine {
+  padding: 0 16px;
+  color: $zinc-300;
+  white-space: pre;
+}

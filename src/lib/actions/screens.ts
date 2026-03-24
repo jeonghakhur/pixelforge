@@ -6,7 +6,7 @@ import { eq, ne } from 'drizzle-orm';
 import { scanPageFiles } from '@/lib/screens/file-scanner';
 import { existsSync } from 'fs';
 import { generateAllSpecs } from '@/lib/screens/playwright-generator';
-import { getFileGitDates, getFileGitLog } from '@/lib/screens/git-history';
+import { getFileGitDates, getFileGitLog, getCommitSource, getCommitDiff, getCommitParentDiff } from '@/lib/screens/git-history';
 import type { GitCommit } from '@/lib/screens/git-history';
 import { getSession } from '@/lib/auth/session';
 import { FigmaClient, extractFileKey, extractNodeId } from '@/lib/figma/api';
@@ -490,4 +490,59 @@ export async function getFileGitLogAction(id: string): Promise<GitCommit[]> {
     .where(eq(screens.id, id));
   if (!rows[0]) return [];
   return getFileGitLog(rows[0].filePath);
+}
+
+const LANG_MAP: Record<string, string> = {
+  tsx: 'typescript', ts: 'typescript',
+  jsx: 'javascript', js: 'javascript',
+  scss: 'scss', css: 'css',
+  json: 'json', md: 'markdown',
+};
+
+/**
+ * 특정 커밋 시점의 파일 소스를 반환한다.
+ */
+export async function getCommitSourceAction(
+  screenId: string,
+  hash: string,
+): Promise<{ source: string; language: string }> {
+  const rows = await db
+    .select({ filePath: screens.filePath })
+    .from(screens)
+    .where(eq(screens.id, screenId));
+  if (!rows[0]) throw new Error('화면을 찾을 수 없습니다');
+  const source = getCommitSource(rows[0].filePath, hash);
+  const ext = rows[0].filePath.split('.').pop() ?? 'tsx';
+  return { source, language: LANG_MAP[ext] ?? 'typescript' };
+}
+
+/**
+ * 해당 커밋이 부모 대비 변경한 diff를 반환한다. (GitHub 커밋 뷰)
+ */
+export async function getCommitParentDiffAction(
+  screenId: string,
+  hash: string,
+): Promise<string> {
+  const rows = await db
+    .select({ filePath: screens.filePath })
+    .from(screens)
+    .where(eq(screens.id, screenId));
+  if (!rows[0]) throw new Error('화면을 찾을 수 없습니다');
+  return getCommitParentDiff(rows[0].filePath, hash);
+}
+
+/**
+ * 두 커밋 사이의 unified diff를 반환한다.
+ */
+export async function getCommitDiffAction(
+  screenId: string,
+  hashA: string,
+  hashB: string,
+): Promise<string> {
+  const rows = await db
+    .select({ filePath: screens.filePath })
+    .from(screens)
+    .where(eq(screens.id, screenId));
+  if (!rows[0]) throw new Error('화면을 찾을 수 없습니다');
+  return getCommitDiff(rows[0].filePath, hashA, hashB);
 }

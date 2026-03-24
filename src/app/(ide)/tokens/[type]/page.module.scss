@@ -48,6 +48,34 @@
   }
 }
 
+// CSS 보기 버튼 — btn-secondary 스타일
+.cssViewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--border-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
 .exportBtn {
   display: inline-flex;
   align-items: center;
@@ -238,17 +266,17 @@
 }
 
 // ===========================
-// 검증 버튼
+// 검증 버튼 — Bootstrap btn-success
 // ===========================
 .verifyBtn {
   display: inline-flex;
   align-items: center;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 2) map-get($spacers, 3);
-  background: rgba($success, 0.08);
-  border: 1px solid rgba($success, 0.3);
+  background: $success;
+  border: 1px solid $success;
   border-radius: $border-radius;
-  color: $success;
+  color: $zinc-950;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   cursor: pointer;
@@ -257,8 +285,8 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba($success, 0.15);
-    border-color: $success;
+    box-shadow: 0 0 16px rgba($success, 0.35);
+    opacity: 0.92;
   }
 
   &:disabled {
@@ -419,17 +447,17 @@
 }
 
 // ===========================
-// 추가하기 버튼
+// 추가하기 버튼 — btn-primary (solid accent)
 // ===========================
 .addBtn {
   display: inline-flex;
   align-items: center;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 2) map-get($spacers, 3);
-  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1);
-  border: 1px solid rgba(var(--accent-rgb, 99, 102, 241), 0.3);
+  background: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: $border-radius;
-  color: var(--accent);
+  color: $white;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   cursor: pointer;
@@ -438,8 +466,8 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba(var(--accent-rgb, 99, 102, 241), 0.2);
-    border-color: var(--accent);
+    box-shadow: $box-shadow-glow;
+    opacity: 0.92;
   }
 
   &:focus-visible {
@@ -563,6 +591,44 @@
   font-size: $font-size-base;
   color: var(--text-primary);
   font-weight: $font-weight-medium;
+}
+
+.diffChips {
+  display: flex;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: map-get($spacers, 1);
+}
+
+.chipAdded {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $success;
+  background: rgba($success, 0.12);
+  border: 1px solid rgba($success, 0.25);
+  border-radius: $border-radius-pill;
+  padding: 2px 10px;
+}
+
+.chipChanged {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $warning;
+  background: rgba($warning, 0.12);
+  border: 1px solid rgba($warning, 0.25);
+  border-radius: $border-radius-pill;
+  padding: 2px 10px;
+}
+
+.chipRemoved {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $danger;
+  background: rgba($danger, 0.12);
+  border: 1px solid rgba($danger, 0.25);
+  border-radius: $border-radius-pill;
+  padding: 2px 10px;
 }
 
 .extractError {

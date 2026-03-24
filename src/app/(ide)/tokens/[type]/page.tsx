@@ -56,7 +56,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
           )}
         </div>
         <div className={styles.headerActions}>
-          <TokenPageActions type={type} count={tokenRows.length} figmaUrl={tokenSource?.figmaUrl} />
+          <TokenPageActions type={type} count={tokenRows.length} />
         </div>
         {extractionSource && (
           <div className={`${styles.sourceBanner} ${extractionSource === 'variables' ? styles.sourceBannerVariables : styles.sourceBannerScan}`}>

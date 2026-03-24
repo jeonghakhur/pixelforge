@@ -24,7 +24,7 @@ export interface TokenRow {
 }
 
 export async function getTokensByType(type: string): Promise<TokenRow[]> {
-  const rows = db.select({
+  return db.select({
     id: tokens.id,
     name: tokens.name,
     type: tokens.type,
@@ -38,8 +38,22 @@ export async function getTokensByType(type: string): Promise<TokenRow[]> {
     .from(tokens)
     .where(eq(tokens.type, type))
     .all();
+}
 
-  return rows;
+export async function getAllTokensAction(): Promise<TokenRow[]> {
+  return db.select({
+    id: tokens.id,
+    name: tokens.name,
+    type: tokens.type,
+    value: tokens.value,
+    raw: tokens.raw,
+    source: tokens.source,
+    mode: tokens.mode,
+    collectionName: tokens.collectionName,
+    alias: tokens.alias,
+  })
+    .from(tokens)
+    .all();
 }
 
 export interface TokenSummary {
@@ -214,6 +228,12 @@ export async function getTokenSourceAction(type: string): Promise<TokenSource | 
   };
 }
 
+export interface TokenDiff {
+  added: number;
+  changed: number;
+  removed: number;
+}
+
 export interface ExtractByTypeResult {
   error: string | null;
   count: number;
@@ -221,6 +241,25 @@ export interface ExtractByTypeResult {
   screenshotPath: string | null;
   /** true면 Figma 데이터가 이전과 동일해 DB 쓰기/스크린샷을 건너뜀 */
   unchanged?: boolean;
+  /** 이전 대비 변경 요약 (unchanged가 아닐 때만 존재) */
+  diff?: TokenDiff;
+}
+
+function computeTokenDiff(
+  before: { name: string; raw: string | null; value: string }[],
+  after:  { name: string; raw: string | null; value: string }[],
+): TokenDiff {
+  const beforeMap = new Map(before.map((t) => [t.name, t.raw ?? t.value]));
+  const afterMap  = new Map(after.map((t) => [t.name, t.raw ?? t.value]));
+  let added = 0, changed = 0, removed = 0;
+  for (const [name, val] of afterMap) {
+    if (!beforeMap.has(name)) added++;
+    else if (beforeMap.get(name) !== val) changed++;
+  }
+  for (const name of beforeMap.keys()) {
+    if (!afterMap.has(name)) removed++;
+  }
+  return { added, changed, removed };
 }
 
 export async function extractTokensByTypeAction(
@@ -231,6 +270,15 @@ export async function extractTokensByTypeAction(
   if (!fileKey) {
     return { error: '올바른 Figma URL이 아닙니다.', count: 0, type, screenshotPath: null };
   }
+
+  // 추출 전 기존 토큰 스냅샷 (diff 계산용)
+  const beforeProject = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const beforeTokens = beforeProject
+    ? db.select({ name: tokens.name, value: tokens.value, raw: tokens.raw })
+        .from(tokens)
+        .where(and(eq(tokens.projectId, beforeProject.id), eq(tokens.type, type)))
+        .all()
+    : [];
 
   // 해당 타입만 추출
   const result = await extractTokensAction(figmaUrl, { types: [type] });
@@ -286,6 +334,13 @@ export async function extractTokensByTypeAction(
     }).run();
   }
 
+  // 추출 후 토큰 가져와서 diff 계산
+  const afterTokens = db.select({ name: tokens.name, value: tokens.value, raw: tokens.raw })
+    .from(tokens)
+    .where(and(eq(tokens.projectId, projectId), eq(tokens.type, type)))
+    .all();
+  const diff = computeTokenDiff(beforeTokens, afterTokens);
+
   // 변경 없으면 스크린샷 스킵
   if (isUnchanged) {
     const src = db.select({ uiScreenshot: tokenSources.uiScreenshot, figmaScreenshot: tokenSources.figmaScreenshot })
@@ -334,7 +389,7 @@ export async function extractTokensByTypeAction(
     // 캡처 실패는 무시
   }
 
-  return { error: null, count, type, screenshotPath };
+  return { error: null, count, type, screenshotPath, diff };
 }
 
 // ===========================
