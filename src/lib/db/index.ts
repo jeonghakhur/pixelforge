@@ -86,6 +86,7 @@ function initTables(): void {
       figma_version TEXT,
       last_extracted_at INTEGER,
       token_count INTEGER NOT NULL DEFAULT 0,
+      content_hash TEXT,
       ui_screenshot TEXT,
       figma_screenshot TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -152,6 +153,8 @@ function migrateColumns(): void {
     `ALTER TABLE screens ADD COLUMN reviewed_at INTEGER;`,
     `ALTER TABLE token_sources ADD COLUMN figma_screenshot TEXT;`,
     `ALTER TABLE screens ADD COLUMN display_order INTEGER;`,
+    `ALTER TABLE screens ADD COLUMN display_order_key TEXT;`,
+    `ALTER TABLE token_sources ADD COLUMN content_hash TEXT;`,
   ];
   for (const sql of alters) {
     try { sqlite.exec(sql); } catch { /* already exists — skip */ }

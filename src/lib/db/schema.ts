@@ -93,8 +93,8 @@ export const screens = sqliteTable('screens', {
   reviewedBy: text('reviewed_by'),   // 마지막으로 상태를 변경한 사용자 이메일
   reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
 
-  // 노출 순위 (낮을수록 앞에 표시, null = 미지정)
-  displayOrder: integer('display_order'),
+  // 노출 순위 키 (예: "1", "2", "2-1", "2-2" — null = 미지정)
+  displayOrderKey: text('display_order_key'),
 
   // Playwright 검수
   playwrightStatus: text('playwright_status', {
@@ -116,6 +116,8 @@ export const tokenSources = sqliteTable('token_sources', {
   figmaVersion: text('figma_version'),
   lastExtractedAt: integer('last_extracted_at', { mode: 'timestamp' }),
   tokenCount: integer('token_count').notNull().default(0),
+  /** 추출된 토큰 데이터의 SHA-256 해시 — 변경 여부 감지용 */
+  contentHash: text('content_hash'),
   uiScreenshot: text('ui_screenshot'),
   figmaScreenshot: text('figma_screenshot'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

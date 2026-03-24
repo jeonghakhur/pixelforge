@@ -88,6 +88,11 @@ export default function ScreensPage() {
     setSelectedScreen(updated);
   };
 
+  const handleRefresh = useCallback(async () => {
+    const updated = await getScreenListAction();
+    setScreens(updated);
+  }, []);
+
   // 비관리자는 노출 화면만, 관리자는 showHidden 토글로 전체 가능
   const visibleScreens = (isAdmin && showHidden) ? screens : screens.filter((s) => s.visible);
 
@@ -293,6 +298,7 @@ export default function ScreensPage() {
         onClose={() => setSelectedScreen(null)}
         onStatusChange={handleStatusChange}
         onUpdate={handleScreenUpdate}
+        onRefresh={handleRefresh}
       />
     </div>
   );

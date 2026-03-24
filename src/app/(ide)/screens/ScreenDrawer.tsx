@@ -14,6 +14,7 @@ interface ScreenDrawerProps {
   onClose: () => void;
   onStatusChange: (id: string, status: ScreenStatus) => Promise<void>;
   onUpdate: (updated: ScreenListItem) => void;
+  onRefresh: () => Promise<void>;
 }
 
 const STATUS_OPTIONS: { value: ScreenStatus; label: string }[] = [
@@ -42,7 +43,7 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate }: ScreenDrawerProps) {
+export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate, onRefresh }: ScreenDrawerProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [gitLog, setGitLog] = useState<GitCommit[]>([]);
   const [gitLoading, setGitLoading] = useState(false);
@@ -78,16 +79,18 @@ export default function ScreenDrawer({ screen, onClose, onStatusChange, onUpdate
   }, [screen?.id]);
 
   useEffect(() => {
-    setOrderInput(screen?.displayOrder != null ? String(screen.displayOrder) : '');
+    setOrderInput(screen?.displayOrder ?? '');
   }, [screen?.id, screen?.displayOrder]);
 
   const handleOrderSave = async () => {
     if (!screen) return;
-    const parsed = orderInput.trim() === '' ? null : parseInt(orderInput, 10);
-    if (parsed !== null && isNaN(parsed)) return;
+    const input = orderInput.trim();
+    if (input !== '' && !/^\d+(-\d+)?$/.test(input)) return;
     setOrderSaving(true);
-    await updateScreenOrderAction(screen.id, parsed);
-    onUpdate({ ...screen, displayOrder: parsed });
+    const { assigned } = await updateScreenOrderAction(screen.id, input || null);
+    setOrderInput(assigned ?? '');
+    onUpdate({ ...screen, displayOrder: assigned });
+    await onRefresh();
     setOrderSaving(false);
   };
 

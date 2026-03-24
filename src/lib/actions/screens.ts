@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { screens } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, ne } from 'drizzle-orm';
 import { scanPageFiles } from '@/lib/screens/file-scanner';
 import { existsSync } from 'fs';
 import { generateAllSpecs } from '@/lib/screens/playwright-generator';
@@ -38,7 +38,7 @@ export interface ScreenListItem {
   reviewedAt: string | null;     // ISO date string (표시용)
   playwrightStatus: 'pending' | 'pass' | 'fail' | 'skip';
   playwrightScore: number | null;
-  displayOrder: number | null;
+  displayOrder: string | null;
   updatedAt: Date;
 }
 
@@ -88,7 +88,7 @@ function rowToListItem(row: typeof screens.$inferSelect): ScreenListItem {
       : null,
     playwrightStatus: (row.playwrightStatus ?? 'pending') as ScreenListItem['playwrightStatus'],
     playwrightScore: row.playwrightScore ?? null,
-    displayOrder: row.displayOrder ?? null,
+    displayOrder: row.displayOrderKey ?? null,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt : new Date(row.updatedAt),
   };
 }
@@ -250,9 +250,19 @@ export async function getScreenListAction(filters?: {
     items = items.filter((s) => s.category === filters.category);
   }
 
-  // display_order ASC (null은 맨 뒤), 같으면 route 알파벳 순
+  // displayOrder 키 ASC (null은 맨 뒤), 같으면 route 알파벳 순
+  // 포맷: "N" 또는 "N-M" — 숫자 파싱으로 정렬
+  function parseKey(k: string): [number, number] {
+    const [major, sub = '0'] = k.split('-');
+    return [parseInt(major, 10), parseInt(sub, 10)];
+  }
   return items.sort((a, b) => {
-    if (a.displayOrder !== null && b.displayOrder !== null) return a.displayOrder - b.displayOrder;
+    if (a.displayOrder !== null && b.displayOrder !== null) {
+      const [aM, aS] = parseKey(a.displayOrder);
+      const [bM, bS] = parseKey(b.displayOrder);
+      if (aM !== bM) return aM - bM;
+      return aS - bS;
+    }
     if (a.displayOrder !== null) return -1;
     if (b.displayOrder !== null) return 1;
     return a.route.localeCompare(b.route);
@@ -260,12 +270,61 @@ export async function getScreenListAction(filters?: {
 }
 
 /**
- * 화면 노출 순위를 저장한다.
+ * 화면 노출 순위 키를 저장한다.
+ * 입력 포맷: "N" 또는 "N-M" (예: "2", "2-1")
+ * 중복 발생 시 "N-1", "N-2" ... 순으로 자동 배정.
+ * 반환값: 실제 저장된 키 (자동 조정됐을 수 있음)
  */
-export async function updateScreenOrderAction(id: string, order: number | null): Promise<void> {
+export async function updateScreenOrderAction(
+  id: string,
+  orderKey: string | null,
+): Promise<{ assigned: string | null }> {
+  if (!orderKey) {
+    await db.update(screens)
+      .set({ displayOrderKey: null, updatedAt: new Date() })
+      .where(eq(screens.id, id));
+    return { assigned: null };
+  }
+
+  // 포맷 검증: "N" 또는 "N-M"
+  const match = orderKey.trim().match(/^(\d+)(?:-(\d+))?$/);
+  if (!match) throw new Error('올바른 형식이 아닙니다 (예: 2 또는 2-1)');
+
+  const major = parseInt(match[1], 10);
+  const explicitSub = match[2] !== undefined ? parseInt(match[2], 10) : null;
+
+  // 다른 화면들의 순위 키 수집
+  const others = await db
+    .select({ displayOrderKey: screens.displayOrderKey })
+    .from(screens)
+    .where(ne(screens.id, id));
+  const takenKeys = new Set(
+    others.map((r) => r.displayOrderKey).filter((k): k is string => k !== null),
+  );
+
+  let assigned: string;
+
+  if (explicitSub !== null) {
+    // "N-M" 명시적 입력 — 충돌 시 M+1, M+2 ...
+    let sub = explicitSub;
+    while (takenKeys.has(`${major}-${sub}`)) sub++;
+    assigned = `${major}-${sub}`;
+  } else {
+    // "N" 입력 — "N"이 비어있으면 그대로, 아니면 "N-1", "N-2" ...
+    if (!takenKeys.has(`${major}`)) {
+      assigned = `${major}`;
+    } else {
+      let sub = 1;
+      while (takenKeys.has(`${major}-${sub}`)) sub++;
+      assigned = `${major}-${sub}`;
+    }
+  }
+
   await db.update(screens)
-    .set({ displayOrder: order, updatedAt: new Date() })
+    .set({ displayOrderKey: assigned, updatedAt: new Date() })
     .where(eq(screens.id, id));
+
+  return { assigned };
 }
 
 /**
