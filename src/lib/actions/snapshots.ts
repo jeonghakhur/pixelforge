@@ -402,3 +402,50 @@ export async function detectDriftAction(): Promise<{
     };
   }
 }
+
+// ===========================
+// Plugin JSON 기반 Drift Detection
+// (Professional 요금제 — Variables REST API 사용 불가 시)
+// ===========================
+
+import { parsePluginJson } from '@/lib/tokens/plugin-json-parser';
+
+export async function detectDriftFromJsonAction(jsonString: string): Promise<{
+  error: string | null;
+  report: DriftReport | null;
+  format: string;
+}> {
+  const parseResult = parsePluginJson(jsonString);
+  if (parseResult.error) {
+    return { error: parseResult.error, report: null, format: parseResult.format };
+  }
+
+  const project = db.select({ id: projects.id })
+    .from(projects).limit(1).get();
+
+  if (!project) {
+    return {
+      error: '프로젝트를 찾을 수 없습니다. 먼저 토큰을 추출해주세요.',
+      report: null,
+      format: parseResult.format,
+    };
+  }
+
+  const dbTokenRows = db.select({
+    id: tokens.id,
+    name: tokens.name,
+    type: tokens.type,
+    value: tokens.value,
+    raw: tokens.raw,
+    source: tokens.source,
+    mode: tokens.mode,
+    collectionName: tokens.collectionName,
+    alias: tokens.alias,
+  })
+    .from(tokens)
+    .where(eq(tokens.projectId, project.id))
+    .all() as TokenRow[];
+
+  const report = computeDrift(parseResult.tokens, dbTokenRows);
+  return { error: null, report, format: parseResult.format };
+}

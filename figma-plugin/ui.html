@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--figma-color-text, #333);
+      background: var(--figma-color-bg, #fff);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 100vh;
+    }
+    h2 { font-size: 15px; font-weight: 600; }
+    p { color: var(--figma-color-text-secondary, #666); line-height: 1.5; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; padding: 10px 16px;
+      font-size: 13px; font-weight: 500;
+      border: none; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: #2563eb; color: #fff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--figma-color-bg-secondary, #f0f0f0);
+      color: var(--figma-color-text, #333);
+    }
+    .btn-secondary:hover {
+      background: var(--figma-color-bg-tertiary, #e0e0e0);
+    }
+    .result {
+      padding: 12px;
+      background: var(--figma-color-bg-secondary, #f5f5f5);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .success { color: #16a34a; }
+    .error { color: #dc2626; }
+    .stats { display: flex; gap: 8px; flex-wrap: wrap; }
+    .stat {
+      padding: 2px 8px;
+      background: var(--figma-color-bg-tertiary, #e5e5e5);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    textarea {
+      width: 100%; height: 120px; padding: 8px;
+      font-family: monospace; font-size: 11px;
+      border: 1px solid var(--figma-color-border, #ddd);
+      border-radius: 6px; resize: vertical;
+      background: var(--figma-color-bg, #fff);
+      color: var(--figma-color-text, #333);
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>PixelForge Token Exporter</h2>
+  <p>Figma Variables를 PixelForge 호환 JSON으로 내보냅니다.</p>
+
+  <button class="btn btn-primary" id="exportBtn" onclick="doExport()">
+    Export Variables
+  </button>
+
+  <div id="resultArea" class="hidden">
+    <div id="statusMsg" class="result"></div>
+    <div id="statsRow" class="stats hidden"></div>
+    <textarea id="jsonOutput" readonly></textarea>
+    <button class="btn btn-secondary" onclick="copyToClipboard()">
+      클립보드에 복사
+    </button>
+    <button class="btn btn-secondary" onclick="downloadFile()">
+      JSON 파일 다운로드
+    </button>
+  </div>
+
+  <script>
+    let exportData = null;
+
+    function doExport() {
+      document.getElementById('exportBtn').disabled = true;
+      document.getElementById('exportBtn').textContent = '내보내는 중...';
+      parent.postMessage({ pluginMessage: { type: 'export' } }, '*');
+    }
+
+    function copyToClipboard() {
+      const textarea = document.getElementById('jsonOutput');
+      textarea.select();
+      document.execCommand('copy');
+    }
+
+    function downloadFile() {
+      if (!exportData) return;
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pixelforge-tokens-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      document.getElementById('exportBtn').disabled = false;
+      document.getElementById('exportBtn').textContent = 'Export Variables';
+      document.getElementById('resultArea').classList.remove('hidden');
+
+      if (msg.type === 'export-result') {
+        exportData = msg.data;
+        const status = document.getElementById('statusMsg');
+        status.className = 'result success';
+        status.textContent = msg.tokenCount + '개 토큰을 내보냈습니다.';
+
+        // 타입별 통계
+        const counts = {};
+        msg.data.tokens.forEach(t => { counts[t.type] = (counts[t.type] || 0) + 1; });
+        const statsRow = document.getElementById('statsRow');
+        statsRow.className = 'stats';
+        statsRow.innerHTML = Object.entries(counts)
+          .map(([k, v]) => '<span class="stat">' + k + ': ' + v + '</span>')
+          .join('');
+
+        document.getElementById('jsonOutput').value = JSON.stringify(msg.data, null, 2);
+      }
+
+      if (msg.type === 'export-error') {
+        const status = document.getElementById('statusMsg');
+        status.className = 'result error';
+        status.textContent = msg.error;
+        document.getElementById('statsRow').className = 'stats hidden';
+        document.getElementById('jsonOutput').value = '';
+      }
+    };
+  </script>
+</body>
+</html>

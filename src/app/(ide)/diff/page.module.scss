@@ -85,7 +85,7 @@
 
 .driftError {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 3);
   background: var(--danger-subtle);
@@ -94,6 +94,102 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   margin-bottom: map-get($spacers, 3);
+  line-height: $line-height-base;
+}
+
+// ===========================
+// Mode toggle (API vs Plugin JSON)
+// ===========================
+.modeToggle {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 3);
+}
+
+.modeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+}
+
+.modeBtnActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.modeTag {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0 5px;
+  border-radius: $border-radius-sm;
+  line-height: 1.5;
+}
+
+.formatTag {
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Drop zone
+// ===========================
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 5) map-get($spacers, 3);
+  border: 2px dashed var(--border-color);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  margin-bottom: map-get($spacers, 3);
+  transition: $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--text-secondary);
+  }
+}
+
+.dropText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.dropHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 // ===========================

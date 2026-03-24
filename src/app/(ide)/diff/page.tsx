@@ -1,7 +1,7 @@
 // @page Diff — 스냅샷 버전 관리 + Drift Detection
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import EmptyState from '@/components/common/EmptyState';
 import Button from '@/components/common/Button';
@@ -13,6 +13,7 @@ import {
   rollbackToSnapshotAction,
   deleteSnapshotAction,
   detectDriftAction,
+  detectDriftFromJsonAction,
   getSnapshotDetailAction,
   type SnapshotListItem,
   type SnapshotDetail,
@@ -231,14 +232,18 @@ export default function DiffPage() {
   const [rolling, setRolling] = useState(false);
 
   // Drift detection
+  type DriftMode = 'api' | 'json';
+  const [driftMode, setDriftMode] = useState<DriftMode>('api');
   const [driftReport, setDriftReport] = useState<DriftReport | null>(null);
   const [driftLoading, setDriftLoading] = useState(false);
   const [driftError, setDriftError] = useState<string | null>(null);
   const [driftFilter, setDriftFilter] = useState<DriftStatus | 'all'>('all');
   const [driftTypeFilter, setDriftTypeFilter] = useState<string | null>(null);
+  const [jsonFormat, setJsonFormat] = useState<string | null>(null);
   const setGlobalDrift = useUIStore((s) => s.setDrift);
   const clearGlobalDrift = useUIStore((s) => s.clearDrift);
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync (re-extract)
   const [syncing, setSyncing] = useState(false);
@@ -287,30 +292,82 @@ export default function DiffPage() {
     }
   };
 
+  /** drift 결과를 Zustand에 반영하는 공통 함수 */
+  const applyDriftReport = (report: DriftReport | null) => {
+    setDriftReport(report);
+    if (report) {
+      setGlobalDrift(
+        {
+          newInFigma: report.newInFigma.length,
+          removedFromFigma: report.removedFromFigma.length,
+          valueChanged: report.valueChanged.length,
+          total: report.newInFigma.length + report.removedFromFigma.length + report.valueChanged.length,
+        },
+        report.checkedAt,
+      );
+    }
+  };
+
+  /** Variables REST API 모드 (Enterprise 요금제) */
   const handleDetectDrift = async () => {
     setDriftLoading(true);
     setDriftError(null);
     setDriftReport(null);
     setDriftTypeFilter(null);
+    setJsonFormat(null);
     const result = await detectDriftAction();
     if (result.error) {
-      setDriftError(result.error);
-    } else {
-      setDriftReport(result.report);
-      // Zustand에 drift 상태 반영 → ActivityBar, StatusBar, Sidebar, Home 페이지에 전파
-      if (result.report) {
-        setGlobalDrift(
-          {
-            newInFigma: result.report.newInFigma.length,
-            removedFromFigma: result.report.removedFromFigma.length,
-            valueChanged: result.report.valueChanged.length,
-            total: result.report.newInFigma.length + result.report.removedFromFigma.length + result.report.valueChanged.length,
-          },
-          result.report.checkedAt,
+      // Variables API 403 시 Plugin JSON 모드 안내
+      const is403 = result.error.includes('접근할 수 없습니다') || result.error.includes('403');
+      if (is403) {
+        setDriftError(
+          'Figma Variables REST API는 Enterprise 요금제에서만 사용 가능합니다. ' +
+          'Professional 요금제에서는 "Plugin JSON 업로드" 모드를 사용해주세요.',
         );
+        setDriftMode('json');
+      } else {
+        setDriftError(result.error);
       }
+    } else {
+      applyDriftReport(result.report);
     }
     setDriftLoading(false);
+  };
+
+  /** Plugin JSON 업로드 모드 (Professional 요금제) */
+  const handleJsonUpload = async (file: File) => {
+    setDriftLoading(true);
+    setDriftError(null);
+    setDriftReport(null);
+    setDriftTypeFilter(null);
+    setJsonFormat(null);
+
+    try {
+      const text = await file.text();
+      const result = await detectDriftFromJsonAction(text);
+      if (result.error) {
+        setDriftError(result.error);
+      } else {
+        applyDriftReport(result.report);
+        setJsonFormat(result.format);
+      }
+    } catch {
+      setDriftError('파일 읽기에 실패했습니다.');
+    }
+    setDriftLoading(false);
+    // 파일 input 초기화
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleJsonUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.json')) handleJsonUpload(file);
   };
 
   // Sync: Figma에서 재추출하여 drift 해소
@@ -452,19 +509,77 @@ export default function DiffPage() {
               {driftReport?.clean && (
                 <Badge variant="success">동기화 완료</Badge>
               )}
+              {jsonFormat && (
+                <span className={styles.formatTag}>
+                  {jsonFormat === 'pixelforge' ? 'PixelForge Plugin' : 'Tokens Studio'}
+                </span>
+              )}
             </h2>
-            <p className={styles.driftDesc}>
-              현재 Figma Variables와 DB 토큰을 실시간으로 비교하여 동기화 상태를 확인합니다.
-            </p>
-            <div className={styles.driftActions}>
-              <Button
-                variant="secondary"
-                leftIcon="solar:radar-2-linear"
-                loading={driftLoading}
-                onClick={handleDetectDrift}
+
+            {/* ── 모드 선택 ── */}
+            <div className={styles.modeToggle}>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${driftMode === 'api' ? styles.modeBtnActive : ''}`}
+                onClick={() => setDriftMode('api')}
               >
-                Drift 감지 실행
-              </Button>
+                <Icon icon="solar:server-linear" width={14} height={14} />
+                Variables API
+                <span className={styles.modeTag}>Enterprise</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${driftMode === 'json' ? styles.modeBtnActive : ''}`}
+                onClick={() => setDriftMode('json')}
+              >
+                <Icon icon="solar:upload-linear" width={14} height={14} />
+                Plugin JSON
+                <span className={styles.modeTag}>Professional+</span>
+              </button>
+            </div>
+
+            {driftMode === 'api' && (
+              <p className={styles.driftDesc}>
+                Figma Variables REST API로 실시간 비교합니다. Enterprise 요금제에서만 사용 가능합니다.
+              </p>
+            )}
+            {driftMode === 'json' && (
+              <p className={styles.driftDesc}>
+                Figma 플러그인에서 내보낸 JSON을 업로드하여 비교합니다. 모든 요금제에서 사용 가능합니다.
+              </p>
+            )}
+
+            <div className={styles.driftActions}>
+              {driftMode === 'api' && (
+                <Button
+                  variant="secondary"
+                  leftIcon="solar:radar-2-linear"
+                  loading={driftLoading}
+                  onClick={handleDetectDrift}
+                >
+                  Drift 감지 실행
+                </Button>
+              )}
+              {driftMode === 'json' && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileChange}
+                    className={styles.hiddenInput}
+                    aria-label="Plugin JSON 파일 선택"
+                  />
+                  <Button
+                    variant="secondary"
+                    leftIcon="solar:upload-linear"
+                    loading={driftLoading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    JSON 파일 업로드
+                  </Button>
+                </>
+              )}
               {driftReport && !driftReport.clean && (
                 <Button
                   variant="primary"
@@ -492,6 +607,23 @@ export default function DiffPage() {
                 </span>
               )}
             </div>
+
+            {/* ── Plugin JSON 드래그 앤 드롭 영역 ── */}
+            {driftMode === 'json' && !driftReport && !driftLoading && (
+              <div
+                className={styles.dropZone}
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                <Icon icon="solar:cloud-upload-linear" width={28} height={28} />
+                <span className={styles.dropText}>
+                  JSON 파일을 드래그하거나 위 버튼을 클릭하세요
+                </span>
+                <span className={styles.dropHint}>
+                  PixelForge Plugin, Tokens Studio 형식 지원
+                </span>
+              </div>
+            )}
 
             {driftError && (
               <div className={styles.driftError}>
