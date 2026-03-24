@@ -41,6 +41,8 @@ interface FigmaNode {
    * value: "S:abc123" 형식 styleId
    */
   styles?: Record<string, string>;
+  /** TEXT 노드의 실제 텍스트 내용 */
+  characters?: string;
   /** Auto Layout 방향 */
   layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
   /** 노드 경계 박스 — 원형 판별용 */

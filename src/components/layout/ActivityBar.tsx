@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { logout } from '@/lib/actions/auth';
 import styles from './ActivityBar.module.scss';
 
-export type Section = 'home' | 'tokens' | 'components' | 'pages' | 'screens' | 'diff' | 'settings' | 'admin';
+export type Section = 'home' | 'tokens' | 'components' | 'screens' | 'diff' | 'settings' | 'admin';
 
 interface ActivityBarProps {
   activeSection: Section;
@@ -20,7 +20,6 @@ const TOP_ITEMS: { section: Section; icon: string; label: string }[] = [
 const MID_ITEMS: { section: Section; icon: string; label: string }[] = [
   { section: 'tokens', icon: 'solar:palette-linear', label: 'Tokens' },
   { section: 'components', icon: 'solar:widget-2-linear', label: 'Components' },
-  { section: 'pages',   icon: 'solar:documents-linear',             label: 'Pages'   },
   { section: 'screens', icon: 'solar:layers-minimalistic-linear',   label: 'Screens' },
   { section: 'diff',    icon: 'solar:code-scan-linear',             label: 'Diff'    },
 ];
@@ -46,6 +45,8 @@ const THEME_CYCLE = ['light', 'dark', 'system'] as const;
 export default function ActivityBar({ activeSection, onSectionChange, userRole }: ActivityBarProps) {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
+  const driftSeverity = useUIStore((s) => s.driftSeverity);
+  const driftTotal = useUIStore((s) => s.driftCounts.total);
 
   const cycleTheme = () => {
     const currentIdx = THEME_CYCLE.indexOf(theme);
@@ -70,19 +71,27 @@ export default function ActivityBar({ activeSection, onSectionChange, userRole }
           </button>
         ))}
         <div className={styles.separator} />
-        {MID_ITEMS.map((item) => (
-          <button
-            key={item.section}
-            type="button"
-            className={`${styles.iconBtn} ${activeSection === item.section ? styles.active : ''}`}
-            onClick={() => onSectionChange(item.section)}
-            aria-label={item.label}
-            aria-current={activeSection === item.section ? 'page' : undefined}
-          >
-            <Icon icon={item.icon} width={20} height={20} />
-            <span className={styles.tooltip}>{item.label}</span>
-          </button>
-        ))}
+        {MID_ITEMS.map((item) => {
+          const showDriftBadge = item.section === 'diff' && driftSeverity !== 'none' && driftTotal > 0;
+          return (
+            <button
+              key={item.section}
+              type="button"
+              className={`${styles.iconBtn} ${activeSection === item.section ? styles.active : ''}`}
+              onClick={() => onSectionChange(item.section)}
+              aria-label={showDriftBadge ? `${item.label} (${driftTotal}건 drift)` : item.label}
+              aria-current={activeSection === item.section ? 'page' : undefined}
+            >
+              <Icon icon={item.icon} width={20} height={20} />
+              {showDriftBadge && (
+                <span className={`${styles.driftBadge} ${styles[`drift_${driftSeverity}`]}`}>
+                  {driftTotal > 99 ? '99+' : driftTotal}
+                </span>
+              )}
+              <span className={styles.tooltip}>{item.label}</span>
+            </button>
+          );
+        })}
       </div>
       <div className={styles.bottomGroup}>
         <button

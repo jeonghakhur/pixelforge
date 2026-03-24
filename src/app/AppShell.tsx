@@ -11,7 +11,6 @@ import { useUIStore } from '@/stores/useUIStore';
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
   if (pathname.startsWith('/components')) return 'components';
-  if (pathname.startsWith('/pages')) return 'pages';
   if (pathname.startsWith('/screens')) return 'screens';
   if (pathname.startsWith('/diff')) return 'diff';
   if (pathname.startsWith('/settings')) return 'settings';
@@ -67,9 +66,6 @@ export default function AppShell({ children, userRole }: { children: React.React
         break;
       case 'components':
         router.push('/components/new');
-        break;
-      case 'pages':
-        router.push('/pages');
         break;
       case 'screens':
         router.push('/screens');

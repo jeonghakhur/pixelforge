@@ -1,4 +1,4 @@
-// @page Home — Figma URL 입력 + 토큰 추출 + 히스토리
+// @page Home — Figma URL 입력 + 토큰 추출 + 대시보드
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -7,12 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
-import { analyzeFileAction, extractTokensAction, getRecentProjects, type RecentProject } from '@/lib/actions/project';
+import { analyzeFileAction, extractTokensAction } from '@/lib/actions/project';
+import { previewTokensAction, type TokenPreviewResult } from '@/lib/actions/preview';
+import type { FigmaPageInfo } from '@/lib/figma/api';
 import { getTokenSummary, deleteAllTokensAction, type TokenSummary } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import { useStageProgress } from '@/hooks/useStageProgress';
-import EmptyState from '@/components/common/EmptyState';
 import ProgressCard from '@/components/common/ProgressCard';
 import { TOKEN_TYPES, ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
 import styles from './page.module.scss';
@@ -44,29 +45,24 @@ const EXTRACT_STAGES = [
   { label: '저장 완료!', percent: 100, durationMs: 0 },
 ];
 
-const SHORTCUTS = [
-  { icon: 'solar:pallete-linear', label: '색상 토큰 보기', desc: '추출된 색상 팔레트를 확인합니다', section: 'tokens' as const, path: '/tokens/color' },
-  { icon: 'solar:text-field-linear', label: '타이포그래피 토큰', desc: '폰트 스타일과 타입 스케일을 확인합니다', section: 'tokens' as const, path: '/tokens/typography' },
-  { icon: 'solar:widget-2-linear', label: '컴포넌트 생성', desc: '토큰 기반 컴포넌트를 생성합니다', section: 'components' as const, path: '/components/new' },
-  { icon: 'solar:settings-linear', label: '설정', desc: 'Figma 토큰 및 앱 설정', section: 'settings' as const, path: '/settings' },
-];
+type SectionKey = 'tokens' | 'components' | 'settings';
+type CountKey = 'colors' | 'typography' | 'spacing' | 'radius' | null;
 
-const RESULT_ITEMS = [
-  { key: 'colors' as const, label: 'Colors', icon: 'solar:pallete-linear', path: '/tokens/color' },
-  { key: 'typography' as const, label: 'Typography', icon: 'solar:text-field-linear', path: '/tokens/typography' },
-  { key: 'spacing' as const, label: 'Spacing', icon: 'solar:ruler-linear', path: '/tokens/spacing' },
-  { key: 'radii' as const, label: 'Radii', icon: 'solar:crop-linear', path: '/tokens/radius' },
+const NAV_ITEMS: {
+  icon: string;
+  label: string;
+  path: string;
+  section: SectionKey;
+  countKey: CountKey;
+  resultKey?: keyof ExtractResult;
+}[] = [
+  { icon: 'solar:pallete-linear',    label: '색상',        path: '/tokens/color',      section: 'tokens',     countKey: 'colors',     resultKey: 'colors'     },
+  { icon: 'solar:text-field-linear', label: '타이포그래피', path: '/tokens/typography', section: 'tokens',     countKey: 'typography', resultKey: 'typography' },
+  { icon: 'solar:ruler-linear',      label: '간격',        path: '/tokens/spacing',    section: 'tokens',     countKey: 'spacing',    resultKey: 'spacing'    },
+  { icon: 'solar:crop-linear',       label: '반경',        path: '/tokens/radius',     section: 'tokens',     countKey: 'radius',     resultKey: 'radii'      },
+  { icon: 'solar:widget-2-linear',   label: '컴포넌트',    path: '/components/new',    section: 'components', countKey: null },
+  { icon: 'solar:settings-linear',   label: '설정',        path: '/settings',          section: 'settings',   countKey: null },
 ];
-
-function formatRelativeDate(date: Date): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return '오늘';
-  if (days === 1) return '어제';
-  if (days < 7) return `${days}일 전`;
-  const d = new Date(date);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -78,14 +74,15 @@ export default function HomePage() {
   const [step, setStep] = useState<'url' | 'select'>('url');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null } | null>(null);
+  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null; pages: FigmaPageInfo[] } | null>(null);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(ALL_TOKEN_TYPE_IDS);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
   const [fromCache, setFromCache] = useState(false);
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [preview, setPreview] = useState<TokenPreviewResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const refreshRef = useRef(false);
@@ -95,7 +92,6 @@ export default function HomePage() {
 
   useEffect(() => {
     getTokenSummary().then(setSummary);
-    getRecentProjects().then(setRecentProjects);
   }, []);
 
   const { register, handleSubmit, getValues, setValue, formState: { errors }, setFocus } = useForm<FigmaUrlForm>({
@@ -111,16 +107,20 @@ export default function HomePage() {
     analyzeProgress.start();
 
     const res = await analyzeFileAction(data.url, forceRefresh);
-
     analyzeProgress.complete();
     setAnalyzing(false);
 
-    if (res.error) {
-      setAnalyzeError(res.error);
-      return;
-    }
-    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId });
+    if (res.error) { setAnalyzeError(res.error); return; }
+    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId, pages: res.pages });
     setFromCache(res.fromCache);
+
+    // 캐시 파일로 토큰 미리보기 추출 (백그라운드)
+    setPreviewing(true);
+    previewTokensAction(data.url).then((p) => {
+      setPreview(p);
+      setPreviewing(false);
+    });
+
     setTimeout(() => setStep('select'), res.fromCache ? 0 : 400);
   };
 
@@ -129,18 +129,11 @@ export default function HomePage() {
     setExtracting(true);
     extractProgress.start();
 
-    // nodeIds 없이 전체 문서 추출 — 3-Layer 엔진이 섹션 자동 탐지
-    const res = await extractTokensAction(getValues('url'), {
-      types: selectedTypes,
-    });
-
+    const res = await extractTokensAction(getValues('url'), { types: selectedTypes });
     extractProgress.complete();
     setExtracting(false);
 
-    if (res.error) {
-      setExtractError(res.error);
-      return;
-    }
+    if (res.error) { setExtractError(res.error); return; }
     setResult({ colors: res.colors, typography: res.typography, spacing: res.spacing, radii: res.radii });
     invalidateTokens();
     setSelectedTypes(ALL_TOKEN_TYPE_IDS);
@@ -148,7 +141,6 @@ export default function HomePage() {
       setStep('url');
       router.refresh();
       getTokenSummary().then(setSummary);
-      getRecentProjects().then(setRecentProjects);
     }, 500);
   };
 
@@ -159,6 +151,7 @@ export default function HomePage() {
     setAnalyzeError(null);
     setExtractError(null);
     setSelectedTypes(ALL_TOKEN_TYPE_IDS);
+    setPreview(null);
     analyzeProgress.reset();
     extractProgress.reset();
   };
@@ -168,22 +161,6 @@ export default function HomePage() {
     handleSubmit(onAnalyze)();
   };
 
-  const handleLoadProject = (project: RecentProject) => {
-    if (!project.figmaUrl) return;
-    setValue('url', project.figmaUrl);
-
-    if (project.pagesCache) {
-      try {
-        setFileInfo({ fileName: project.name, nodeId: null });
-        setFromCache(true);
-        setStep('select');
-        return;
-      } catch { /* 캐시 파싱 실패 시 fresh 분석 */ }
-    }
-    handleSubmit(onAnalyze)();
-  };
-
-  // Pages 페이지의 "다시 추출" 버튼으로부터 URL 전달받은 경우 자동 로드
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!preloadUrl || step !== 'url' || analyzing) return;
@@ -202,15 +179,21 @@ export default function HomePage() {
     setResult(null);
     invalidateTokens();
     router.refresh();
-    getRecentProjects().then(setRecentProjects);
   };
 
-  const handleShortcut = (path: string, section: typeof SHORTCUTS[number]['section']) => {
+  const handleNav = (path: string, section: SectionKey) => {
     setSection(section);
     router.push(path);
   };
 
-  const hasExistingTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
+  const getCount = (item: typeof NAV_ITEMS[number]): number | null => {
+    if (!item.countKey) return null;
+    if (result && item.resultKey) return result[item.resultKey];
+    if (summary) return summary[item.countKey];
+    return null;
+  };
+
+  const hasAnyTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
 
   const toggleType = (id: string) => {
     setSelectedTypes((prev) =>
@@ -222,9 +205,11 @@ export default function HomePage() {
 
   return (
     <div className={styles.home}>
+
       {/* ── Step 1: URL 입력 ─────────────────── */}
       {step === 'url' && (
-        <div className={styles.section}>
+        <div className={styles.inputSection}>
+        <div className={styles.inputSectionInner}>
           <span className={styles.sectionLabel}>Figma URL</span>
           <form onSubmit={handleSubmit(onAnalyze, () => setFocus('url'))} className={styles.form} noValidate>
             <div className={styles.inputRow}>
@@ -254,22 +239,19 @@ export default function HomePage() {
               <p className={styles.error} role="alert">{analyzeError}</p>
             )}
           </form>
-
-          {/* 분석 진행 표시 */}
           {analyzeProgress.isRunning && (
             <div className={styles.progressWrap}>
-              <ProgressCard
-                percent={analyzeProgress.percent}
-                label={analyzeProgress.label}
-              />
+              <ProgressCard percent={analyzeProgress.percent} label={analyzeProgress.label} />
             </div>
           )}
+        </div>
         </div>
       )}
 
       {/* ── Step 2: 토큰 타입 선택 + 추출 ────── */}
       {step === 'select' && fileInfo && (
-        <div className={styles.section}>
+        <div className={styles.inputSection}>
+        <div className={styles.inputSectionInner}>
           <div className={styles.selectHeader}>
             <div className={styles.selectHeaderLeft}>
               <span className={styles.sectionLabel}>토큰 추출</span>
@@ -307,9 +289,112 @@ export default function HomePage() {
                   <span className={styles.fileName}>{fileInfo.fileName}</span>
                 </div>
 
+                {/* 페이지 목록 */}
+                {fileInfo.pages.length > 0 && (
+                  <div className={styles.pagesBlock}>
+                    <div className={styles.pagesHeader}>
+                      <Icon icon="solar:document-text-linear" width={11} height={11} />
+                      <span>Pages</span>
+                      <span className={styles.pageCount}>{fileInfo.pages.length}</span>
+                    </div>
+                    <ul className={styles.pageList} aria-label="Figma 페이지 목록">
+                      {fileInfo.pages.map((page) => (
+                        <li key={page.id} className={styles.pageItem}>
+                          <Icon icon="solar:layers-minimalistic-linear" width={11} height={11} className={styles.pageIcon} />
+                          <span className={styles.pageName}>{page.name}</span>
+                          {page.frames.length > 0 && (
+                            <span className={styles.frameCount}>{page.frames.length}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 토큰 미리보기 */}
+                <div className={styles.previewBlock}>
+                  <div className={styles.previewHeader}>
+                    <span className={styles.filterLabel}>발견된 토큰</span>
+                    {previewing && <span className={styles.previewLoading}>스캔 중...</span>}
+                  </div>
+                  {preview && (
+                    <div className={styles.previewRows}>
+                      {/* 색상 */}
+                      <div className={styles.previewRow}>
+                        <div className={styles.previewRowMeta}>
+                          <Icon icon="solar:pallete-linear" width={12} height={12} className={styles.previewRowIcon} />
+                          <span className={styles.previewRowLabel}>Colors</span>
+                          <span className={styles.previewRowCount}>{preview.colors.length}</span>
+                        </div>
+                        <div className={styles.swatchRow}>
+                          {preview.colors.slice(0, 10).map((c) => (
+                            <span
+                              key={`${c.category}/${c.name}`}
+                              className={styles.swatch}
+                              style={{ background: c.hex }}
+                              title={`${c.category}/${c.name} ${c.hex}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 타이포그래피 */}
+                      {preview.typography.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:text-field-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Typography</span>
+                            <span className={styles.previewRowCount}>{preview.typography.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.typography.filter((t) => t.category === 'size').map((t) => (
+                              <span key={t.name} className={styles.valueChip}>{t.value}px</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 간격 */}
+                      {preview.spacing.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:ruler-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Spacing</span>
+                            <span className={styles.previewRowCount}>{preview.spacing.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.spacing.slice(0, 8).map((s) => (
+                              <span key={s.name} className={styles.valueChip}>{s.value}</span>
+                            ))}
+                            {preview.spacing.length > 8 && (
+                              <span className={styles.valueChipMore}>+{preview.spacing.length - 8}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 반경 */}
+                      {preview.radius.length > 0 && (
+                        <div className={styles.previewRow}>
+                          <div className={styles.previewRowMeta}>
+                            <Icon icon="solar:crop-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Radius</span>
+                            <span className={styles.previewRowCount}>{preview.radius.length}</span>
+                          </div>
+                          <div className={styles.valueChips}>
+                            {preview.radius.map((r) => (
+                              <span key={r.name} className={styles.valueChip}>{r.value}px</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Token Types */}
                 <div className={styles.filterBlock}>
-                  <span className={styles.filterLabel}>Token Types</span>
+                  <span className={styles.filterLabel}>추출 타입 선택</span>
                   <div className={styles.typeChips}>
                     {TOKEN_TYPES.map(({ id, label, icon }) => (
                       <button
@@ -342,105 +427,60 @@ export default function HomePage() {
             </>
           )}
         </div>
-      )}
-
-      {/* ── 최근 파일 목록 ───────────────────── */}
-      {step === 'url' && recentProjects.length > 0 && (
-        <div className={styles.section}>
-          <span className={styles.sectionLabel}>최근 파일</span>
-          <div className={styles.recentList}>
-            {recentProjects.map((project) => {
-              const stats = [
-                project.colors > 0 && `색상 ${project.colors}`,
-                project.typography > 0 && `타이포 ${project.typography}`,
-                project.spacing > 0 && `간격 ${project.spacing}`,
-              ].filter(Boolean).join(' · ');
-              return (
-                <button
-                  key={project.id}
-                  type="button"
-                  className={styles.recentItem}
-                  onClick={() => handleLoadProject(project)}
-                  disabled={analyzing}
-                >
-                  <Icon icon="solar:figma-linear" width={14} height={14} className={styles.recentIcon} />
-                  <div className={styles.recentInfo}>
-                    <span className={styles.recentName}>{project.name}</span>
-                    <span className={styles.recentMeta}>{stats}{stats ? ' · ' : ''}{formatRelativeDate(project.updatedAt)}</span>
-                  </div>
-                  {project.pagesCache && (
-                    <Icon icon="solar:database-linear" width={11} height={11} className={styles.recentCacheIcon} />
-                  )}
-                  <Icon icon="solar:arrow-right-linear" width={12} height={12} className={styles.recentArrow} />
-                </button>
-              );
-            })}
-          </div>
         </div>
       )}
 
-      {/* ── 추출 결과 / 기존 토큰 요약 ──────── */}
-      {step === 'url' && (result || hasExistingTokens) && (
-        <div className={styles.section}>
-          <div className={styles.tokenSummaryHeader}>
-            <span className={styles.sectionLabel}>{result ? 'Extracted Tokens' : 'Current Tokens'}</span>
-            {!result && hasExistingTokens && (
+      {/* ── 대시보드 카드: Navigation + 인라인 토큰 카운트 ── */}
+      <div className={styles.dashboardCard}>
+        <div className={styles.dashboardInner}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardLabel}>Navigation</span>
+            {hasAnyTokens && (
               <button
                 type="button"
-                className={styles.deleteAllTokensBtn}
+                className={styles.deleteAllBtn}
                 onClick={() => setDeleteAllOpen(true)}
                 aria-label="모든 토큰 삭제"
               >
-                <Icon icon="solar:trash-bin-2-linear" width={12} height={12} />
+                <Icon icon="solar:trash-bin-2-linear" width={11} height={11} />
                 전체 삭제
               </button>
             )}
           </div>
-          <div className={styles.resultGrid}>
-            {RESULT_ITEMS.map((item) => {
-              const count = result
-                ? result[item.key]
-                : (summary ? summary[item.key === 'radii' ? 'radius' : item.key] : 0);
+
+          <nav className={styles.navList} aria-label="주요 메뉴">
+            {NAV_ITEMS.map((item, index) => {
+              const count = getCount(item);
+              const hasCount = count !== null;
+              const isTokenGroup = index < 4;
+              const showDivider = index === 4; // 토큰 그룹 / 기타 구분선
+
               return (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={styles.resultItem}
-                  onClick={() => { setSection('tokens'); router.push(item.path); }}
-                  aria-label={`${item.label} 토큰 상세 보기`}
-                >
-                  <div className={styles.resultIcon}><Icon icon={item.icon} width={14} height={14} /></div>
-                  <span className={styles.resultLabel}>{item.label}</span>
-                  <span className={styles.resultCount}>{count}</span>
-                </button>
+                <div key={item.path}>
+                  {showDivider && <div className={styles.navDivider} />}
+                  <button
+                    type="button"
+                    className={`${styles.navItem}${isTokenGroup ? ` ${styles.navItemToken}` : ''}`}
+                    onClick={() => handleNav(item.path, item.section)}
+                  >
+                    <div className={styles.navIcon}>
+                      <Icon icon={item.icon} width={14} height={14} />
+                    </div>
+                    <span className={styles.navLabel}>{item.label}</span>
+                    {hasCount && (
+                      <span className={`${styles.countBadge}${count > 0 ? ` ${styles.countBadgeActive}` : ''}`}>
+                        {count}
+                      </span>
+                    )}
+                    <Icon icon="solar:arrow-right-linear" width={11} height={11} className={styles.navArrow} />
+                  </button>
+                </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Quick Navigation ────────────────── */}
-      <div className={styles.welcome}>
-        <h2 className={styles.welcomeTitle}>Quick Navigation</h2>
-        <div className={styles.shortcutList}>
-          {SHORTCUTS.map((item) => (
-            <button key={item.path} type="button" className={styles.shortcutItem} onClick={() => handleShortcut(item.path, item.section)}>
-              <div className={styles.shortcutIcon}><Icon icon={item.icon} width={18} height={18} /></div>
-              <div className={styles.shortcutText}>
-                <span className={styles.shortcutLabel}>{item.label}</span>
-                <span className={styles.shortcutDesc}>{item.desc}</span>
-              </div>
-            </button>
-          ))}
+          </nav>
         </div>
       </div>
 
-      {/* ── Empty state ──────────────────────── */}
-      {step === 'url' && !hasExistingTokens && !result && !analyzeProgress.isRunning && (
-        <div className={styles.emptySection}>
-          <EmptyState icon="solar:figma-linear" title="아직 추출된 토큰이 없습니다" description="Figma URL을 입력하여 디자인 토큰을 추출해보세요." />
-        </div>
-      )}
       <ConfirmDialog
         isOpen={deleteAllOpen}
         onClose={() => setDeleteAllOpen(false)}

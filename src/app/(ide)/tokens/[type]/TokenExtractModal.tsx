@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Icon } from '@iconify/react';
 import Modal from '@/components/common/Modal';
 import Spinner from '@/components/common/Spinner';
-import { extractTokensByTypeAction } from '@/lib/actions/tokens';
-import { getProjectFigmaUrl } from '@/lib/actions/settings';
+import { extractTokensByTypeAction, type TokenDiff } from '@/lib/actions/tokens';
 import styles from './page.module.scss';
 
 const schema = z.object({
@@ -28,7 +27,7 @@ interface TokenExtractModalProps {
   typeLabel: string;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (count: number) => void;
+  onSuccess: (count: number, diff?: TokenDiff) => void;
 }
 
 export default function TokenExtractModal({
@@ -40,6 +39,8 @@ export default function TokenExtractModal({
 }: TokenExtractModalProps) {
   const [step, setStep] = useState<Step>('idle');
   const [resultCount, setResultCount] = useState(0);
+  const [isUnchanged, setIsUnchanged] = useState(false);
+  const [resultDiff, setResultDiff] = useState<TokenDiff | undefined>(undefined);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -47,14 +48,15 @@ export default function TokenExtractModal({
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  // 프로젝트에 저장된 Figma URL 자동 채우기
+  const figmaUrlValue = watch('figmaUrl');
+
   useEffect(() => {
     if (isOpen) {
-      getProjectFigmaUrl().then(({ url }) => {
-        if (url) reset({ figmaUrl: url });
-      });
+      reset({ figmaUrl: '' });
     }
   }, [isOpen, reset]);
 
@@ -63,12 +65,25 @@ export default function TokenExtractModal({
     reset();
     setStep('idle');
     setServerError(null);
+    setIsUnchanged(false);
+    setResultDiff(undefined);
     onClose();
   };
+
+  // 추출 완료(변경 있음) 시 1.5초 후 자동 닫기 — 페이지 갱신은 onSuccess에서 처리
+  useEffect(() => {
+    if (step === 'done' && !isUnchanged) {
+      const t = setTimeout(handleClose, 1500);
+      return () => clearTimeout(t);
+    }
+  // handleClose는 렌더마다 새 참조이나, step/isUnchanged 변화 시에만 타이머 필요
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, isUnchanged]);
 
   const onValid = async ({ figmaUrl }: FormData) => {
     setStep('extracting');
     setServerError(null);
+    setIsUnchanged(false);
 
     const result = await extractTokensByTypeAction(type, figmaUrl);
 
@@ -78,14 +93,21 @@ export default function TokenExtractModal({
       return;
     }
 
+    if (result.unchanged) {
+      // 변경 없음 — 스크린샷 대기 없이 바로 done
+      setResultCount(result.count);
+      setIsUnchanged(true);
+      setStep('done');
+      return;
+    }
+
     setStep('capturing');
-    // 스크린샷은 서버 액션 내부에서 이미 처리됨
-    // capturing 상태를 잠깐 표시 후 done으로 이동
     await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
     setResultCount(result.count);
+    setResultDiff(result.diff);
     setStep('done');
-    onSuccess(result.count);
+    onSuccess(result.count, result.diff);
   };
 
   const isBusy = step === 'extracting' || step === 'capturing';
@@ -126,8 +148,29 @@ export default function TokenExtractModal({
     >
       {step === 'done' ? (
         <div className={styles.extractDone}>
-          <Icon icon="solar:check-circle-linear" width={32} height={32} className={styles.extractDoneIcon} />
-          <p className={styles.extractDoneText}>{resultCount}개 토큰이 추출되었습니다.</p>
+          <Icon
+            icon={isUnchanged ? 'solar:check-read-linear' : 'solar:check-circle-linear'}
+            width={32} height={32}
+            className={styles.extractDoneIcon}
+          />
+          {isUnchanged ? (
+            <p className={styles.extractDoneText}>변경된 내용이 없습니다. ({resultCount}개 토큰)</p>
+          ) : (
+            <p className={styles.extractDoneText}>{resultCount}개 토큰이 추출되었습니다.</p>
+          )}
+          {!isUnchanged && resultDiff && (resultDiff.added > 0 || resultDiff.changed > 0 || resultDiff.removed > 0) && (
+            <div className={styles.diffChips}>
+              {resultDiff.added > 0 && (
+                <span className={styles.chipAdded}>+{resultDiff.added} 추가</span>
+              )}
+              {resultDiff.changed > 0 && (
+                <span className={styles.chipChanged}>~{resultDiff.changed} 변경</span>
+              )}
+              {resultDiff.removed > 0 && (
+                <span className={styles.chipRemoved}>-{resultDiff.removed} 삭제</span>
+              )}
+            </div>
+          )}
         </div>
       ) : step === 'error' ? (
         <div className={styles.extractError}>
@@ -159,16 +202,29 @@ export default function TokenExtractModal({
             <label htmlFor="figma-url" className={styles.formLabel}>
               Figma URL
             </label>
-            <input
-              id="figma-url"
-              type="url"
-              className={`${styles.formInput} ${errors.figmaUrl ? styles.formInputError : ''}`}
-              placeholder="https://www.figma.com/design/..."
-              disabled={isBusy}
-              aria-invalid={!!errors.figmaUrl}
-              aria-describedby={errors.figmaUrl ? 'url-error' : 'url-hint'}
-              {...register('figmaUrl')}
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                id="figma-url"
+                type="url"
+                className={`${styles.formInput} ${errors.figmaUrl ? styles.formInputError : ''}`}
+                placeholder="https://www.figma.com/design/..."
+                disabled={isBusy}
+                aria-invalid={!!errors.figmaUrl}
+                aria-describedby={errors.figmaUrl ? 'url-error' : 'url-hint'}
+                {...register('figmaUrl')}
+              />
+              {figmaUrlValue && !isBusy && (
+                <button
+                  type="button"
+                  className={styles.inputClearBtn}
+                  onClick={() => setValue('figmaUrl', '', { shouldValidate: false })}
+                  aria-label="입력값 지우기"
+                  tabIndex={-1}
+                >
+                  <Icon icon="solar:close-circle-bold" width={16} height={16} />
+                </button>
+              )}
+            </div>
             {errors.figmaUrl ? (
               <p id="url-error" className={styles.formError} role="alert">
                 {errors.figmaUrl.message}

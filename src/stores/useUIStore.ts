@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
-type Section = 'home' | 'tokens' | 'components' | 'pages' | 'screens' | 'diff' | 'settings' | 'admin';
+type Section = 'home' | 'tokens' | 'components' | 'screens' | 'diff' | 'settings' | 'admin';
 
 const STORAGE_KEY = 'pixelforge-theme';
 
@@ -10,7 +10,6 @@ const DEFAULT_TABS: Record<Section, string> = {
   home: '',
   tokens: 'color',
   components: 'list',
-  pages: '',
   screens: '',
   diff: '',
   settings: 'general',
@@ -31,6 +30,15 @@ function applyTheme(resolved: ResolvedTheme): void {
   document.documentElement.dataset.theme = resolved;
 }
 
+type DriftSeverity = 'none' | 'warning' | 'critical';
+
+interface DriftCounts {
+  newInFigma: number;
+  removedFromFigma: number;
+  valueChanged: number;
+  total: number;
+}
+
 interface UIState {
   theme: Theme;
   resolvedTheme: ResolvedTheme;
@@ -38,12 +46,18 @@ interface UIState {
   activeTab: string;
   tokenRevision: number;
   preloadUrl: string | null;
+  // Drift detection
+  driftSeverity: DriftSeverity;
+  driftCounts: DriftCounts;
+  lastDriftCheck: string | null;
   setTheme: (theme: Theme) => void;
   initTheme: () => void;
   setSection: (section: Section) => void;
   setTab: (tab: string) => void;
   invalidateTokens: () => void;
   setPreloadUrl: (url: string | null) => void;
+  setDrift: (counts: DriftCounts, checkedAt: string) => void;
+  clearDrift: () => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -53,6 +67,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   activeTab: '',
   tokenRevision: 0,
   preloadUrl: null,
+  driftSeverity: 'none',
+  driftCounts: { newInFigma: 0, removedFromFigma: 0, valueChanged: 0, total: 0 },
+  lastDriftCheck: null,
 
   setTheme: (theme) => {
     const resolved = resolveTheme(theme);
@@ -107,4 +124,16 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   invalidateTokens: () => set((s) => ({ tokenRevision: s.tokenRevision + 1 })),
   setPreloadUrl: (url) => set({ preloadUrl: url }),
+
+  setDrift: (counts, checkedAt) => {
+    const severity: DriftSeverity =
+      counts.total === 0 ? 'none' :
+      counts.removedFromFigma > 0 || counts.valueChanged > 3 ? 'critical' : 'warning';
+    set({ driftCounts: counts, driftSeverity: severity, lastDriftCheck: checkedAt });
+  },
+  clearDrift: () => set({
+    driftSeverity: 'none',
+    driftCounts: { newInFigma: 0, removedFromFigma: 0, valueChanged: 0, total: 0 },
+    lastDriftCheck: null,
+  }),
 }));

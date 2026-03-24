@@ -55,6 +55,30 @@
   opacity: 0.4;
 }
 
+// ===========================
+// Drift indicator
+// ===========================
+.driftIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+  padding: 0 6px;
+  border-radius: $border-radius-sm;
+  line-height: 1.6;
+}
+
+.drift_warning {
+  color: #fbbf24; // amber
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.drift_critical {
+  color: #fb7185; // rose
+  background: rgba(251, 113, 133, 0.15);
+}
+
 .themeBtn {
   @include flex-center;
   background: none;

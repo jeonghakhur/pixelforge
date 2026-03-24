@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
-import { deleteTokensByTypeAction, exportTokensCssAction } from '@/lib/actions/tokens';
+import { deleteTokensByTypeAction, type TokenDiff } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import { useUIStore } from '@/stores/useUIStore';
 import TokenExtractModal from './TokenExtractModal';
 import TokenVerifyModal from './TokenVerifyModal';
+import CssPreviewModal from './CssPreviewModal';
 import styles from './page.module.scss';
 
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
@@ -24,21 +25,32 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [cssPreviewOpen, setCssPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const typeConfig = TOKEN_TYPE_MAP[type];
 
-  const addToast = (message: string, variant: ToastItem['variant'] = 'danger') => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev, { id, message, variant }]);
+  const addToast = (item: Omit<ToastItem, 'id'>) => {
+    setToasts((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
   };
 
-  const handleExtractSuccess = (_count: number) => {
+  const handleExtractSuccess = (_count: number, diff?: TokenDiff) => {
     invalidateTokens();
     router.refresh();
+    if (diff && (diff.added > 0 || diff.changed > 0 || diff.removed > 0)) {
+      const parts = [
+        diff.added   > 0 && `+${diff.added} 추가`,
+        diff.changed > 0 && `~${diff.changed} 변경`,
+        diff.removed > 0 && `-${diff.removed} 삭제`,
+      ].filter(Boolean).join('  ');
+      addToast({
+        variant: 'success',
+        title: `${typeConfig?.label ?? type} 토큰 업데이트`,
+        message: parts,
+        duration: 4000,
+      });
+    }
   };
 
   const handleConfirm = async () => {
@@ -50,39 +62,9 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
     router.refresh();
   };
 
-  const handleExportCopy = async () => {
-    setExporting(true);
-    const { css, error } = await exportTokensCssAction();
-    setExporting(false);
-    if (error || !css) {
-      addToast(error ?? 'CSS 생성에 실패했습니다.');
-      return;
-    }
-    await navigator.clipboard.writeText(css);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleExportDownload = async () => {
-    setExporting(true);
-    const { css, error } = await exportTokensCssAction();
-    setExporting(false);
-    if (error || !css) {
-      addToast(error ?? 'CSS 생성에 실패했습니다.');
-      return;
-    }
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tokens.css';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <>
-      {/* 추가하기 버튼 — 토큰 유무와 관계없이 항상 표시 */}
+      {/* 추가하기 — 항상 표시, 주요 액션 */}
       <button
         type="button"
         className={styles.addBtn}
@@ -95,7 +77,18 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
 
       {count > 0 && (
         <>
-          {/* 검증 버튼 */}
+          {/* CSS 보기 */}
+          <button
+            type="button"
+            className={styles.cssViewBtn}
+            onClick={() => setCssPreviewOpen(true)}
+            aria-label="CSS 변수 코드 미리보기"
+          >
+            <Icon icon="solar:code-linear" width={14} height={14} />
+            CSS 보기
+          </button>
+
+          {/* 검증 — Bootstrap btn-success */}
           <button
             type="button"
             className={styles.verifyBtn}
@@ -106,31 +99,7 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
             검증
           </button>
 
-          <button
-            type="button"
-            className={styles.exportBtn}
-            onClick={handleExportCopy}
-            disabled={exporting}
-            aria-label="CSS 변수로 내보내기 (클립보드 복사)"
-          >
-            <Icon
-              icon={copied ? 'solar:check-circle-linear' : exporting ? 'solar:refresh-linear' : 'solar:export-linear'}
-              width={14} height={14}
-            />
-            {copied ? '복사됨' : exporting ? '생성 중...' : 'CSS 복사'}
-          </button>
-
-          <button
-            type="button"
-            className={styles.exportBtn}
-            onClick={handleExportDownload}
-            disabled={exporting}
-            aria-label="tokens.css 파일 다운로드"
-          >
-            <Icon icon="solar:download-minimalistic-linear" width={14} height={14} />
-            .css 저장
-          </button>
-
+          {/* 전체 삭제 */}
           <button
             type="button"
             className={styles.deleteAllBtn}
@@ -156,6 +125,11 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
         typeLabel={typeConfig?.label ?? type}
         isOpen={verifyOpen}
         onClose={() => setVerifyOpen(false)}
+      />
+
+      <CssPreviewModal
+        isOpen={cssPreviewOpen}
+        onClose={() => setCssPreviewOpen(false)}
       />
 
       <ConfirmDialog

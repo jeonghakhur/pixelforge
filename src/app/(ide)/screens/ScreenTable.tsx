@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import type { ScreenListItem, ScreenStatus } from '@/lib/actions/screens';
 import styles from './page.module.scss';
@@ -75,7 +76,14 @@ export default function ScreenTable({
                 >
                   {/* 화면명 */}
                   <td>
-                    <div className={styles.screenName}>{screen.name}</div>
+                    <Link
+                      href={screen.route}
+                      className={styles.screenNameLink}
+                      onClick={(e) => e.stopPropagation()}
+                      title="미리보기"
+                    >
+                      {screen.name}
+                    </Link>
                     {screen.description && (
                       <div className={styles.screenDesc}>{screen.description}</div>
                     )}
@@ -118,19 +126,14 @@ export default function ScreenTable({
                   <td>
                     <span className={styles.dateText}>{screen.updatedDate ?? '-'}</span>
                   </td>
-                  {/* Figma 썸네일 */}
+                  {/* Figma 등록 여부 */}
                   <td>
-                    {screen.figmaScreenshot ? (
-                      <img
-                        src={screen.figmaScreenshot}
-                        alt={`${screen.name} Figma`}
-                        className={styles.figmaThumb}
-                      />
-                    ) : (
-                      <div className={styles.figmaEmpty} title="미등록">
-                        <Icon icon="solar:image-linear" width={12} height={12} />
-                      </div>
-                    )}
+                    <div
+                      className={screen.figmaScreenshot ? styles.figmaRegistered : styles.figmaEmpty}
+                      title={screen.figmaScreenshot ? 'Figma 원본 등록됨' : '미등록'}
+                    >
+                      <Icon icon="solar:figma-linear" width={13} height={13} />
+                    </div>
                   </td>
                   {/* QA 점수 */}
                   <td>
@@ -167,7 +170,7 @@ export default function ScreenTable({
                           window.open(screen.route, '_blank', 'noopener,noreferrer');
                         }}
                       >
-                        <Icon icon="solar:arrow-up-right-linear" width={13} height={13} />
+                        <Icon icon="solar:link-linear" width={13} height={13} />
                       </button>
                       <button
                         type="button"

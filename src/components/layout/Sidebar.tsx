@@ -7,7 +7,6 @@ import { Icon } from '@iconify/react';
 import { type Section } from '@/components/layout/ActivityBar';
 import { getTokenSummary, type TokenSummary } from '@/lib/actions/tokens';
 import { getComponentsByProject } from '@/lib/actions/components';
-import { getProjectList, type ProjectListItem } from '@/lib/actions/project';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './Sidebar.module.scss';
 
@@ -53,7 +52,6 @@ export default function Sidebar({ activeSection }: SidebarProps) {
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
   const [generatedNames, setGeneratedNames] = useState<Set<string>>(new Set());
-  const [projectList, setProjectList] = useState<ProjectListItem[]>([]);
 
   useEffect(() => {
     if (activeSection === 'tokens') {
@@ -64,12 +62,9 @@ export default function Sidebar({ activeSection }: SidebarProps) {
         setGeneratedNames(new Set(rows.filter((r) => r.tsx !== null).map((r) => r.name)))
       );
     }
-    if (activeSection === 'pages') {
-      getProjectList().then(setProjectList);
-    }
   }, [activeSection, pathname, tokenRevision]);
 
-  if (!(['tokens', 'components', 'pages', 'screens'] as const).includes(activeSection as never)) {
+  if (!(['tokens', 'components'] as const).includes(activeSection as never)) {
     return null;
   }
 
@@ -117,34 +112,6 @@ export default function Sidebar({ activeSection }: SidebarProps) {
                 <Icon icon="solar:clock-circle-linear" width={13} height={13} />
                 {formatDate(summary.lastExtracted)}
               </span>
-            )}
-          </nav>
-        </>
-      )}
-
-      {/* ── Figma 파일 패널 ── */}
-      {activeSection === 'pages' && (
-        <>
-          <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>파일</span>
-          </div>
-          <nav className={styles.nav}>
-            {projectList.length === 0 ? (
-              <span className={styles.emptyHint}>분석된 파일 없음</span>
-            ) : (
-              projectList.map((project) => (
-                <Link
-                  key={project.id}
-                  href="/pages"
-                  className={`${styles.navItem} ${pathname === '/pages' ? styles.active : ''}`}
-                >
-                  <Icon icon="solar:figma-linear" width={15} height={15} className={styles.icon} />
-                  <span className={`${styles.navLabel} ${styles.projectNavLabel}`}>{project.name}</span>
-                  {project.totalTokens > 0 && (
-                    <span className={styles.badge}>{project.totalTokens}</span>
-                  )}
-                </Link>
-              ))
             )}
           </nav>
         </>

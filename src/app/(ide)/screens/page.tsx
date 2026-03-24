@@ -1,10 +1,11 @@
 // @page Screens — 화면 대시보드
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import {
   getScreenListAction,
+  refreshScreenDatesAction,
   syncScreensAction,
   updateScreenStatusAction,
   updateScreenVisibilityAction,
@@ -36,6 +37,7 @@ export default function ScreensPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -48,6 +50,10 @@ export default function ScreensPage() {
         setIsAdmin(user.role === 'admin');
         setCurrentUserEmail(user.email);
       }
+      // git 날짜 백그라운드 갱신 → 완료 후 목록 재조회
+      refreshScreenDatesAction().then(() =>
+        getScreenListAction().then(setScreens)
+      );
     }).finally(() => setLoading(false));
   }, []);
 
@@ -82,12 +88,28 @@ export default function ScreensPage() {
     setSelectedScreen(updated);
   };
 
+  const handleRefresh = useCallback(async () => {
+    const updated = await getScreenListAction();
+    setScreens(updated);
+  }, []);
+
   // 비관리자는 노출 화면만, 관리자는 showHidden 토글로 전체 가능
   const visibleScreens = (isAdmin && showHidden) ? screens : screens.filter((s) => s.visible);
 
-  const filtered = statusFilter === 'all'
+  const statusFiltered = statusFilter === 'all'
     ? visibleScreens
     : visibleScreens.filter((s) => s.status === statusFilter);
+
+  const filtered = searchQuery.trim()
+    ? statusFiltered.filter((s) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(q) ||
+          s.route.toLowerCase().includes(q) ||
+          s.authors.some((a) => a.toLowerCase().includes(q))
+        );
+      })
+    : statusFiltered;
 
   const stats = {
     total:   screens.filter((s) => s.visible).length,
@@ -202,6 +224,27 @@ export default function ScreensPage() {
               </button>
             ))}
           </div>
+          <div className={styles.searchWrap}>
+            <Icon icon="solar:magnifer-linear" width={14} height={14} className={styles.searchIcon} />
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="화면명, 라우트, 담당자 검색"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="화면 검색"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className={styles.searchClear}
+                onClick={() => setSearchQuery('')}
+                aria-label="검색어 지우기"
+              >
+                <Icon icon="solar:close-circle-linear" width={13} height={13} />
+              </button>
+            )}
+          </div>
         </div>
         {isAdmin && (
           <div className={styles.filterRight}>
@@ -255,6 +298,7 @@ export default function ScreensPage() {
         onClose={() => setSelectedScreen(null)}
         onStatusChange={handleStatusChange}
         onUpdate={handleScreenUpdate}
+        onRefresh={handleRefresh}
       />
     </div>
   );

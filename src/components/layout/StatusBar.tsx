@@ -17,6 +17,8 @@ const THEME_CYCLE = ['light', 'dark', 'system'] as const;
 export default function StatusBar() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
+  const driftSeverity = useUIStore((s) => s.driftSeverity);
+  const driftTotal = useUIStore((s) => s.driftCounts.total);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
 
@@ -63,6 +65,15 @@ export default function StatusBar() {
             <span className={styles.separator}>&middot;</span>
             <span className={styles.stat}>
               반경 {summary.radius}개
+            </span>
+          </>
+        )}
+        {driftSeverity !== 'none' && driftTotal > 0 && (
+          <>
+            <span className={styles.separator}>&middot;</span>
+            <span className={`${styles.driftIndicator} ${styles[`drift_${driftSeverity}`]}`}>
+              <Icon icon="solar:radar-2-linear" width={12} height={12} />
+              Drift {driftTotal}
             </span>
           </>
         )}

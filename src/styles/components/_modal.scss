@@ -34,9 +34,18 @@
   }
 }
 
-.modal-sm { max-width: 360px; }
-.modal-lg { max-width: 640px; }
-.modal-xl { max-width: 800px; }
+.modal-sm   { max-width: 360px; }
+.modal-lg   { max-width: 640px; }
+.modal-xl   { max-width: 800px; }
+.modal-wide {
+  max-width: min(1200px, calc(100vw - #{map-get($spacers, 5)} * 2));
+  overflow: hidden;
+
+  .modal-header {
+    padding: map-get($spacers, 2) map-get($spacers, 4);
+    border-bottom: none;
+  }
+}
 
 .modal-header {
   @include flex-between;

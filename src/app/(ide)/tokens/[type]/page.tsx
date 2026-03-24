@@ -8,6 +8,7 @@ import RadiusList from './RadiusList';
 import GenericTokenList from './GenericTokenList';
 import TokenPageActions from './TokenPageActions';
 import CompareActions from './CompareActions';
+import CopyUrlInline from './CopyUrlInline';
 import styles from './page.module.scss';
 
 interface TokenPageProps {
@@ -39,26 +40,22 @@ export default async function TokenPage({ params }: TokenPageProps) {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <div className={styles.headerRow}>
-          <div className={styles.headerText}>
-            <span className={styles.eyebrow}>Design Tokens</span>
-            <h1 className={styles.title}>{typeConfig.label} 토큰</h1>
-            <p className={styles.description}>{typeConfig.description}</p>
-            {tokenRows.length > 0 && (
-              <p className={styles.count}>{tokenRows.length}개 추출됨</p>
-            )}
-            {tokenSource && (
-              <p className={styles.sourceMeta}>
-                마지막 추출: {formatDate(tokenSource.lastExtractedAt)}
-                {' · '}
-                <span className={styles.sourceUrl} title={tokenSource.figmaUrl}>
-                  {tokenSource.figmaUrl.length > 60
-                    ? `${tokenSource.figmaUrl.slice(0, 60)}…`
-                    : tokenSource.figmaUrl}
-                </span>
-              </p>
-            )}
-          </div>
+        <div className={styles.headerText}>
+          <span className={styles.eyebrow}>Design Tokens</span>
+          <h1 className={styles.title}>{typeConfig.label} 토큰</h1>
+          <p className={styles.description}>{typeConfig.description}</p>
+          {tokenRows.length > 0 && (
+            <p className={styles.count}>{tokenRows.length}개 추출됨</p>
+          )}
+          {tokenSource && (
+            <p className={styles.sourceMeta}>
+              마지막 추출: {formatDate(tokenSource.lastExtractedAt)}
+              {' · '}
+              <CopyUrlInline url={tokenSource.figmaUrl} />
+            </p>
+          )}
+        </div>
+        <div className={styles.headerActions}>
           <TokenPageActions type={type} count={tokenRows.length} />
         </div>
         {extractionSource && (

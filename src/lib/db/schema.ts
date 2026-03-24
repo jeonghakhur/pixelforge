@@ -93,6 +93,9 @@ export const screens = sqliteTable('screens', {
   reviewedBy: text('reviewed_by'),   // 마지막으로 상태를 변경한 사용자 이메일
   reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
 
+  // 노출 순위 키 (예: "1", "2", "2-1", "2-2" — null = 미지정)
+  displayOrderKey: text('display_order_key'),
+
   // Playwright 검수
   playwrightStatus: text('playwright_status', {
     enum: ['pending', 'pass', 'fail', 'skip'],
@@ -113,8 +116,31 @@ export const tokenSources = sqliteTable('token_sources', {
   figmaVersion: text('figma_version'),
   lastExtractedAt: integer('last_extracted_at', { mode: 'timestamp' }),
   tokenCount: integer('token_count').notNull().default(0),
+  /** 추출된 토큰 데이터의 SHA-256 해시 — 변경 여부 감지용 */
+  contentHash: text('content_hash'),
   uiScreenshot: text('ui_screenshot'),
   figmaScreenshot: text('figma_screenshot'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (t) => [unique().on(t.projectId, t.type)]);
+
+// ===========================
+// 토큰 스냅샷 (버전 관리)
+// ===========================
+export const tokenSnapshots = sqliteTable('token_snapshots', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  /** 자동 증가 버전 번호 */
+  version: integer('version').notNull(),
+  /** 추출 방식 */
+  source: text('source', { enum: ['variables', 'styles-api', 'section-scan', 'node-scan'] }).notNull(),
+  /** Figma 파일 버전 (변경 추적용) */
+  figmaVersion: text('figma_version'),
+  /** 타입별 토큰 수 JSON: { color: 106, typography: 55, ... } */
+  tokenCounts: text('token_counts').notNull(),
+  /** 전체 토큰 데이터 JSON: Array<{ type, name, value, raw, mode, collectionName, alias }> */
+  tokensData: text('tokens_data').notNull(),
+  /** 이전 스냅샷 대비 변경 요약 JSON: { added: [...], removed: [...], changed: [...] } */
+  diffSummary: text('diff_summary'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
