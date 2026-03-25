@@ -10,6 +10,7 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
 import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
+import TokenTypeSettings from './TokenTypeSettings';
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
 import { useUIStore } from '@/stores/useUIStore';
@@ -37,7 +38,7 @@ const figmaUrlSchema = z.object({
 
 type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
-type SettingsTab = 'general' | 'account' | 'team' | 'figma';
+type SettingsTab = 'general' | 'account' | 'team' | 'figma' | 'tokens';
 
 interface UserRow {
   id: string;
@@ -57,7 +58,7 @@ export default function SettingsPage() {
   const [figmaUrlSaved, setFigmaUrlSaved] = useState(false);
   const [figmaUrlError, setFigmaUrlError] = useState<string | null>(null);
 
-  const validTab = ['general', 'account', 'team', 'figma'].includes(activeTab) ? activeTab : 'general';
+  const validTab = ['general', 'account', 'team', 'figma', 'tokens'].includes(activeTab) ? activeTab : 'general';
   const [users, setUsers] = useState<UserRow[]>([]);
   const [addUserError, setAddUserError] = useState<string | null>(null);
   const [changePwSuccess, setChangePwSuccess] = useState(false);
@@ -564,6 +565,14 @@ export default function SettingsPage() {
             </div>
           </Card>
           {/* /Figma API 토큰 */}
+        </div>
+      )}
+
+      {validTab === 'tokens' && (
+        <div className={styles.tabContent}>
+          <Card className={styles.settingsCard}>
+            <TokenTypeSettings />
+          </Card>
         </div>
       )}
     </div>

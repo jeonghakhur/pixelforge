@@ -28,6 +28,7 @@ interface TokenExtractModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (count: number, diff?: TokenDiff) => void;
+  initialUrl?: string;
 }
 
 export default function TokenExtractModal({
@@ -36,6 +37,7 @@ export default function TokenExtractModal({
   isOpen,
   onClose,
   onSuccess,
+  initialUrl,
 }: TokenExtractModalProps) {
   const [step, setStep] = useState<Step>('idle');
   const [resultCount, setResultCount] = useState(0);
@@ -56,9 +58,9 @@ export default function TokenExtractModal({
 
   useEffect(() => {
     if (isOpen) {
-      reset({ figmaUrl: '' });
+      reset({ figmaUrl: initialUrl ?? '' });
     }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, initialUrl]);
 
   const handleClose = () => {
     if (step === 'extracting' || step === 'capturing') return;

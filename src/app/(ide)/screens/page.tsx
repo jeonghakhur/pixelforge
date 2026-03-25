@@ -9,6 +9,7 @@ import {
   syncScreensAction,
   updateScreenStatusAction,
   updateScreenVisibilityAction,
+  deleteScreenAction,
   getCurrentUserAction,
   type ScreenListItem,
   type ScreenStatus,
@@ -17,6 +18,7 @@ import {
 import ScreenTable from './ScreenTable';
 import ScreenDrawer from './ScreenDrawer';
 import AddScreenModal from './AddScreenModal';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import styles from './page.module.scss';
 
 const STATUS_FILTERS: { value: ScreenStatus | 'all'; label: string }[] = [
@@ -38,6 +40,8 @@ export default function ScreensPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -92,6 +96,17 @@ export default function ScreensPage() {
     const updated = await getScreenListAction();
     setScreens(updated);
   }, []);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    const res = await deleteScreenAction(deleteTargetId);
+    setDeleting(false);
+    if (res.error) { setDeleteTargetId(null); return; }
+    setScreens((prev) => prev.filter((s) => s.id !== deleteTargetId));
+    setSelectedScreen((prev) => (prev?.id === deleteTargetId ? null : prev));
+    setDeleteTargetId(null);
+  };
 
   // 비관리자는 노출 화면만, 관리자는 showHidden 토글로 전체 가능
   const visibleScreens = (isAdmin && showHidden) ? screens : screens.filter((s) => s.visible);
@@ -281,6 +296,7 @@ export default function ScreensPage() {
           onRowClick={setSelectedScreen}
           onStatusChange={handleStatusChange}
           onVisibilityChange={handleVisibilityChange}
+          onDelete={setDeleteTargetId}
           isAdmin={isAdmin}
         />
       )}
@@ -290,6 +306,17 @@ export default function ScreensPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onCreated={(screen) => setScreens((prev) => [...prev, screen])}
+      />
+
+      {/* 화면 삭제 확인 */}
+      <ConfirmDialog
+        isOpen={deleteTargetId !== null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleDeleteConfirm}
+        title="화면 삭제"
+        message="이 화면을 삭제합니다. DB에서 제거되며 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        loading={deleting}
       />
 
       {/* 상세 Drawer */}

@@ -23,7 +23,10 @@ function figmaColorToRgba(c: FigmaColor) {
  * - 토큰명: Variable Information > 첫 번째 TEXT (characters)
  * - 색상값: Variable Layer > Swatch > fills[SOLID]
  */
+const GENERIC_SWATCH = /^(swatch|color chip|color sample|dot|spot|square)$/i;
+
 export function extractColorNodes(node: FigmaNode, result: ColorToken[]): void {
+  // Pattern 1: Variable/{category}/... showcase structure
   const match = node.name.match(/^Variable\/([^/]+)\/.+$/);
   if (match) {
     const category = match[1];
@@ -46,6 +49,25 @@ export function extractColorNodes(node: FigmaNode, result: ColorToken[]): void {
       });
     }
     return;
+  }
+
+  // Pattern 2: Frame containing a generic "Swatch" child (community UI kit pattern)
+  // e.g. Frame "Yellow bright" > Rectangle "Swatch" (direct fill)
+  if (node.children) {
+    const swatch = node.children.find(
+      (c) => GENERIC_SWATCH.test(c.name) && c.fills?.some((f) => f.type === 'SOLID' && f.color),
+    );
+    if (swatch) {
+      const fill = swatch.fills?.find((f) => f.type === 'SOLID' && f.color);
+      if (fill?.color) {
+        result.push({
+          name: node.name,
+          hex: figmaColorToHex(fill.color),
+          rgba: figmaColorToRgba(fill.color),
+        });
+      }
+      return;
+    }
   }
 
   for (const child of node.children ?? []) {

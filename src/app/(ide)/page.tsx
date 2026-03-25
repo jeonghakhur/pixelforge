@@ -1,22 +1,68 @@
 // @page Home — Figma URL 입력 + 토큰 추출 + 대시보드
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
-import { analyzeFileAction, extractTokensAction } from '@/lib/actions/project';
+import { analyzeFileAction } from '@/lib/actions/project';
+import TokenExtractModal from './tokens/[type]/TokenExtractModal';
 import { previewTokensAction, type TokenPreviewResult } from '@/lib/actions/preview';
 import type { FigmaPageInfo } from '@/lib/figma/api';
 import { getTokenSummary, deleteAllTokensAction, type TokenSummary } from '@/lib/actions/tokens';
+
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import { useStageProgress } from '@/hooks/useStageProgress';
 import ProgressCard from '@/components/common/ProgressCard';
-import { TOKEN_TYPES, ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
+import { TOKEN_TYPES } from '@/lib/tokens/token-types';
 import styles from './page.module.scss';
+
+// ===========================
+// URL 히스토리 (localStorage)
+// ===========================
+const HISTORY_KEY = 'pixelforge_url_history';
+const HISTORY_MAX = 5;
+
+interface UrlHistoryItem {
+  url: string;
+  analyzedAt: string; // ISO string
+}
+
+function loadUrlHistory(): UrlHistoryItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+function pushUrlHistory(url: string): UrlHistoryItem[] {
+  const existing = loadUrlHistory().filter((h) => h.url !== url);
+  const updated = [{ url, analyzedAt: new Date().toISOString() }, ...existing].slice(0, HISTORY_MAX);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+function deleteUrlHistory(url: string): UrlHistoryItem[] {
+  const updated = loadUrlHistory().filter((h) => h.url !== url);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+function formatHistoryDate(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const hhmm = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (dDay.getTime() === today.getTime()) return `오늘 ${hhmm}`;
+  if (dDay.getTime() === yesterday.getTime()) return `어제 ${hhmm}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${hhmm}`;
+}
 
 const figmaUrlSchema = z.object({
   url: z
@@ -27,7 +73,6 @@ const figmaUrlSchema = z.object({
 });
 type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
-interface ExtractResult { colors: number; typography: number; spacing: number; radii: number; }
 
 const ANALYZE_STAGES = [
   { label: 'Figma 서버에 연결 중...', percent: 20, durationMs: 700 },
@@ -46,22 +91,19 @@ const EXTRACT_STAGES = [
 ];
 
 type SectionKey = 'tokens' | 'components' | 'settings';
-type CountKey = 'colors' | 'typography' | 'spacing' | 'radius' | null;
 
-const NAV_ITEMS: {
-  icon: string;
-  label: string;
-  path: string;
-  section: SectionKey;
-  countKey: CountKey;
-  resultKey?: keyof ExtractResult;
-}[] = [
-  { icon: 'solar:pallete-linear',    label: '색상',        path: '/tokens/color',      section: 'tokens',     countKey: 'colors',     resultKey: 'colors'     },
-  { icon: 'solar:text-field-linear', label: '타이포그래피', path: '/tokens/typography', section: 'tokens',     countKey: 'typography', resultKey: 'typography' },
-  { icon: 'solar:ruler-linear',      label: '간격',        path: '/tokens/spacing',    section: 'tokens',     countKey: 'spacing',    resultKey: 'spacing'    },
-  { icon: 'solar:crop-linear',       label: '반경',        path: '/tokens/radius',     section: 'tokens',     countKey: 'radius',     resultKey: 'radii'      },
-  { icon: 'solar:widget-2-linear',   label: '컴포넌트',    path: '/components/new',    section: 'components', countKey: null },
-  { icon: 'solar:settings-linear',   label: '설정',        path: '/settings',          section: 'settings',   countKey: null },
+const TOKEN_NAV_ITEMS = TOKEN_TYPES.map((t) => ({
+  icon: t.icon,
+  label: t.label,
+  path: `/tokens/${t.id}`,
+  section: 'tokens' as SectionKey,
+  typeId: t.id,
+}));
+
+const NAV_ITEMS = [
+  ...TOKEN_NAV_ITEMS,
+  { icon: 'solar:widget-2-linear', label: 'Components', path: '/components/new', section: 'components' as SectionKey, typeId: null },
+  { icon: 'solar:settings-linear', label: 'Settings',   path: '/settings',       section: 'settings'   as SectionKey, typeId: null },
 ];
 
 export default function HomePage() {
@@ -74,24 +116,24 @@ export default function HomePage() {
   const [step, setStep] = useState<'url' | 'select'>('url');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null; pages: FigmaPageInfo[] } | null>(null);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(ALL_TOKEN_TYPE_IDS);
-  const [extracting, setExtracting] = useState(false);
-  const [extractError, setExtractError] = useState<string | null>(null);
-  const [result, setResult] = useState<ExtractResult | null>(null);
+  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null; pages: FigmaPageInfo[]; typeNodeIds: Record<string, string> } | null>(null);
+  const [extractModalType, setExtractModalType] = useState<string | null>(null);
+  const [extractDone, setExtractDone] = useState<{ typeId: string; count: number } | null>(null);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [preview, setPreview] = useState<TokenPreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [urlHistory, setUrlHistory] = useState<UrlHistoryItem[]>([]);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const refreshRef = useRef(false);
 
   const analyzeProgress = useStageProgress(ANALYZE_STAGES);
-  const extractProgress = useStageProgress(EXTRACT_STAGES);
 
   useEffect(() => {
     getTokenSummary().then(setSummary);
+    setUrlHistory(loadUrlHistory());
   }, []);
 
   const { register, handleSubmit, getValues, setValue, formState: { errors }, setFocus } = useForm<FigmaUrlForm>({
@@ -111,8 +153,9 @@ export default function HomePage() {
     setAnalyzing(false);
 
     if (res.error) { setAnalyzeError(res.error); return; }
-    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId, pages: res.pages });
+    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId, pages: res.pages, typeNodeIds: res.typeNodeIds });
     setFromCache(res.fromCache);
+    setUrlHistory(pushUrlHistory(data.url));
 
     // 캐시 파일로 토큰 미리보기 추출 (백그라운드)
     setPreviewing(true);
@@ -124,24 +167,29 @@ export default function HomePage() {
     setTimeout(() => setStep('select'), res.fromCache ? 0 : 400);
   };
 
-  const onExtract = async () => {
-    setExtractError(null);
-    setExtracting(true);
-    extractProgress.start();
+  const getTypeInitialUrl = useCallback((typeId: string): string => {
+    const base = getValues('url');
+    const nodeId = fileInfo?.typeNodeIds[typeId];
+    if (!nodeId) return base;
+    const urlNodeId = nodeId.replace(/:/g, '-');
+    try {
+      const url = new URL(base);
+      url.searchParams.set('node-id', urlNodeId);
+      return url.toString();
+    } catch {
+      return base;
+    }
+  }, [fileInfo, getValues]);
 
-    const res = await extractTokensAction(getValues('url'), { types: selectedTypes });
-    extractProgress.complete();
-    setExtracting(false);
+  const onExtractType = (typeId: string) => {
+    setExtractDone(null);
+    setExtractModalType(typeId);
+  };
 
-    if (res.error) { setExtractError(res.error); return; }
-    setResult({ colors: res.colors, typography: res.typography, spacing: res.spacing, radii: res.radii });
+  const handleExtractSuccess = (typeId: string, count: number) => {
+    setExtractDone({ typeId, count });
     invalidateTokens();
-    setSelectedTypes(ALL_TOKEN_TYPE_IDS);
-    setTimeout(() => {
-      setStep('url');
-      router.refresh();
-      getTokenSummary().then(setSummary);
-    }, 500);
+    getTokenSummary().then(setSummary);
   };
 
   const handleBack = () => {
@@ -149,11 +197,10 @@ export default function HomePage() {
     setFileInfo(null);
     setFromCache(false);
     setAnalyzeError(null);
-    setExtractError(null);
-    setSelectedTypes(ALL_TOKEN_TYPE_IDS);
+    setExtractDone(null);
+    setExtractModalType(null);
     setPreview(null);
     analyzeProgress.reset();
-    extractProgress.reset();
   };
 
   const handleRefresh = () => {
@@ -170,13 +217,29 @@ export default function HomePage() {
     setTimeout(() => handleSubmit(onAnalyze)(), 50);
   }, [preloadUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleHistoryClick = useCallback((url: string) => {
+    setValue('url', url);
+    setFocus('url');
+  }, [setValue, setFocus]);
+
+  const handleHistoryCopy = useCallback((url: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedUrl(url);
+      setTimeout(() => setCopiedUrl(null), 1800);
+    });
+  }, []);
+
+  const handleHistoryDelete = useCallback((url: string) => {
+    setUrlHistory(deleteUrlHistory(url));
+  }, []);
+
   const handleDeleteAll = async () => {
     setDeletingAll(true);
     await deleteAllTokensAction();
     setDeletingAll(false);
     setDeleteAllOpen(false);
     setSummary(null);
-    setResult(null);
+    setExtractDone(null);
     invalidateTokens();
     router.refresh();
   };
@@ -187,13 +250,11 @@ export default function HomePage() {
   };
 
   const getCount = (item: typeof NAV_ITEMS[number]): number | null => {
-    if (!item.countKey) return null;
-    if (result && item.resultKey) return result[item.resultKey];
-    if (summary) return summary[item.countKey];
-    return null;
+    if (!item.typeId || !summary) return null;
+    return summary.counts[item.typeId] ?? 0;
   };
 
-  const hasAnyTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
+  const hasAnyTokens = summary && Object.values(summary.counts).reduce((a, b) => a + b, 0) > 0;
 
   const getTypePreviewCount = (typeId: string): number | null => {
     if (!preview) return null;
@@ -204,14 +265,6 @@ export default function HomePage() {
       radius:     preview.radius.length,
     };
     return map[typeId] ?? null;
-  };
-
-  const toggleType = (id: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(id)
-        ? prev.length === 1 ? ALL_TOKEN_TYPE_IDS : prev.filter((t) => t !== id)
-        : [...prev, id],
-    );
   };
 
   return (
@@ -255,6 +308,53 @@ export default function HomePage() {
               <ProgressCard percent={analyzeProgress.percent} label={analyzeProgress.label} />
             </div>
           )}
+
+          {/* 최근 검색 히스토리 */}
+          {!analyzeProgress.isRunning && urlHistory.length > 0 && (
+            <div className={styles.historyBlock}>
+              <span className={styles.historyLabel}>최근 검색</span>
+              <ul className={styles.historyList} aria-label="최근 검색 목록">
+                {urlHistory.map((item) => (
+                  <li key={item.url} className={styles.historyItem}>
+                    <button
+                      type="button"
+                      className={styles.historyUrlBtn}
+                      onClick={() => handleHistoryClick(item.url)}
+                      title={item.url}
+                    >
+                      <Icon icon="solar:history-linear" width={12} height={12} className={styles.historyIcon} />
+                      <span className={styles.historyUrl}>{item.url}</span>
+                      <span className={styles.historyDate}>{formatHistoryDate(item.analyzedAt)}</span>
+                    </button>
+                    <div className={styles.historyActions}>
+                      <button
+                        type="button"
+                        className={styles.historyActionBtn}
+                        onClick={() => handleHistoryCopy(item.url)}
+                        aria-label="URL 복사"
+                        title="클립보드에 복사"
+                      >
+                        <Icon
+                          icon={copiedUrl === item.url ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+                          width={13}
+                          height={13}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.historyActionBtn} ${styles.historyActionDelete}`}
+                        onClick={() => handleHistoryDelete(item.url)}
+                        aria-label="히스토리 삭제"
+                        title="삭제"
+                      >
+                        <Icon icon="solar:close-circle-linear" width={13} height={13} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         </div>
       )}
@@ -275,24 +375,19 @@ export default function HomePage() {
             </div>
             <div className={styles.selectHeaderRight}>
               {fromCache && (
-                <button type="button" className={styles.refreshBtn} onClick={handleRefresh} disabled={extracting || analyzing}>
+                <button type="button" className={styles.refreshBtn} onClick={handleRefresh} disabled={analyzing}>
                   <Icon icon="solar:refresh-linear" width={12} height={12} />
                   새로고침
                 </button>
               )}
-              <button type="button" className={styles.backBtn} onClick={handleBack} disabled={extracting}>
+              <button type="button" className={styles.backBtn} onClick={handleBack}>
                 <Icon icon="solar:arrow-left-linear" width={12} height={12} />
                 처음으로
               </button>
             </div>
           </div>
 
-          {extracting || extractProgress.isRunning ? (
-            <div className={styles.progressWrap}>
-              <ProgressCard percent={extractProgress.percent} label={extractProgress.label} />
-            </div>
-          ) : (
-            <>
+          <>
               <div className={styles.selectorPanel}>
                 {/* 파일명 */}
                 <div className={styles.fileNameRow}>
@@ -403,9 +498,9 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* Token Types */}
+                {/* Token Types — 클릭 시 해당 타입 추출 후 페이지 이동 */}
                 <div className={styles.filterBlock}>
-                  <span className={styles.filterLabel}>추출 타입 선택</span>
+                  <span className={styles.filterLabel}>추출할 타입 선택</span>
                   <div className={styles.typeChips}>
                     {TOKEN_TYPES.map(({ id, label, icon }) => {
                       const cnt = getTypePreviewCount(id);
@@ -413,9 +508,9 @@ export default function HomePage() {
                         <button
                           key={id}
                           type="button"
-                          className={`${styles.typeChip}${selectedTypes.includes(id) ? ` ${styles.typeChipActive}` : ''}${cnt === 0 ? ` ${styles.typeChipEmpty}` : ''}`}
-                          onClick={() => toggleType(id)}
-                          aria-pressed={selectedTypes.includes(id)}
+                          className={`${styles.typeChip} ${styles.typeChipAction}${cnt === 0 ? ` ${styles.typeChipEmpty}` : ''}`}
+                          onClick={() => onExtractType(id)}
+                          title={`${label} 토큰 추출하기`}
                         >
                           <Icon icon={icon} width={12} height={12} />
                           {label}
@@ -424,6 +519,7 @@ export default function HomePage() {
                               {cnt}
                             </span>
                           )}
+                          <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.typeChipArrow} />
                         </button>
                       );
                     })}
@@ -431,19 +527,16 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {extractError && (
-                <p className={styles.error} role="alert">{extractError}</p>
+              {extractDone && (
+                <div className={styles.extractSuccess} role="status">
+                  <Icon icon="solar:check-circle-linear" width={15} height={15} />
+                  <span>
+                    {TOKEN_TYPES.find((t) => t.id === extractDone.typeId)?.label ?? extractDone.typeId} 토큰
+                    {extractDone.count > 0 ? ` ${extractDone.count}개` : ''} 추출 완료
+                  </span>
+                </div>
               )}
-              <button
-                type="button"
-                className={styles.extractBtnFull}
-                onClick={onExtract}
-              >
-                <Icon icon="solar:download-minimalistic-linear" width={16} height={16} />
-                {fileInfo?.nodeId ? '선택된 노드에서 추출' : '전체 문서에서 추출'}
-              </button>
-            </>
-          )}
+          </>
         </div>
         </div>
       )}
@@ -498,6 +591,20 @@ export default function HomePage() {
           </nav>
         </div>
       </div>
+
+      {extractModalType && (
+        <TokenExtractModal
+          type={extractModalType}
+          typeLabel={TOKEN_TYPES.find((t) => t.id === extractModalType)?.label ?? extractModalType}
+          isOpen={!!extractModalType}
+          initialUrl={getTypeInitialUrl(extractModalType)}
+          onClose={() => setExtractModalType(null)}
+          onSuccess={(count) => {
+            setExtractModalType(null);
+            handleExtractSuccess(extractModalType, count);
+          }}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={deleteAllOpen}

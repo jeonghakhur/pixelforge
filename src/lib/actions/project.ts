@@ -13,7 +13,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-import { ALL_TOKEN_TYPE_IDS } from '@/lib/tokens/token-types';
+import { ALL_TOKEN_TYPE_IDS, TOKEN_TYPES } from '@/lib/tokens/token-types';
 export type { TokenType } from '@/lib/tokens/token-types';
 import type { TokenType } from '@/lib/tokens/token-types';
 const ALL_TYPES = ALL_TOKEN_TYPE_IDS;
@@ -46,6 +46,8 @@ export interface FileStructureResult {
   detectedNodeId: string | null;
   /** DB 캐시에서 반환된 경우 true */
   fromCache: boolean;
+  /** sectionPattern으로 매칭된 타입별 node-id (재귀 탐색) */
+  typeNodeIds: Record<string, string>;
 }
 
 export interface RecentProject {
@@ -70,6 +72,82 @@ export interface ProjectListItem {
 
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+// ===========================
+// 타입별 node-id 재귀 탐색
+// ===========================
+interface SearchableNode {
+  id: string;
+  name: string;
+  children?: SearchableNode[];
+}
+
+const STRUCTURAL_TYPES = new Set(['FRAME', 'SECTION', 'GROUP', 'COMPONENT', 'COMPONENT_SET']);
+
+/**
+ * 타입별 엄격 패턴 (1단계) — 정확한 타입명만 매칭
+ * sectionPattern보다 좁아서 오탐 방지 (예: "Text Styles" → typography 오탐 방지)
+ */
+const STRICT_PATTERNS: Record<string, RegExp> = {
+  color:      /^(color|colour|colors|colours|palette|색상|팔레트)$/i,
+  typography: /^(typography|typeface|type|타이포그래피|타이포|폰트)$/i,
+  spacing:    /^(spacing|space|gap|간격|여백)$/i,
+  radius:     /^(radius|radii|corner|반경|모서리)$/i,
+  shadow:     /^(shadow|shadows|그림자)$/i,
+  opacity:    /^(opacity|불투명도)$/i,
+  border:     /^(border|borders|테두리)$/i,
+};
+
+/** BFS 두 단계 매칭: 1단계 엄격(정확한 타입명) → 2단계 완화(sectionPattern) */
+function findTypeNodeIds(root: SearchableNode & { type?: string }): Record<string, string> {
+  type N = SearchableNode & { type?: string };
+  const result: Record<string, string> = {};
+
+  function bfs(patternFn: (id: string, name: string) => boolean): void {
+    const queue: N[] = [root];
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      if (STRUCTURAL_TYPES.has(node.type ?? '')) {
+        for (const { id } of TOKEN_TYPES) {
+          if (!result[id] && patternFn(id, node.name)) {
+            result[id] = node.id;
+          }
+        }
+      }
+      for (const child of node.children ?? []) queue.push(child as N);
+    }
+  }
+
+  // 1단계: 엄격 패턴 (정확한 타입명)
+  bfs((id, name) => (STRICT_PATTERNS[id]?.test(name) ?? false));
+  // 2단계: 미매칭 타입에 한해 sectionPattern 폴백
+  const remaining = TOKEN_TYPES.filter(({ id }) => !result[id]);
+  if (remaining.length > 0) {
+    bfs((id, name) => remaining.some((t) => t.id === id && t.sectionPattern.test(name)));
+  }
+
+  return result;
+}
+
+/** 캐시 파일에서 typeNodeIds 계산 (DB 캐시 경로용) */
+function findTypeNodeIdsFromCacheFile(fileKey: string): Record<string, string> {
+  try {
+    const cachePath = getCachePath(fileKey);
+    if (!fs.existsSync(cachePath)) return {};
+    const raw = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+    let root: SearchableNode;
+    if (raw.nodes) {
+      root = raw.nodes[Object.keys(raw.nodes)[0]]?.document;
+    } else if (raw.document) {
+      root = raw.document;
+    } else {
+      root = raw;
+    }
+    return root ? findTypeNodeIds(root) : {};
+  } catch {
+    return {};
+  }
 }
 
 // ===========================
@@ -178,25 +256,29 @@ function computeTokenHash(items: Array<{ name: string; value: string }>): string
 export async function analyzeFileAction(figmaUrl: string, forceRefresh = false): Promise<FileStructureResult> {
   const figmaToken = getFigmaToken();
   if (!figmaToken) {
-    return { error: 'Figma API 토큰이 설정되지 않았습니다.', fileName: '', pages: [], detectedNodeId: null, fromCache: false };
+    return { error: 'Figma API 토큰이 설정되지 않았습니다.', fileName: '', pages: [], detectedNodeId: null, fromCache: false, typeNodeIds: {} };
   }
 
   const fileKey = extractFileKey(figmaUrl);
   if (!fileKey) {
-    return { error: '올바른 Figma URL이 아닙니다.', fileName: '', pages: [], detectedNodeId: null, fromCache: false };
+    return { error: '올바른 Figma URL이 아닙니다.', fileName: '', pages: [], detectedNodeId: null, fromCache: false, typeNodeIds: {} };
   }
 
   const detectedNodeId = extractNodeId(figmaUrl);
 
-  // node-id가 있으면 해당 노드만 빠르게 조회 (전체 파일 fetch 생략)
+  // node-id 유무와 무관하게 전체 파일 캐시를 항상 저장
+  // getNodes(빠른 노드 조회) + loadFileCached(전체 파일 캐시) 병렬 실행
   if (detectedNodeId) {
     try {
       const client = new FigmaClient(figmaToken);
-      const nodesRes = await client.getNodes(fileKey, [detectedNodeId]);
-      const nodeDoc = nodesRes.nodes[detectedNodeId]?.document;
+      const [nodesRes, fullFile] = await Promise.all([
+        client.getNodes(fileKey, [detectedNodeId]),
+        loadFileCached(client, fileKey),
+      ]);
 
+      const nodeDoc = nodesRes.nodes[detectedNodeId]?.document;
       if (!nodeDoc) {
-        return { error: '해당 노드를 찾을 수 없습니다.', fileName: '', pages: [], detectedNodeId, fromCache: false };
+        return { error: '해당 노드를 찾을 수 없습니다.', fileName: '', pages: [], detectedNodeId, fromCache: false, typeNodeIds: {} };
       }
 
       const pages: FigmaPageInfo[] = [{
@@ -205,10 +287,11 @@ export async function analyzeFileAction(figmaUrl: string, forceRefresh = false):
         frames: [{ id: nodeDoc.id, name: nodeDoc.name, type: nodeDoc.type }],
       }];
 
-      return { error: null, fileName: nodesRes.name, pages, detectedNodeId, fromCache: false };
+      const typeNodeIds = findTypeNodeIds(fullFile.document);
+      return { error: null, fileName: nodesRes.name, pages, detectedNodeId, fromCache: false, typeNodeIds };
     } catch (err) {
       const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      return { error: message, fileName: '', pages: [], detectedNodeId, fromCache: false };
+      return { error: message, fileName: '', pages: [], detectedNodeId, fromCache: false, typeNodeIds: {} };
     }
   }
 
@@ -218,7 +301,8 @@ export async function analyzeFileAction(figmaUrl: string, forceRefresh = false):
     if (cached?.pagesCache) {
       try {
         const pages = JSON.parse(cached.pagesCache) as FigmaPageInfo[];
-        return { error: null, fileName: cached.name, pages, detectedNodeId, fromCache: true };
+        const typeNodeIds = findTypeNodeIdsFromCacheFile(fileKey);
+        return { error: null, fileName: cached.name, pages, detectedNodeId, fromCache: true, typeNodeIds };
       } catch {
         // 캐시 파싱 실패 시 API 재호출
       }
@@ -229,6 +313,7 @@ export async function analyzeFileAction(figmaUrl: string, forceRefresh = false):
     const client = new FigmaClient(figmaToken);
     const file = await loadFileCached(client, fileKey);
     const pages = parseFileStructure(file.document);
+    const typeNodeIds = findTypeNodeIds(file.document);
 
     // 분석 결과를 DB에 캐시 저장
     const existing = db.select().from(projects).where(eq(projects.figmaKey, fileKey)).get();
@@ -247,10 +332,10 @@ export async function analyzeFileAction(figmaUrl: string, forceRefresh = false):
       }).run();
     }
 
-    return { error: null, fileName: file.name, pages, detectedNodeId, fromCache: false };
+    return { error: null, fileName: file.name, pages, detectedNodeId, fromCache: false, typeNodeIds };
   } catch (err) {
     const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-    return { error: message, fileName: '', pages: [], detectedNodeId: null, fromCache: false };
+    return { error: message, fileName: '', pages: [], detectedNodeId: null, fromCache: false, typeNodeIds: {} };
   }
 }
 

@@ -13,10 +13,10 @@ export interface TabItem {
 const SECTION_TABS: Record<Section, TabItem[]> = {
   home: [],
   tokens: [
-    { id: 'color', label: '색상', icon: 'solar:pallete-linear' },
-    { id: 'typography', label: '타이포', icon: 'solar:text-field-linear' },
-    { id: 'spacing', label: '간격', icon: 'solar:ruler-linear' },
-    { id: 'radius', label: '반경', icon: 'solar:crop-linear' },
+    { id: 'color', label: 'Colors', icon: 'solar:pallete-linear' },
+    { id: 'typography', label: 'Typography', icon: 'solar:text-field-linear' },
+    { id: 'spacing', label: 'Spacing', icon: 'solar:ruler-linear' },
+    { id: 'radius', label: 'Radius', icon: 'solar:crop-linear' },
   ],
   components: [
     { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
@@ -30,6 +30,7 @@ const SECTION_TABS: Record<Section, TabItem[]> = {
     { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },
     { id: 'team', label: '팀원', icon: 'solar:users-group-two-rounded-linear' },
     { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
+    { id: 'tokens', label: '토큰 타입', icon: 'solar:layers-minimalistic-linear' },
   ],
   admin: [],
 };

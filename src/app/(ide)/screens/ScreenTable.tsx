@@ -12,6 +12,7 @@ interface ScreenTableProps {
   onRowClick: (screen: ScreenListItem) => void;
   onStatusChange: (id: string, status: ScreenStatus) => void;
   onVisibilityChange?: (id: string, visible: boolean) => void;
+  onDelete?: (id: string) => void;
   isAdmin?: boolean;
   readOnly?: boolean;
 }
@@ -45,6 +46,7 @@ export default function ScreenTable({
   onRowClick,
   onStatusChange,
   onVisibilityChange,
+  onDelete,
   isAdmin = false,
   readOnly = false,
 }: ScreenTableProps) {
@@ -172,6 +174,17 @@ export default function ScreenTable({
                       >
                         <Icon icon="solar:link-linear" width={13} height={13} />
                       </button>
+                      {isAdmin && onDelete && (
+                        <button
+                          type="button"
+                          className={`${styles.rowActionBtn} ${styles.rowActionBtnDanger}`}
+                          aria-label={`${screen.name} 삭제`}
+                          title="삭제"
+                          onClick={(e) => { e.stopPropagation(); onDelete(screen.id); }}
+                        >
+                          <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={styles.rowActionBtn}

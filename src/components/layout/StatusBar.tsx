@@ -35,7 +35,8 @@ export default function StatusBar() {
     setTheme(THEME_CYCLE[nextIdx]);
   };
 
-  const hasTokens = summary && (summary.colors + summary.typography + summary.spacing + summary.radius > 0);
+  const countEntries = summary ? Object.entries(summary.counts).filter(([, v]) => v > 0) : [];
+  const hasTokens = countEntries.length > 0;
 
   return (
     <footer className={styles.statusBar}>
@@ -51,21 +52,12 @@ export default function StatusBar() {
       <div className={styles.right}>
         {hasTokens && summary && (
           <>
-            <span className={styles.stat}>
-              색상 {summary.colors}개
-            </span>
-            <span className={styles.separator}>&middot;</span>
-            <span className={styles.stat}>
-              타이포 {summary.typography}개
-            </span>
-            <span className={styles.separator}>&middot;</span>
-            <span className={styles.stat}>
-              간격 {summary.spacing}개
-            </span>
-            <span className={styles.separator}>&middot;</span>
-            <span className={styles.stat}>
-              반경 {summary.radius}개
-            </span>
+            {countEntries.map(([typeId, count], i) => (
+              <span key={typeId} className={styles.stat}>
+                {i > 0 && <span className={styles.separator}>&middot;</span>}
+                {typeId} {count}
+              </span>
+            ))}
           </>
         )}
         {driftSeverity !== 'none' && driftTotal > 0 && (

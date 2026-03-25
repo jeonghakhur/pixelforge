@@ -55,6 +55,42 @@ export function commitTokensCss(
   }
 }
 
+/**
+ * tokens.css 파일을 삭제하고 git commit.
+ * 파일이 없거나 git 저장소가 없으면 조용히 무시.
+ */
+export function deleteTokensCss(): CommitTokensResult {
+  try {
+    if (!fs.existsSync(TOKENS_CSS_PATH)) {
+      return { committed: false, hash: null, error: null };
+    }
+    fs.unlinkSync(TOKENS_CSS_PATH);
+
+    try {
+      exec('git rev-parse --git-dir');
+    } catch {
+      return { committed: false, hash: null, error: 'git 저장소가 없습니다.' };
+    }
+
+    const statusOutput = exec('git status --porcelain design-tokens/tokens.css');
+    if (!statusOutput) {
+      return { committed: false, hash: null, error: null };
+    }
+
+    exec('git add design-tokens/tokens.css');
+    exec(`git ${GIT_AUTHOR_FLAGS} commit -m "tokens: 전체 삭제" --no-verify`);
+
+    const hash = exec('git rev-parse --short HEAD');
+    return { committed: true, hash, error: null };
+  } catch (err) {
+    return {
+      committed: false,
+      hash: null,
+      error: err instanceof Error ? err.message : 'git commit 실패',
+    };
+  }
+}
+
 export function buildCommitMessage(counts: {
   colors: number;
   typography: number;

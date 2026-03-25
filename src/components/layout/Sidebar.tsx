@@ -7,15 +7,10 @@ import { Icon } from '@iconify/react';
 import { type Section } from '@/components/layout/ActivityBar';
 import { getTokenSummary, type TokenSummary } from '@/lib/actions/tokens';
 import { getComponentsByProject } from '@/lib/actions/components';
+import { getActiveTokenTypesAction } from '@/lib/actions/token-type-config';
+import type { StoredTokenType } from '@/lib/config';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './Sidebar.module.scss';
-
-const TOKEN_TYPES = [
-  { label: '색상',   slug: 'color',      icon: 'solar:palette-linear',     key: 'colors'     as const },
-  { label: '타이포', slug: 'typography', icon: 'solar:text-field-linear',  key: 'typography' as const },
-  { label: '간격',   slug: 'spacing',    icon: 'solar:ruler-linear',       key: 'spacing'    as const },
-  { label: '반경',   slug: 'radius',     icon: 'solar:crop-linear',        key: 'radius'     as const },
-];
 
 const COMPONENT_CATALOG = [
   { slug: 'button',        name: 'Button',       category: 'action'     },
@@ -51,11 +46,13 @@ export default function Sidebar({ activeSection }: SidebarProps) {
   const pathname = usePathname();
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
+  const [tokenTypes, setTokenTypes] = useState<StoredTokenType[]>([]);
   const [generatedNames, setGeneratedNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (activeSection === 'tokens') {
       getTokenSummary().then(setSummary);
+      getActiveTokenTypesAction().then(setTokenTypes);
     }
     if (activeSection === 'components') {
       getComponentsByProject().then((rows) =>
@@ -87,14 +84,14 @@ export default function Sidebar({ activeSection }: SidebarProps) {
             <span className={styles.panelTitle}>토큰</span>
           </div>
           <nav className={styles.nav}>
-            {TOKEN_TYPES.map((token) => {
-              const count = summary ? summary[token.key] : 0;
+            {tokenTypes.map((token) => {
+              const count = summary ? (summary.counts[token.id] ?? 0) : 0;
               const hasTokens = count > 0;
               return (
                 <Link
-                  key={token.slug}
-                  href={`/tokens/${token.slug}`}
-                  className={`${styles.navItem} ${pathname === `/tokens/${token.slug}` ? styles.active : ''} ${!hasTokens ? styles.dimmed : ''}`}
+                  key={token.id}
+                  href={`/tokens/${token.id}`}
+                  className={`${styles.navItem} ${pathname === `/tokens/${token.id}` ? styles.active : ''} ${!hasTokens ? styles.dimmed : ''}`}
                 >
                   <Icon
                     icon={hasTokens ? token.icon : 'solar:lock-linear'}

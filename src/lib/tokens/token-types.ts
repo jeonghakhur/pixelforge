@@ -21,7 +21,7 @@ export interface TokenTypeConfig {
 export const TOKEN_TYPES: TokenTypeConfig[] = [
   {
     id: 'color',
-    label: '색상',
+    label: 'Colors',
     description: 'Figma 파일에서 추출된 색상 팔레트를 확인하고 관리합니다.',
     icon: 'solar:pallete-linear',
     sectionPattern: /^(colors?|colours?|palette|색상|팔레트|fill)/i,
@@ -29,7 +29,7 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
   },
   {
     id: 'typography',
-    label: '타이포그래피',
+    label: 'Typography',
     description: '텍스트 스타일과 타입 스케일을 체계적으로 관리합니다.',
     icon: 'solar:text-field-linear',
     sectionPattern: /^(typ(e|o|ography)?|font|text.?style|텍스트|타이포|글자)/i,
@@ -37,7 +37,7 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
   },
   {
     id: 'spacing',
-    label: '간격',
+    label: 'Spacing',
     description: '레이아웃 간격 시스템을 정의하고 일관성을 유지합니다.',
     icon: 'solar:ruler-linear',
     sectionPattern: /^(spacing|space|gap|간격|여백|padding)/i,
@@ -45,35 +45,11 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
   },
   {
     id: 'radius',
-    label: '반경',
+    label: 'Radius',
     description: '모서리 둥글기 토큰을 관리합니다.',
     icon: 'solar:crop-linear',
     sectionPattern: /^(radius|corner|rounded|반경|모서리|round)/i,
     cssPrefix: 'radius',
-  },
-  {
-    id: 'shadow',
-    label: '그림자',
-    description: '박스 섀도우 및 이펙트 토큰을 관리합니다.',
-    icon: 'solar:layers-linear',
-    sectionPattern: /^(shadow|effect|elevation|그림자|이펙트|레이어)/i,
-    cssPrefix: 'shadow',
-  },
-  {
-    id: 'opacity',
-    label: '불투명도',
-    description: '불투명도 토큰을 관리합니다.',
-    icon: 'solar:eye-linear',
-    sectionPattern: /^(opacity|투명|불투명|alpha)/i,
-    cssPrefix: 'opacity',
-  },
-  {
-    id: 'border',
-    label: '테두리',
-    description: '테두리 두께 및 스타일 토큰을 관리합니다.',
-    icon: 'solar:square-linear',
-    sectionPattern: /^(border|stroke|테두리|선|outline)/i,
-    cssPrefix: 'border',
   },
 ];
 

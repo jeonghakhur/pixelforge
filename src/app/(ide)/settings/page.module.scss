@@ -240,3 +240,153 @@
     outline-offset: 1px;
   }
 }
+
+// ===========================
+// Token Type Management
+// ===========================
+.tokenTypeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.tokenTypeItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.tokenTypeIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tokenTypeLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.tokenTypeId {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-body);
+  padding: 2px map-get($spacers, 2);
+  border-radius: $border-radius-sm;
+}
+
+.tokenTypeDeleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: map-get($spacers, 1);
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 1px;
+  }
+}
+
+.tokenTypeEmpty {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  padding: map-get($spacers, 3) 0;
+  text-align: center;
+}
+
+.tokenTypeAddToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  background: none;
+  border: 1px dashed var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+  width: 100%;
+  justify-content: center;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.tokenTypeAddForm {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.tokenTypeAddGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 3);
+
+  @include media-down(sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tokenTypeCancelBtn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.formHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-weight: $font-weight-normal;
+}

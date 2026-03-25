@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { generateTokensCss } from '@/lib/tokens/css-exporter';
+import { commitTokensCss, deleteTokensCss, buildCommitMessage } from '@/lib/git/token-commits';
 
 export interface TokenRow {
   id: string;
@@ -57,10 +58,8 @@ export async function getAllTokensAction(): Promise<TokenRow[]> {
 }
 
 export interface TokenSummary {
-  colors: number;
-  typography: number;
-  spacing: number;
-  radius: number;
+  /** type id → count (e.g. "color" → 42) */
+  counts: Record<string, number>;
   lastExtracted: string | null;
 }
 
@@ -93,13 +92,7 @@ export async function getTokenSummary(): Promise<TokenSummary> {
     lastExtracted = d instanceof Date ? d.toISOString() : new Date(d as number * 1000).toISOString();
   }
 
-  return {
-    colors: countMap['color'] ?? 0,
-    typography: countMap['typography'] ?? 0,
-    spacing: countMap['spacing'] ?? 0,
-    radius: countMap['radius'] ?? 0,
-    lastExtracted,
-  };
+  return { counts: countMap, lastExtracted };
 }
 
 // ===========================
@@ -108,6 +101,30 @@ export async function getTokenSummary(): Promise<TokenSummary> {
 export async function deleteTokenAction(id: string): Promise<{ error: string | null }> {
   try {
     db.delete(tokens).where(eq(tokens.id, id)).run();
+
+    // 남은 토큰으로 tokens.css 재생성
+    const remaining = db.select().from(tokens).all();
+    if (remaining.length === 0) {
+      deleteTokensCss();
+    } else {
+      const project = db.select({ name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+      const counts = remaining.reduce((acc, t) => {
+        acc[t.type] = (acc[t.type] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const css = generateTokensCss(remaining as TokenRow[], {
+        fileName: project?.name ?? 'Design Tokens',
+        extractedAt: new Date().toISOString(),
+      });
+      const msg = buildCommitMessage({
+        colors: counts['color'] ?? 0,
+        typography: counts['typography'] ?? 0,
+        spacing: counts['spacing'] ?? 0,
+        radii: counts['radius'] ?? 0,
+      });
+      commitTokensCss(css, msg);
+    }
+
     return { error: null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패' };
@@ -118,6 +135,8 @@ export async function deleteAllTokensAction(): Promise<{ error: string | null; d
   try {
     const rows = db.select({ id: tokens.id }).from(tokens).all();
     db.delete(tokens).run();
+    db.delete(tokenSources).run();
+    deleteTokensCss();
     return { error: null, deleted: rows.length };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패', deleted: 0 };
@@ -129,7 +148,39 @@ export async function deleteTokensByTypeAction(
 ): Promise<{ error: string | null; deleted: number }> {
   try {
     const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.type, type)).all();
+
+    // token_sources 삭제
+    const project = db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+    if (project) {
+      db.delete(tokenSources).where(
+        and(eq(tokenSources.projectId, project.id), eq(tokenSources.type, type)),
+      ).run();
+    }
+
     db.delete(tokens).where(eq(tokens.type, type)).run();
+
+    // 남은 토큰으로 tokens.css 재생성 또는 삭제
+    const remaining = db.select().from(tokens).all();
+    if (remaining.length === 0) {
+      deleteTokensCss();
+    } else {
+      const counts = remaining.reduce((acc, t) => {
+        acc[t.type] = (acc[t.type] ?? 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const css = generateTokensCss(remaining as TokenRow[], {
+        fileName: project?.name ?? 'Design Tokens',
+        extractedAt: new Date().toISOString(),
+      });
+      const msg = buildCommitMessage({
+        colors: counts['color'] ?? 0,
+        typography: counts['typography'] ?? 0,
+        spacing: counts['spacing'] ?? 0,
+        radii: counts['radius'] ?? 0,
+      });
+      commitTokensCss(css, msg);
+    }
+
     return { error: null, deleted: rows.length };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패', deleted: 0 };

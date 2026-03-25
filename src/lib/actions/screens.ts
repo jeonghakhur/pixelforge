@@ -481,6 +481,18 @@ export async function updateScreenVisibilityAction(
 }
 
 /**
+ * 화면을 DB에서 삭제한다 (관리자 전용).
+ */
+export async function deleteScreenAction(id: string): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return { error: '관리자만 삭제할 수 있습니다.' };
+  }
+  await db.delete(screens).where(eq(screens.id, id));
+  return {};
+}
+
+/**
  * 파일의 git 커밋 이력을 반환한다 (최신 10건).
  */
 export async function getFileGitLogAction(id: string): Promise<GitCommit[]> {
