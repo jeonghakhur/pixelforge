@@ -17,6 +17,50 @@
   --color-brand-primary: #ff6f0f;
   --color-brand-secondary: #e68507;
 
+  /* ── Typography ── */
+  /* Tmap강의 */
+  --font-tmap강의-subtitle: Pretendard 32px;
+
+  --font-body: Pretendard 40px;
+  --font-title: Pretendard 72px;
+  --font-subheader: Pretendard 40px;
+  --font-14-regular: Inter 14px;
+  --font-18-semibold: Inter 18px;
+  --font-16-semibold: Inter 16px;
+  --font-12-regular: Inter 12px;
+
+  /* Type */
+  --font-type-semibold-16px: Pretendard Variable 16px;
+  --font-type-semibold-14px: Pretendard Variable 14px;
+  --font-type-bold-38px: Pretendard Variable 38px;
+  --font-type-regular-14px: Pretendard Variable 14px;
+  --font-type-regular-16px: Pretendard Variable 16px;
+
+  /* small */
+  --font-small-regular: Inter 13px;
+
+  /* title1 */
+  --font-title1-seminbold: Pretendard 36px;
+
+  /* normal */
+  --font-normal-regular: Pretendard 15px;
+
+  /* mini */
+  --font-mini-medium: Pretendard 12px;
+
+  /* Footnote */
+  --font-footnote-regular: SF Pro 13px;
+
+  /* Body */
+  --font-body-regular: SF Pro 17px;
+  --font-body-emphasized: SF Pro 17px;
+
+  /* www.daangn.com */
+  --font-www.daangn.com-semantic-heading-1: Pretendard Variable 28px;
+  --font-www.daangn.com-semantic-heading-2: Pretendard Variable 20px;
+  --font-www.daangn.com-semantic-heading-3: Pretendard Variable 16px;
+  --font-www.daangn.com-semantic-link: Pretendard Variable 20px;
+
   /* ── Spacing ── */
   --spacing-2: 0/0/0/0 gap:2;
   --spacing-4: 0/0/0/0 gap:4;
