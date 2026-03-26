@@ -44,6 +44,4 @@ yarn-error.log*
 next-env.d.ts
 
 # bkit internal files
-.bkit/snapshots/
-.bkit/runtime/
-.bkit/state/
+.bkit/
