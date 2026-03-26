@@ -1,1 +1,40 @@
-/* 토큰이 없습니다. */
+/* === PixelForge Design Tokens ===
+ * Source: [피그마 튜터]클로드 코드+피그마 디자인 시스템으로 바이브 코딩하고 웹페이지 만들어보기 (Community)
+ * Extracted: 2026-03-26T03:13:00.244Z
+ * Method: node-scan
+ * Total: 5 tokens
+ *
+ * Usage:
+ *   color: var(--pf-color-primary);
+ *   background: rgba(var(--pf-color-primary-rgb), 0.1);
+ *   font-size: var(--pf-font-size-heading-xl);
+ */
+
+:root {
+  /* ── Light / Default ── */
+  /* typography */
+  --pf-font-family-typography-body:    'Roboto', system-ui, sans-serif;
+  --pf-font-size-typography-body:      16px;
+  --pf-font-weight-typography-body:    400;
+  --pf-line-height-typography-body:   6.88;
+  --pf-font-family-typography-h1-bold:    'Inter', system-ui, sans-serif;
+  --pf-font-size-typography-h1-bold:      49px;
+  --pf-font-weight-typography-h1-bold:    400;
+  --pf-line-height-typography-h1-bold:   2.24;
+  --pf-letter-spacing-typography-h1-bold: -5px;
+  --pf-font-family-typography-h1-regular:    'Inter', system-ui, sans-serif;
+  --pf-font-size-typography-h1-regular:      49px;
+  --pf-font-weight-typography-h1-regular:    400;
+  --pf-line-height-typography-h1-regular:   2.24;
+  --pf-letter-spacing-typography-h1-regular: -5px;
+  --pf-font-family-typography-h2-bold:    'Inter', system-ui, sans-serif;
+  --pf-font-size-typography-h2-bold:      39px;
+  --pf-font-weight-typography-h2-bold:    400;
+  --pf-line-height-typography-h2-bold:   2.82;
+  --pf-letter-spacing-typography-h2-bold: -5px;
+  --pf-font-family-typography-h2-regular:    'Inter', system-ui, sans-serif;
+  --pf-font-size-typography-h2-regular:      39px;
+  --pf-font-weight-typography-h2-regular:    400;
+  --pf-line-height-typography-h2-regular:   2.82;
+  --pf-letter-spacing-typography-h2-regular: -5px;
+}
