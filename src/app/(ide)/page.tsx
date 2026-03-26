@@ -12,6 +12,8 @@ import TokenExtractModal from './tokens/[type]/TokenExtractModal';
 import { previewTokensAction, type TokenPreviewResult } from '@/lib/actions/preview';
 import type { FigmaPageInfo } from '@/lib/figma/api';
 import { getTokenSummary, deleteAllTokensAction, type TokenSummary } from '@/lib/actions/tokens';
+import { importFromJsonAction, type PixelForgeJson } from '@/lib/actions/import-json';
+import JsonAnalysisPanel from './JsonAnalysisPanel';
 
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
@@ -129,6 +131,13 @@ export default function HomePage() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const refreshRef = useRef(false);
 
+  // JSON 임포트 상태
+  const [jsonParsedData, setJsonParsedData] = useState<PixelForgeJson | null>(null);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonImporting, setJsonImporting] = useState(false);
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [jsonImportDone, setJsonImportDone] = useState<{ colors: number; typography: number } | null>(null);
+
   const analyzeProgress = useStageProgress(ANALYZE_STAGES);
 
   useEffect(() => {
@@ -191,6 +200,43 @@ export default function HomePage() {
     invalidateTokens();
     getTokenSummary().then(setSummary);
   };
+
+  // ── JSON 붙여넣기 임포트 핸들러 ─────────────────────
+  const handleJsonParse = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    try {
+      const data = JSON.parse(trimmed) as PixelForgeJson;
+      if (!data.meta) throw new Error('올바른 PixelForge JSON 파일이 아닙니다.');
+      setJsonParsedData(data);
+      setJsonError(null);
+      setJsonImportDone(null);
+    } catch (err) {
+      setJsonError(err instanceof Error ? err.message : 'JSON 파싱에 실패했습니다.');
+      setJsonParsedData(null);
+    }
+  }, []);
+
+  const handleJsonImport = async () => {
+    if (!jsonParsedData) return;
+    setJsonImporting(true);
+    setJsonError(null);
+    const res = await importFromJsonAction(jsonParsedData);
+    setJsonImporting(false);
+    if (res.error) { setJsonError(res.error); return; }
+    invalidateTokens();
+    getTokenSummary().then(setSummary);
+    setJsonImportDone({ colors: res.colors, typography: res.typography });
+    setJsonParsedData(null);
+    setJsonText('');
+  };
+
+  const handleJsonReset = useCallback(() => {
+    setJsonParsedData(null);
+    setJsonError(null);
+    setJsonText('');
+  }, []);
+  // ────────────────────────────────────────────────
 
   const handleBack = () => {
     setStep('url');
@@ -355,6 +401,65 @@ export default function HomePage() {
               </ul>
             </div>
           )}
+          {/* JSON 붙여넣기 임포트 */}
+          <div className={styles.jsonSection}>
+            <div className={styles.jsonDivider}>
+              <span className={styles.jsonDividerText}>또는</span>
+            </div>
+
+            {!jsonParsedData ? (
+              <div className={styles.jsonPasteBlock}>
+                <textarea
+                  className={styles.jsonTextarea}
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    handleJsonParse(pasted);
+                  }}
+                  placeholder='{ "meta": { ... }, "variables": { ... } }'
+                  spellCheck={false}
+                  aria-label="PixelForge JSON 붙여넣기"
+                  rows={4}
+                />
+                <div className={styles.jsonPasteFooter}>
+                  <span className={styles.jsonPasteHint}>
+                    <Icon icon="solar:info-circle-linear" width={11} height={11} />
+                    Figma 플러그인에서 내보낸 JSON을 붙여넣기
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.jsonParseBtn}
+                    onClick={() => handleJsonParse(jsonText)}
+                    disabled={!jsonText.trim()}
+                  >
+                    <Icon icon="solar:magnifer-linear" width={13} height={13} />
+                    분석
+                  </button>
+                </div>
+                {jsonError && (
+                  <p className={styles.error} role="alert">{jsonError}</p>
+                )}
+              </div>
+            ) : (
+              <JsonAnalysisPanel
+                data={jsonParsedData}
+                importing={jsonImporting}
+                error={jsonError}
+                onImport={handleJsonImport}
+                onReset={handleJsonReset}
+              />
+            )}
+
+            {jsonImportDone && (
+              <div className={styles.extractSuccess} role="status">
+                <Icon icon="solar:check-circle-linear" width={15} height={15} />
+                <span>
+                  JSON 임포트 완료 — 색상 {jsonImportDone.colors}개, 타이포그래피 {jsonImportDone.typography}개
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         </div>
       )}

@@ -905,3 +905,111 @@
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+// ===========================
+// JSON 파일 임포트
+// ===========================
+.jsonSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jsonDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: $glass-border;
+  }
+}
+
+.jsonDividerText {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.45;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+// JSON 붙여넣기 블록
+.jsonPasteBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jsonTextarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &::placeholder {
+    color: var(--text-muted);
+    opacity: 0.35;
+  }
+
+  &:focus {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.02);
+  }
+}
+
+.jsonPasteFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jsonPasteHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  flex: 1;
+}
+
+.jsonParseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--accent);
+  }
+  &:active { transform: scale(0.97); }
+  &:disabled { opacity: 0.3; pointer-events: none; }
+}
