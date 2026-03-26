@@ -48,6 +48,16 @@ function displayName(fullName: string): string {
   return slash >= 0 ? fullName.slice(slash + 1) : fullName;
 }
 
+/** 색상이 밝은지 판별 (텍스트 색 자동 결정용) */
+function isLightColor(hex: string): boolean {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55;
+}
+
 export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokens, setTokens] = useState<TokenRow[]>(initial);
@@ -106,29 +116,64 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
     }
   };
 
-  /** flat 그리드용 카드 (기존 스타일 유지) */
-  const renderFlatCard = (token: TokenRow) => {
+  /** 가로 스트립용 칩 */
+  const renderChip = (token: TokenRow) => {
     const color = parseColor(token.value);
     if (!color) return null;
+    const name = displayName(token.name);
+    const isCopied = copiedId === token.id;
+    const isLight = isLightColor(color.hex);
+
     return (
-      <div key={token.id} className={styles.colorCard}>
-        <div className={styles.colorCardInner}>
-          <div className={styles.colorSwatch} style={{ backgroundColor: color.hex }} />
-          <div className={styles.colorInfo}>
-            <span className={styles.colorName}>{displayName(token.name)}</span>
-            <div className={styles.colorValues}>
-              <button type="button" className={styles.copyBtn} onClick={() => handleCopy(color.hex, token.id)} aria-label={`${token.name} ${color.hex} 복사`}>
-                <span className={styles.hexValue}>{color.hex.toUpperCase()}</span>
-                <Icon icon={copiedId === token.id ? 'solar:check-circle-linear' : 'solar:copy-linear'} width={14} height={14} />
+      <div key={token.id} className={styles.colorChip}>
+        {/* 스와치 영역 */}
+        <div
+          className={styles.chipSwatch}
+          style={{ backgroundColor: color.hex }}
+          title={color.hex}
+        >
+          {token.mode && (
+            <span
+              className={styles.chipMode}
+              style={{ color: isLight ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.55)' }}
+            >
+              {token.mode}
+            </span>
+          )}
+        </div>
+
+        {/* 정보 영역 */}
+        <div className={styles.chipInfo}>
+          <span className={styles.chipName} title={token.name}>{name}</span>
+          <div className={styles.chipFooter}>
+            <button
+              type="button"
+              className={styles.chipHex}
+              onClick={() => handleCopy(color.hex, token.id)}
+              aria-label={`${color.hex} 복사`}
+            >
+              {isCopied
+                ? <Icon icon="solar:check-circle-linear" width={12} height={12} />
+                : color.hex.toUpperCase()
+              }
+            </button>
+            <div className={styles.chipActions}>
+              <button
+                type="button"
+                className={styles.chipAction}
+                onClick={() => openEdit(token)}
+                aria-label="편집"
+              >
+                <Icon icon="solar:pen-2-linear" width={11} height={11} />
               </button>
-              <div className={styles.cardActions}>
-                <button type="button" className={styles.actionBtn} onClick={() => openEdit(token)} aria-label="편집">
-                  <Icon icon="solar:pen-2-linear" width={13} height={13} />
-                </button>
-                <button type="button" className={`${styles.actionBtn} ${styles.actionBtnDelete}`} onClick={() => setDeleteTarget(token)} aria-label="삭제">
-                  <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
-                </button>
-              </div>
+              <button
+                type="button"
+                className={`${styles.chipAction} ${styles.chipActionDelete}`}
+                onClick={() => setDeleteTarget(token)}
+                aria-label="삭제"
+              >
+                <Icon icon="solar:trash-bin-2-linear" width={11} height={11} />
+              </button>
             </div>
           </div>
         </div>
@@ -141,20 +186,27 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
   return (
     <>
       {isFlat ? (
-        <div className={styles.colorGrid}>
-          {tokens.map(renderFlatCard)}
+        <div className={styles.colorStrip}>
+          {tokens.map(renderChip)}
         </div>
       ) : (
         <div className={styles.colorGroups}>
           {groups.map(([group, groupTokens]) => (
             <section key={group || '_ungrouped'} className={styles.colorGroupSection}>
-              {group && (
-                <div className={styles.colorGroupHeader}>
-                  <span className={styles.colorGroupLabel}>{group}</span>
+              <div className={styles.colorGroupHeader}>
+                <div className={styles.colorGroupHeaderLeft}>
+                  <span className={styles.colorGroupLabel}>{group || 'uncategorized'}</span>
+                  <span className={styles.colorGroupCount}>{groupTokens.length}</span>
                 </div>
-              )}
-              <div className={styles.colorGrid}>
-                {groupTokens.map(renderFlatCard)}
+                {groupTokens.some((t) => t.collectionName) && (
+                  <span className={styles.colorGroupCollection}>
+                    <Icon icon="solar:layers-minimalistic-linear" width={11} height={11} />
+                    {groupTokens[0].collectionName}
+                  </span>
+                )}
+              </div>
+              <div className={styles.colorStrip}>
+                {groupTokens.map(renderChip)}
               </div>
             </section>
           ))}

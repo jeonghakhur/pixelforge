@@ -9,6 +9,7 @@ import GenericTokenList from './GenericTokenList';
 import TokenPageActions from './TokenPageActions';
 import CompareActions from './CompareActions';
 import CopyUrlInline from './CopyUrlInline';
+import JsonImportSection from './JsonImportSection';
 import styles from './page.module.scss';
 
 interface TokenPageProps {
@@ -71,19 +72,26 @@ export default async function TokenPage({ params }: TokenPageProps) {
       {tokenRows.length === 0 ? (
         <div className={styles.stage}>
           <div className={styles.stageInner}>
-            <p className={styles.empty}>Figma에서 토큰을 추출하면 여기에 표시됩니다.</p>
+            <div className={styles.emptyBlock}>
+              <p className={styles.empty}>추출된 토큰이 없습니다.</p>
+              <p className={styles.emptyHint}>Figma URL로 추출하거나 JSON을 직접 가져올 수 있습니다.</p>
+            </div>
+            <JsonImportSection />
           </div>
         </div>
       ) : (
-        <div data-token-grid>
-          {type === 'color'      && <ColorGrid tokens={tokenRows} />}
-          {type === 'typography' && <TypographyList tokens={tokenRows} />}
-          {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
-          {type === 'radius'     && <RadiusList tokens={tokenRows} />}
-          {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
-            <GenericTokenList tokens={tokenRows} />
-          )}
-        </div>
+        <>
+          <div data-token-grid>
+            {type === 'color'      && <ColorGrid tokens={tokenRows} />}
+            {type === 'typography' && <TypographyList tokens={tokenRows} />}
+            {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
+            {type === 'radius'     && <RadiusList tokens={tokenRows} />}
+            {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
+              <GenericTokenList tokens={tokenRows} />
+            )}
+          </div>
+          <JsonImportSection collapsed />
+        </>
       )}
 
       {(tokenSource?.figmaScreenshot || tokenSource?.uiScreenshot) && (

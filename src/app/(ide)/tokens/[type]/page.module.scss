@@ -175,14 +175,203 @@
   background: var(--bg-surface);
   border-radius: calc(#{$border-radius-3xl} - 6px);
   box-shadow: var(--glass-shadow);
-  padding: map-get($spacers, 8) map-get($spacers, 5);
-  @include flex-center;
+  padding: map-get($spacers, 6) map-get($spacers, 5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 5);
   min-height: 300px;
+}
+
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  text-align: center;
 }
 
 .empty {
   color: var(--text-muted);
   font-size: $font-size-sm;
+}
+
+.emptyHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+// ===========================
+// JSON 임포트 섹션
+// ===========================
+.jsonImportSection {
+  width: 100%;
+  max-width: 560px;
+}
+
+.jsonImportToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 6);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.jsonToggleChevron {
+  margin-left: map-get($spacers, 1);
+  opacity: 0.6;
+}
+
+.jsonImportBody {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 3);
+  width: 100%;
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.jsonImportTextarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 90px;
+  outline: none;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &::placeholder {
+    color: var(--text-muted);
+    opacity: 0.35;
+  }
+
+  &:focus {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.02);
+  }
+}
+
+.jsonImportBar {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.jsonFileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.jsonImportHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  flex: 1;
+}
+
+.jsonParseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: var(--accent);
+  }
+
+  &:active { transform: scale(0.97); }
+  &:disabled { opacity: 0.3; pointer-events: none; }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.jsonImportError {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: $danger;
+  margin: 0;
+}
+
+.jsonImportDone {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: rgba($success, 0.08);
+  border: 1px solid rgba($success, 0.2);
+  border-radius: $border-radius;
+  font-size: $font-size-xs;
+  color: $success;
+  font-weight: $font-weight-medium;
 }
 
 .sourceBanner {
