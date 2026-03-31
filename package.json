@@ -6,9 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
     "extract:dev": "tsx scripts/dev-extract.ts",
-    "extract:tokens": "tsx scripts/extract-figma-tokens.ts"
+    "extract:tokens": "tsx scripts/extract-figma-tokens.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -37,7 +44,10 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "playwright": "^1.58.2",
+    "prettier": "^3.8.1",
     "sass": "^1.98.0",
     "typescript": "^5"
   }

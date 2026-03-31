@@ -22,7 +22,6 @@ const SECTION_TABS: Record<Section, TabItem[]> = {
     { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
     { id: 'new', label: '+ 추가', icon: 'solar:add-circle-linear' },
   ],
-  pages: [],
   screens: [],
   diff: [],
   settings: [
@@ -49,7 +48,6 @@ export default function TabBar({ section, activeTab, onTabChange }: TabBarProps)
       <div className={styles.tabBar}>
         <span className={styles.empty}>
           {section === 'home' && 'Welcome'}
-          {section === 'pages' && 'Pages'}
           {section === 'diff' && 'Change Detection'}
           {section === 'admin' && 'Admin'}
         </span>

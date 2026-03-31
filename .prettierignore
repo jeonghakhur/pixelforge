@@ -1,0 +1,8 @@
+.next
+node_modules
+.pixelforge
+data
+dist
+playwright-report
+test-results
+package-lock.json

@@ -446,7 +446,7 @@ export async function extractTokensAction(
     let radius: (RadiusToken | RadiusTokenV)[];
     let extractionSource: ExtSource;
     let fileName: string;
-    let sourceByType: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', ExtSource>> = {};
+    const sourceByType: Partial<Record<'color' | 'typography' | 'spacing' | 'radius', ExtSource>> = {};
 
     // ── 1. Variables API 우선 시도 (nodeIds 유무와 무관 — 파일 전체 변수 반환)
     const variablesRes = await client.getVariables(fileKey);

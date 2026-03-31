@@ -45,3 +45,10 @@ next-env.d.ts
 
 # bkit internal files
 .bkit/
+
+# test
+/playwright-report/
+/test-results/
+
+# docs
+docs/test/reports/
