@@ -38,10 +38,26 @@ interface FigmaCollection {
   defaultModeId: string;
 }
 
+// 플러그인이 보내는 스타일 포맷 (Variables 없을 때 폴백)
+interface PluginStyleColor {
+  id: string;
+  name: string;
+  paints: Array<{ type: string; color?: FigmaColor; opacity?: number }>;
+}
+
 export interface PluginTokenPayload {
   variables?: {
-    variables?: FigmaVariable[];
+    // 플러그인은 variableCollections 또는 collections 키를 사용
     variableCollections?: Record<string, FigmaCollection> | FigmaCollection[];
+    collections?: FigmaCollection[];
+    variables?: FigmaVariable[];
+  };
+  // 플러그인이 타입별로 분류해서 보내는 Float 변수 배열
+  spacing?: FigmaVariable[];
+  radius?: FigmaVariable[];
+  // 플러그인 스타일 포맷 (Variables 없을 때 colors 폴백)
+  styles?: {
+    colors?: PluginStyleColor[];
   };
 }
 
@@ -105,13 +121,28 @@ function buildCollectionMap(
 // ───────────────────────────────────────────────────────
 export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedToken[] {
   const vars = payload.variables;
-  if (!vars) return [];
 
-  const rawVars: FigmaVariable[] = Array.isArray(vars.variables) ? vars.variables : [];
-  const collectionMap = buildCollectionMap(vars.variableCollections);
+  // variables.variables[] + 타입별 배열(spacing, radius)을 합산
+  const rawVars: FigmaVariable[] = [
+    ...(Array.isArray(vars?.variables) ? vars.variables : []),
+    ...(Array.isArray(payload.spacing) ? payload.spacing : []),
+    ...(Array.isArray(payload.radius) ? payload.radius : []),
+  ];
+
+  // 중복 제거 (id 기준 — spacing/radius가 variables.variables와 겹칠 수 있음)
+  const seen = new Set<string>();
+  const uniqueVars = rawVars.filter((v) => {
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    return true;
+  });
+
+  // variableCollections 또는 collections 키 모두 지원
+  const collections = vars?.variableCollections ?? vars?.collections;
+  const collectionMap = buildCollectionMap(collections);
   const result: NormalizedToken[] = [];
 
-  for (const variable of rawVars) {
+  for (const variable of uniqueVars) {
     const collection = variable.collectionId ? collectionMap.get(variable.collectionId) : undefined;
     const defaultModeId = collection?.defaultModeId ?? Object.keys(variable.valuesByMode)[0];
     const modeName = collection?.modes.find((m) => m.modeId === defaultModeId)?.name ?? null;
@@ -160,6 +191,25 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         result.push({ ...base, type: 'boolean', value: boolVal, raw: boolVal });
         break;
       }
+    }
+  }
+
+  // styles.colors 폴백 — variables에 색상이 없을 때
+  const hasColors = result.some((t) => t.type === 'color');
+  if (!hasColors && payload.styles?.colors) {
+    for (const style of payload.styles.colors) {
+      const paint = style.paints.find((p) => p.type === 'SOLID' && p.color);
+      if (!paint?.color) continue;
+      const hex = rgbaToHex({ ...paint.color, a: paint.opacity ?? 1 });
+      result.push({
+        type: 'color',
+        name: style.name,
+        value: hex,
+        raw: hex,
+        mode: null,
+        collectionName: null,
+        alias: null,
+      });
     }
   }
 

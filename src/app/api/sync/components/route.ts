@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       id: componentId,
       projectId,
       figmaNodeId: figmaNodeId ?? null,
-      figmaFileKey: figmaFileKey ?? null,
+      figmaFileKey: resolvedFileKey,
       name,
       category,
       description: description ?? null,

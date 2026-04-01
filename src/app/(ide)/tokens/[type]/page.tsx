@@ -10,6 +10,8 @@ import TokenPageActions from './TokenPageActions';
 import CompareActions from './CompareActions';
 import CopyUrlInline from './CopyUrlInline';
 import JsonImportSection from './JsonImportSection';
+import TokenImportTabs from '@/components/common/TokenImportTabs';
+import { Icon } from '@iconify/react';
 import styles from './page.module.scss';
 
 interface TokenPageProps {
@@ -25,6 +27,28 @@ function formatDate(d: Date | null): string {
   }).format(d);
 }
 
+type TokenSource = 'variables' | 'styles-api' | 'section-scan' | 'node-scan' | null;
+
+interface SourceBadge {
+  label: string;
+  className: string;
+}
+
+function getSourceBadge(source: TokenSource): SourceBadge | null {
+  if (!source) return null;
+  switch (source) {
+    case 'variables':
+      return { label: 'Variables API', className: styles.sourceBannerVariables };
+    case 'styles-api':
+      return { label: 'Styles API', className: styles.sourceBannerStylesApi };
+    case 'node-scan':
+    case 'section-scan':
+      return { label: '노드 스캔', className: styles.sourceBannerScan };
+    default:
+      return null;
+  }
+}
+
 export default async function TokenPage({ params }: TokenPageProps) {
   const { type } = await params;
 
@@ -36,7 +60,12 @@ export default async function TokenPage({ params }: TokenPageProps) {
     getTokenSourceAction(type),
   ]);
 
-  const extractionSource = tokenRows.length > 0 ? tokenRows[0].source : null;
+  const extractionSource = tokenRows.length > 0
+    ? (tokenRows[0].source as TokenSource)
+    : null;
+  const sourceBadge = getSourceBadge(extractionSource);
+
+  const hasScreenshots = !!(tokenSource?.figmaScreenshot || tokenSource?.uiScreenshot);
 
   return (
     <div className={styles.page}>
@@ -59,12 +88,10 @@ export default async function TokenPage({ params }: TokenPageProps) {
         <div className={styles.headerActions}>
           <TokenPageActions type={type} count={tokenRows.length} />
         </div>
-        {extractionSource && (
-          <div className={`${styles.sourceBanner} ${extractionSource === 'variables' ? styles.sourceBannerVariables : styles.sourceBannerScan}`}>
+        {sourceBadge && (
+          <div className={`${styles.sourceBanner} ${sourceBadge.className}`}>
             <span className={styles.sourceDot} />
-            {extractionSource === 'variables'
-              ? 'Variables API — 디자이너가 정의한 토큰'
-              : '노드 스캔 — Variables 없음'}
+            {sourceBadge.label}
           </div>
         )}
       </div>
@@ -72,11 +99,15 @@ export default async function TokenPage({ params }: TokenPageProps) {
       {tokenRows.length === 0 ? (
         <div className={styles.stage}>
           <div className={styles.stageInner}>
+            {/* Empty State — 플러그인 우선 안내 */}
             <div className={styles.emptyBlock}>
-              <p className={styles.empty}>추출된 토큰이 없습니다.</p>
-              <p className={styles.emptyHint}>Figma URL로 추출하거나 JSON을 직접 가져올 수 있습니다.</p>
+              <Icon icon="solar:layers-minimalistic-linear" width={32} height={32} className={styles.emptyIcon} />
+              <p className={styles.empty}>토큰이 아직 없습니다</p>
+              <p className={styles.emptyHint}>
+                Figma 플러그인으로 자동 동기화하거나 JSON 파일을 가져올 수 있습니다.
+              </p>
             </div>
-            <JsonImportSection />
+            <TokenImportTabs />
           </div>
         </div>
       ) : (
@@ -94,57 +125,77 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </>
       )}
 
-      {(tokenSource?.figmaScreenshot || tokenSource?.uiScreenshot) && (
-        <section className={styles.compareSection}>
-          <div className={styles.compareTitleRow}>
-            <div>
-              <h2 className={styles.compareTitle}>디자인 비교</h2>
-              <p className={styles.compareMeta}>캡처: {formatDate(tokenSource.lastExtractedAt)}</p>
+      {/* 디자인 비교 — 항상 표시 */}
+      <section className={styles.compareSection}>
+        <div className={styles.compareTitleRow}>
+          <div>
+            <h2 className={styles.compareTitle}>디자인 비교</h2>
+            <p className={styles.compareMeta}>
+              {hasScreenshots
+                ? `캡처: ${formatDate(tokenSource?.lastExtractedAt ?? null)}`
+                : '플러그인 sync 시 자동으로 캡처됩니다.'}
+            </p>
+          </div>
+          <CompareActions
+            type={type}
+            figmaKey={tokenSource?.figmaKey ?? null}
+            figmaUrl={tokenSource?.figmaUrl ?? null}
+          />
+        </div>
+        <div className={styles.compareGrid}>
+          {/* Figma 원본 */}
+          <div className={styles.comparePanel}>
+            <div className={styles.comparePanelLabel}>
+              <span className={styles.compareDot} style={{ background: '#a259ff' }} />
+              Figma 원본
             </div>
-            <CompareActions
-              type={type}
-              figmaKey={tokenSource.figmaKey}
-              figmaUrl={tokenSource.figmaUrl}
-            />
-          </div>
-          <div className={styles.compareGrid}>
-            {tokenSource.figmaScreenshot && (
-              <div className={styles.comparePanel}>
-                <div className={styles.comparePanelLabel}>
-                  <span className={styles.compareDot} style={{ background: '#a259ff' }} />
-                  Figma 원본
-                </div>
-                <div className={styles.compareFrame}>
-                  <img
-                    src={tokenSource.figmaScreenshot}
-                    alt={`${typeConfig.label} Figma 원본`}
-                    className={styles.compareImg}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
+            {tokenSource?.figmaScreenshot ? (
+              <div className={styles.compareFrame}>
+                <img
+                  src={tokenSource.figmaScreenshot}
+                  alt={`${typeConfig.label} Figma 원본`}
+                  className={styles.compareImg}
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
-            )}
-            {tokenSource.uiScreenshot && (
-              <div className={styles.comparePanel}>
-                <div className={styles.comparePanelLabel}>
-                  <span className={styles.compareDot} style={{ background: 'var(--accent)' }} />
-                  PixelForge 렌더링
-                </div>
-                <div className={styles.compareFrame}>
-                  <img
-                    src={tokenSource.uiScreenshot}
-                    alt={`${typeConfig.label} PixelForge 렌더링`}
-                    className={styles.compareImg}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
+            ) : (
+              <div className={`${styles.compareFrame} ${styles.compareFrameEmpty}`}>
+                <Icon icon="solar:figma-linear" width={24} height={24} className={styles.compareEmptyIcon} />
+                <p className={styles.compareEmptyText}>캡처 없음</p>
+                {tokenSource?.figmaKey && (
+                  <p className={styles.compareEmptyHint}>Figma URL을 연결하면 자동 캡처됩니다.</p>
+                )}
               </div>
             )}
           </div>
-        </section>
-      )}
+
+          {/* PixelForge 렌더링 */}
+          <div className={styles.comparePanel}>
+            <div className={styles.comparePanelLabel}>
+              <span className={styles.compareDot} style={{ background: 'var(--accent)' }} />
+              PixelForge 렌더링
+            </div>
+            {tokenSource?.uiScreenshot ? (
+              <div className={styles.compareFrame}>
+                <img
+                  src={tokenSource.uiScreenshot}
+                  alt={`${typeConfig.label} PixelForge 렌더링`}
+                  className={styles.compareImg}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            ) : (
+              <div className={`${styles.compareFrame} ${styles.compareFrameEmpty}`}>
+                <Icon icon="solar:monitor-linear" width={24} height={24} className={styles.compareEmptyIcon} />
+                <p className={styles.compareEmptyText}>캡처 없음</p>
+                <p className={styles.compareEmptyHint}>sync 후 자동으로 업데이트됩니다.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

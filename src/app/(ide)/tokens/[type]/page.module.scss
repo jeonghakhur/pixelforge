@@ -191,15 +191,24 @@
   text-align: center;
 }
 
-.empty {
+.emptyIcon {
   color: var(--text-muted);
+  opacity: 0.3;
+  margin-bottom: map-get($spacers, 1);
+}
+
+.empty {
+  color: var(--text-secondary);
   font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
 }
 
 .emptyHint {
   font-size: $font-size-xs;
   color: var(--text-muted);
-  opacity: 0.6;
+  opacity: 0.7;
+  max-width: 320px;
+  line-height: 1.55;
 }
 
 // ===========================
@@ -392,10 +401,16 @@
   color: $success;
 }
 
+.sourceBannerStylesApi {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: var(--accent);
+}
+
 .sourceBannerScan {
-  background: rgba($warning, 0.08);
-  border-color: rgba($warning, 0.25);
-  color: $warning;
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.25);
+  color: #a855f7;
 }
 
 .sourceDot {
@@ -1031,4 +1046,38 @@
   width: 100%;
   border-radius: calc(#{$border-radius-3xl} - 6px);
   object-fit: contain;
+}
+
+// 스크린샷 없을 때 empty 패널
+.compareFrameEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  min-height: 180px;
+  border-radius: $border-radius-3xl;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px dashed rgba(255, 255, 255, 0.1);
+  text-align: center;
+  padding: map-get($spacers, 5);
+}
+
+.compareEmptyIcon {
+  color: var(--text-muted);
+  opacity: 0.25;
+}
+
+.compareEmptyText {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  font-weight: $font-weight-medium;
+}
+
+.compareEmptyHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  opacity: 0.5;
+  max-width: 200px;
+  line-height: 1.5;
 }

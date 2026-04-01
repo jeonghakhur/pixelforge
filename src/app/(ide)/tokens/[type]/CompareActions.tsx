@@ -8,8 +8,8 @@ import styles from './page.module.scss';
 
 interface CompareActionsProps {
   type: string;
-  figmaKey: string;
-  figmaUrl: string;
+  figmaKey: string | null;
+  figmaUrl: string | null;
 }
 
 export default function CompareActions({ type, figmaKey, figmaUrl }: CompareActionsProps) {
@@ -26,12 +26,13 @@ export default function CompareActions({ type, figmaKey, figmaUrl }: CompareActi
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    const { extractNodeId } = await import('@/lib/figma/api');
-    const nodeId = extractNodeId(figmaUrl);
-    await Promise.allSettled([
-      captureTokenPageScreenshotAction(type),
-      captureFigmaFrameAction(type, figmaKey, nodeId),
-    ]);
+    const tasks: Promise<unknown>[] = [captureTokenPageScreenshotAction(type)];
+    if (figmaKey && figmaUrl) {
+      const { extractNodeId } = await import('@/lib/figma/api');
+      const nodeId = extractNodeId(figmaUrl);
+      tasks.push(captureFigmaFrameAction(type, figmaKey, nodeId));
+    }
+    await Promise.allSettled(tasks);
     setRefreshing(false);
     router.refresh();
   };
