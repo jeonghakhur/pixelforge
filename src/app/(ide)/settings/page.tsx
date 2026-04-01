@@ -10,6 +10,8 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
 import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
+import { createApiKey, getApiKeys, deleteApiKey } from '@/lib/actions/api-keys';
+import { getSyncStatus, type SyncProjectStatus, type SyncItem } from '@/lib/actions/sync-status';
 import TokenTypeSettings from './TokenTypeSettings';
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
@@ -40,11 +42,38 @@ type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
 type SettingsTab = 'general' | 'account' | 'team' | 'figma' | 'tokens';
 
+interface ApiKeyRow {
+  id: string;
+  name: string;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+}
+
 interface UserRow {
   id: string;
   email: string;
   role: string;
   createdAt: Date;
+}
+
+const SYNC_TYPE_LABEL: Record<string, string> = {
+  tokens: '토큰',
+  icons: '아이콘',
+  images: '이미지',
+  themes: '테마',
+  components: '컴포넌트',
+};
+
+function relativeTime(date: Date): string {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '방금 전';
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}일 전`;
+  return new Date(date).toLocaleDateString();
 }
 
 export default function SettingsPage() {
@@ -63,6 +92,11 @@ export default function SettingsPage() {
   const [addUserError, setAddUserError] = useState<string | null>(null);
   const [changePwSuccess, setChangePwSuccess] = useState(false);
   const [changePwError, setChangePwError] = useState<string | null>(null);
+  const [apiKeyList, setApiKeyList] = useState<ApiKeyRow[]>([]);
+  const [newApiKeyName, setNewApiKeyName] = useState('');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncProjectStatus[]>([]);
 
   const tokenForm = useForm<TokenForm>({
     resolver: zodResolver(tokenSchema),
@@ -84,6 +118,11 @@ export default function SettingsPage() {
   const changePwForm = useForm<ChangePasswordForm>({
     resolver: zodResolver(changePasswordSchema),
   });
+
+  useEffect(() => {
+    getApiKeys().then((keys) => setApiKeyList(keys as ApiKeyRow[]));
+    getSyncStatus().then(setSyncStatus);
+  }, []);
 
   useEffect(() => {
     checkFigmaToken().then((res) => {
@@ -166,6 +205,24 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 3000);
   };
 
+  const onCreateApiKey = async () => {
+    setApiKeyError(null);
+    setCreatedKey(null);
+    const res = await createApiKey(newApiKeyName);
+    if (res.error) { setApiKeyError(res.error); return; }
+    setCreatedKey(res.key!);
+    setNewApiKeyName('');
+    const updated = await getApiKeys();
+    setApiKeyList(updated as ApiKeyRow[]);
+  };
+
+  const onDeleteApiKey = async (id: string) => {
+    await deleteApiKey(id);
+    const updated = await getApiKeys();
+    setApiKeyList(updated as ApiKeyRow[]);
+    if (createdKey) setCreatedKey(null);
+  };
+
   const onProjectSubmit = async (data: ProjectForm) => {
     void data;
     setProjectSaved(true);
@@ -223,6 +280,117 @@ export default function SettingsPage() {
                   )}
                 </div>
               </form>
+            </div>
+          </Card>
+
+          {/* API 키 관리 */}
+          <Card className={styles.settingsCard}>
+            <div className={styles.settingsContent}>
+              <div className={styles.settingsLabel}>
+                <Icon icon="solar:key-minimalistic-linear" width={20} height={20} />
+                <div>
+                  <h2 className={styles.settingsTitle}>Figma 플러그인 API 키</h2>
+                  <p className={styles.settingsDesc}>
+                    Figma 플러그인에서 PixelForge로 데이터를 전송할 때 사용하는 API 키입니다.
+                  </p>
+                </div>
+              </div>
+              {createdKey && (
+                <div className={styles.currentToken} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-success, #22c55e)', fontWeight: 600 }}>
+                    키가 생성되었습니다. 지금 복사하세요 — 다시 표시되지 않습니다.
+                  </span>
+                  <code style={{ fontSize: 11, wordBreak: 'break-all' }}>{createdKey}</code>
+                </div>
+              )}
+              <div className={styles.inputRow}>
+                <div className={styles.inputWrapper}>
+                  <input
+                    type="text"
+                    placeholder="키 이름 (예: 내 작업용)"
+                    className={styles.input}
+                    value={newApiKeyName}
+                    onChange={(e) => setNewApiKeyName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onCreateApiKey(); }}
+                  />
+                </div>
+                <Button type="button" onClick={onCreateApiKey} leftIcon="solar:add-circle-linear">
+                  생성
+                </Button>
+              </div>
+              {apiKeyError && <p className={styles.error} role="alert">{apiKeyError}</p>}
+              {apiKeyList.length > 0 && (
+                <ul className={styles.memberList}>
+                  {apiKeyList.map((k) => (
+                    <li key={k.id} className={styles.memberItem}>
+                      <div className={styles.memberInfo}>
+                        <span className={styles.memberName}>{k.name}</span>
+                        <span className={styles.memberEmail}>
+                          생성: {new Date(k.createdAt).toLocaleDateString()}
+                          {k.lastUsedAt ? ` · 최근 사용: ${new Date(k.lastUsedAt).toLocaleDateString()}` : ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => onDeleteApiKey(k.id)}
+                        aria-label={`${k.name} 삭제`}
+                      >
+                        <Icon icon="solar:trash-bin-trash-linear" width={16} height={16} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+
+          {/* 연동 현황 */}
+          <Card className={styles.settingsCard}>
+            <div className={styles.settingsContent}>
+              <div className={styles.settingsLabel}>
+                <Icon icon="solar:link-round-angle-linear" width={20} height={20} />
+                <div>
+                  <h2 className={styles.settingsTitle}>Figma 플러그인 연동 현황</h2>
+                  <p className={styles.settingsDesc}>
+                    플러그인에서 전송된 Figma 파일별 동기화 이력입니다.
+                  </p>
+                </div>
+              </div>
+              {syncStatus.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--color-text-muted, #94a3b8)' }}>
+                  아직 전송된 데이터가 없습니다. Figma 플러그인에서 데이터를 전송해보세요.
+                </p>
+              ) : (
+                <ul className={styles.memberList}>
+                  {syncStatus.map((proj) => (
+                    <li key={proj.id} className={styles.memberItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                      <span className={styles.memberName} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Icon icon="solar:figma-linear" width={14} height={14} />
+                        {proj.name}
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                        {(['tokens', 'icons', 'images', 'themes', 'components'] as const).map((type) => {
+                          const item = proj.syncs.find((s) => s.type === type) as SyncItem | undefined;
+                          return (
+                            <span key={type} className={styles.memberEmail} style={{ whiteSpace: 'nowrap' }}>
+                              {SYNC_TYPE_LABEL[type]}:{' '}
+                              {item ? (
+                                <>
+                                  v{item.version} · {relativeTime(item.syncedAt)}
+                                  {item.count != null ? ` (${item.count.toLocaleString()}개)` : ''}
+                                </>
+                              ) : (
+                                <span style={{ color: 'var(--color-text-muted, #94a3b8)' }}>미전송</span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </Card>
         </div>

@@ -1,41 +1,48 @@
-// @page Home — Figma URL 입력 + 토큰 추출 + 대시보드
-'use client';
+// @page Home — 플러그인 연결 상태 + 토큰 현황 + 가져오기
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useRouter } from 'next/navigation';
-import { Icon } from '@iconify/react';
-import { analyzeFileAction } from '@/lib/actions/project';
-import TokenExtractModal from './tokens/[type]/TokenExtractModal';
-import { previewTokensAction, type TokenPreviewResult } from '@/lib/actions/preview';
-import type { FigmaPageInfo } from '@/lib/figma/api';
-import { getTokenSummary, deleteAllTokensAction, type TokenSummary } from '@/lib/actions/tokens';
-import { importFromJsonAction, type PixelForgeJson } from '@/lib/actions/import-json';
-import JsonAnalysisPanel from './JsonAnalysisPanel';
-
-import ConfirmDialog from '@/components/common/ConfirmDialog';
-import { useUIStore } from '@/stores/useUIStore';
-import { useStageProgress } from '@/hooks/useStageProgress';
-import ProgressCard from '@/components/common/ProgressCard';
-import { TOKEN_TYPES } from '@/lib/tokens/token-types';
-import styles from './page.module.scss';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { Icon } from "@iconify/react";
+import { analyzeFileAction } from "@/lib/actions/project";
+import TokenExtractModal from "./tokens/[type]/TokenExtractModal";
+import {
+  previewTokensAction,
+  type TokenPreviewResult,
+} from "@/lib/actions/preview";
+import type { FigmaPageInfo } from "@/lib/figma/api";
+import {
+  getTokenSummary,
+  deleteAllTokensAction,
+  type TokenSummary,
+} from "@/lib/actions/tokens";
+import { getSyncStatus, type SyncProjectStatus } from "@/lib/actions/sync-status";
+import PluginStatusCard from "@/components/common/PluginStatusCard";
+import TokenImportTabs from "@/components/common/TokenImportTabs";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useUIStore } from "@/stores/useUIStore";
+import { useStageProgress } from "@/hooks/useStageProgress";
+import ProgressCard from "@/components/common/ProgressCard";
+import { TOKEN_TYPES } from "@/lib/tokens/token-types";
+import styles from "./page.module.scss";
 
 // ===========================
 // URL 히스토리 (localStorage)
 // ===========================
-const HISTORY_KEY = 'pixelforge_url_history';
+const HISTORY_KEY = "pixelforge_url_history";
 const HISTORY_MAX = 5;
 
 interface UrlHistoryItem {
   url: string;
-  analyzedAt: string; // ISO string
+  analyzedAt: string;
 }
 
 function loadUrlHistory(): UrlHistoryItem[] {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]");
   } catch {
     return [];
   }
@@ -43,7 +50,10 @@ function loadUrlHistory(): UrlHistoryItem[] {
 
 function pushUrlHistory(url: string): UrlHistoryItem[] {
   const existing = loadUrlHistory().filter((h) => h.url !== url);
-  const updated = [{ url, analyzedAt: new Date().toISOString() }, ...existing].slice(0, HISTORY_MAX);
+  const updated = [
+    { url, analyzedAt: new Date().toISOString() },
+    ...existing,
+  ].slice(0, HISTORY_MAX);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   return updated;
 }
@@ -60,7 +70,11 @@ function formatHistoryDate(iso: string): string {
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today.getTime() - 86_400_000);
   const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const hhmm = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const hhmm = d.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
   if (dDay.getTime() === today.getTime()) return `오늘 ${hhmm}`;
   if (dDay.getTime() === yesterday.getTime()) return `어제 ${hhmm}`;
   return `${d.getMonth() + 1}/${d.getDate()} ${hhmm}`;
@@ -69,43 +83,45 @@ function formatHistoryDate(iso: string): string {
 const figmaUrlSchema = z.object({
   url: z
     .string()
-    .min(1, 'Figma URL을 입력해주세요')
-    .url('올바른 URL 형식이 아닙니다')
-    .refine((val) => val.includes('figma.com'), 'Figma URL을 입력해주세요'),
+    .min(1, "Figma URL을 입력해주세요")
+    .url("올바른 URL 형식이 아닙니다")
+    .refine((val) => val.includes("figma.com"), "Figma URL을 입력해주세요"),
 });
 type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
-
 const ANALYZE_STAGES = [
-  { label: 'Figma 서버에 연결 중...', percent: 20, durationMs: 700 },
-  { label: '파일 정보 가져오는 중...', percent: 55, durationMs: 1200 },
-  { label: '페이지 구조 파싱 중...', percent: 85, durationMs: 500 },
-  { label: '분석 완료!', percent: 100, durationMs: 0 },
+  { label: "Figma 서버에 연결 중...", percent: 20, durationMs: 700 },
+  { label: "파일 정보 가져오는 중...", percent: 55, durationMs: 1200 },
+  { label: "페이지 구조 파싱 중...", percent: 85, durationMs: 500 },
+  { label: "분석 완료!", percent: 100, durationMs: 0 },
 ];
 
-const EXTRACT_STAGES = [
-  { label: 'Figma API에서 데이터 로드 중...', percent: 20, durationMs: 1000 },
-  { label: '색상 토큰 추출 중...', percent: 42, durationMs: 900 },
-  { label: '타이포그래피 분석 중...', percent: 60, durationMs: 700 },
-  { label: '간격 & 반경 처리 중...', percent: 76, durationMs: 600 },
-  { label: '데이터베이스에 저장 중...', percent: 92, durationMs: 400 },
-  { label: '저장 완료!', percent: 100, durationMs: 0 },
-];
-
-type SectionKey = 'tokens' | 'components' | 'settings';
+type SectionKey = "tokens" | "components" | "settings";
 
 const TOKEN_NAV_ITEMS = TOKEN_TYPES.map((t) => ({
   icon: t.icon,
   label: t.label,
   path: `/tokens/${t.id}`,
-  section: 'tokens' as SectionKey,
+  section: "tokens" as SectionKey,
   typeId: t.id,
 }));
 
 const NAV_ITEMS = [
   ...TOKEN_NAV_ITEMS,
-  { icon: 'solar:widget-2-linear', label: 'Components', path: '/components/new', section: 'components' as SectionKey, typeId: null },
-  { icon: 'solar:settings-linear', label: 'Settings',   path: '/settings',       section: 'settings'   as SectionKey, typeId: null },
+  {
+    icon: "solar:widget-2-linear",
+    label: "Components",
+    path: "/components/new",
+    section: "components" as SectionKey,
+    typeId: null,
+  },
+  {
+    icon: "solar:settings-linear",
+    label: "Settings",
+    path: "/settings",
+    section: "settings" as SectionKey,
+    typeId: null,
+  },
 ];
 
 export default function HomePage() {
@@ -115,37 +131,49 @@ export default function HomePage() {
   const preloadUrl = useUIStore((s) => s.preloadUrl);
   const setPreloadUrl = useUIStore((s) => s.setPreloadUrl);
 
-  const [step, setStep] = useState<'url' | 'select'>('url');
+  const [summary, setSummary] = useState<TokenSummary | null>(null);
+  const [syncProjects, setSyncProjects] = useState<SyncProjectStatus[]>([]);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  // Figma URL 고급 섹션 상태
+  const [urlStep, setUrlStep] = useState<"url" | "select">("url");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [fileInfo, setFileInfo] = useState<{ fileName: string; nodeId: string | null; pages: FigmaPageInfo[]; typeNodeIds: Record<string, string> } | null>(null);
+  const [fileInfo, setFileInfo] = useState<{
+    fileName: string;
+    nodeId: string | null;
+    pages: FigmaPageInfo[];
+    typeNodeIds: Record<string, string>;
+  } | null>(null);
   const [extractModalType, setExtractModalType] = useState<string | null>(null);
-  const [extractDone, setExtractDone] = useState<{ typeId: string; count: number } | null>(null);
-  const [summary, setSummary] = useState<TokenSummary | null>(null);
+  const [extractDone, setExtractDone] = useState<{
+    typeId: string;
+    count: number;
+  } | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [preview, setPreview] = useState<TokenPreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
-  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
-  const [deletingAll, setDeletingAll] = useState(false);
   const [urlHistory, setUrlHistory] = useState<UrlHistoryItem[]>([]);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const refreshRef = useRef(false);
-
-  // JSON 임포트 상태
-  const [jsonParsedData, setJsonParsedData] = useState<PixelForgeJson | null>(null);
-  const [jsonText, setJsonText] = useState('');
-  const [jsonImporting, setJsonImporting] = useState(false);
-  const [jsonError, setJsonError] = useState<string | null>(null);
-  const [jsonImportDone, setJsonImportDone] = useState<{ colors: number; typography: number } | null>(null);
 
   const analyzeProgress = useStageProgress(ANALYZE_STAGES);
 
   useEffect(() => {
     getTokenSummary().then(setSummary);
+    getSyncStatus().then(setSyncProjects);
     setUrlHistory(loadUrlHistory());
   }, []);
 
-  const { register, handleSubmit, getValues, setValue, formState: { errors }, setFocus } = useForm<FigmaUrlForm>({
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    setValue,
+    formState: { errors },
+    setFocus,
+  } = useForm<FigmaUrlForm>({
     resolver: zodResolver(figmaUrlSchema),
   });
 
@@ -161,34 +189,44 @@ export default function HomePage() {
     analyzeProgress.complete();
     setAnalyzing(false);
 
-    if (res.error) { setAnalyzeError(res.error); return; }
-    setFileInfo({ fileName: res.fileName, nodeId: res.detectedNodeId, pages: res.pages, typeNodeIds: res.typeNodeIds });
+    if (res.error) {
+      setAnalyzeError(res.error);
+      return;
+    }
+    setFileInfo({
+      fileName: res.fileName,
+      nodeId: res.detectedNodeId,
+      pages: res.pages,
+      typeNodeIds: res.typeNodeIds,
+    });
     setFromCache(res.fromCache);
     setUrlHistory(pushUrlHistory(data.url));
 
-    // 캐시 파일로 토큰 미리보기 추출 (백그라운드)
     setPreviewing(true);
     previewTokensAction(data.url).then((p) => {
       setPreview(p);
       setPreviewing(false);
     });
 
-    setTimeout(() => setStep('select'), res.fromCache ? 0 : 400);
+    setTimeout(() => setUrlStep("select"), res.fromCache ? 0 : 400);
   };
 
-  const getTypeInitialUrl = useCallback((typeId: string): string => {
-    const base = getValues('url');
-    const nodeId = fileInfo?.typeNodeIds[typeId];
-    if (!nodeId) return base;
-    const urlNodeId = nodeId.replace(/:/g, '-');
-    try {
-      const url = new URL(base);
-      url.searchParams.set('node-id', urlNodeId);
-      return url.toString();
-    } catch {
-      return base;
-    }
-  }, [fileInfo, getValues]);
+  const getTypeInitialUrl = useCallback(
+    (typeId: string): string => {
+      const base = getValues("url");
+      const nodeId = fileInfo?.typeNodeIds[typeId];
+      if (!nodeId) return base;
+      const urlNodeId = nodeId.replace(/:/g, "-");
+      try {
+        const url = new URL(base);
+        url.searchParams.set("node-id", urlNodeId);
+        return url.toString();
+      } catch {
+        return base;
+      }
+    },
+    [fileInfo, getValues],
+  );
 
   const onExtractType = (typeId: string) => {
     setExtractDone(null);
@@ -201,45 +239,8 @@ export default function HomePage() {
     getTokenSummary().then(setSummary);
   };
 
-  // ── JSON 붙여넣기 임포트 핸들러 ─────────────────────
-  const handleJsonParse = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    try {
-      const data = JSON.parse(trimmed) as PixelForgeJson;
-      if (!data.meta) throw new Error('올바른 PixelForge JSON 파일이 아닙니다.');
-      setJsonParsedData(data);
-      setJsonError(null);
-      setJsonImportDone(null);
-    } catch (err) {
-      setJsonError(err instanceof Error ? err.message : 'JSON 파싱에 실패했습니다.');
-      setJsonParsedData(null);
-    }
-  }, []);
-
-  const handleJsonImport = async () => {
-    if (!jsonParsedData) return;
-    setJsonImporting(true);
-    setJsonError(null);
-    const res = await importFromJsonAction(jsonParsedData);
-    setJsonImporting(false);
-    if (res.error) { setJsonError(res.error); return; }
-    invalidateTokens();
-    getTokenSummary().then(setSummary);
-    setJsonImportDone({ colors: res.colors, typography: res.typography });
-    setJsonParsedData(null);
-    setJsonText('');
-  };
-
-  const handleJsonReset = useCallback(() => {
-    setJsonParsedData(null);
-    setJsonError(null);
-    setJsonText('');
-  }, []);
-  // ────────────────────────────────────────────────
-
-  const handleBack = () => {
-    setStep('url');
+  const handleUrlBack = () => {
+    setUrlStep("url");
     setFileInfo(null);
     setFromCache(false);
     setAnalyzeError(null);
@@ -256,17 +257,20 @@ export default function HomePage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!preloadUrl || step !== 'url' || analyzing) return;
-    setValue('url', preloadUrl);
+    if (!preloadUrl || urlStep !== "url" || analyzing) return;
+    setValue("url", preloadUrl);
     setPreloadUrl(null);
     refreshRef.current = false;
     setTimeout(() => handleSubmit(onAnalyze)(), 50);
   }, [preloadUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleHistoryClick = useCallback((url: string) => {
-    setValue('url', url);
-    setFocus('url');
-  }, [setValue, setFocus]);
+  const handleHistoryClick = useCallback(
+    (url: string) => {
+      setValue("url", url);
+      setFocus("url");
+    },
+    [setValue, setFocus],
+  );
 
   const handleHistoryCopy = useCallback((url: string) => {
     navigator.clipboard.writeText(url).then(() => {
@@ -295,358 +299,328 @@ export default function HomePage() {
     router.push(path);
   };
 
-  const getCount = (item: typeof NAV_ITEMS[number]): number | null => {
+  const getCount = (item: (typeof NAV_ITEMS)[number]): number | null => {
     if (!item.typeId || !summary) return null;
     return summary.counts[item.typeId] ?? 0;
   };
 
-  const hasAnyTokens = summary && Object.values(summary.counts).reduce((a, b) => a + b, 0) > 0;
-
   const getTypePreviewCount = (typeId: string): number | null => {
     if (!preview) return null;
     const map: Record<string, number> = {
-      color:      preview.colors.length,
+      color: preview.colors.length,
       typography: preview.typography.length,
-      spacing:    preview.spacing.length,
-      radius:     preview.radius.length,
+      spacing: preview.spacing.length,
+      radius: preview.radius.length,
     };
     return map[typeId] ?? null;
   };
 
+  const hasAnyTokens =
+    summary && Object.values(summary.counts).reduce((a, b) => a + b, 0) > 0;
+
   return (
     <div className={styles.home}>
 
-      {/* ── Step 1: URL 입력 ─────────────────── */}
-      {step === 'url' && (
-        <div className={styles.inputSection}>
+      {/* ── 1. 플러그인 연결 상태 카드 (항상 최상단) ── */}
+      <div className={styles.inputSection}>
         <div className={styles.inputSectionInner}>
-          <span className={styles.sectionLabel}>Figma URL</span>
-          <form onSubmit={handleSubmit(onAnalyze, () => setFocus('url'))} className={styles.form} noValidate>
-            <div className={styles.inputRow}>
-              <div className={styles.inputWrapper}>
-                <Icon icon="solar:link-linear" className={styles.inputIcon} />
-                <label htmlFor="figma-url" className="sr-only">Figma URL</label>
-                <input
-                  id="figma-url"
-                  type="url"
-                  placeholder="https://www.figma.com/file/..."
-                  className={styles.input}
-                  aria-invalid={!!errors.url}
-                  aria-describedby={errors.url ? 'figma-url-error' : undefined}
-                  disabled={analyzing}
-                  {...register('url')}
-                />
-              </div>
-              <button type="submit" className={styles.extractBtn} disabled={analyzing}>
-                <Icon icon="solar:magnifer-linear" width={15} height={15} />
-                분석
-              </button>
-            </div>
-            {errors.url && (
-              <p id="figma-url-error" className={styles.error} role="alert">{errors.url.message}</p>
-            )}
-            {analyzeError && (
-              <p className={styles.error} role="alert">{analyzeError}</p>
-            )}
-          </form>
-          {analyzeProgress.isRunning && (
-            <div className={styles.progressWrap}>
-              <ProgressCard percent={analyzeProgress.percent} label={analyzeProgress.label} />
-            </div>
-          )}
+          <PluginStatusCard
+            syncProjects={syncProjects}
+            onSettingsClick={() => {
+              setSection("settings");
+              router.push("/settings");
+            }}
+          />
+        </div>
+      </div>
 
-          {/* 최근 검색 히스토리 */}
-          {!analyzeProgress.isRunning && urlHistory.length > 0 && (
-            <div className={styles.historyBlock}>
-              <span className={styles.historyLabel}>최근 검색</span>
-              <ul className={styles.historyList} aria-label="최근 검색 목록">
-                {urlHistory.map((item) => (
-                  <li key={item.url} className={styles.historyItem}>
-                    <button
-                      type="button"
-                      className={styles.historyUrlBtn}
-                      onClick={() => handleHistoryClick(item.url)}
-                      title={item.url}
-                    >
-                      <Icon icon="solar:history-linear" width={12} height={12} className={styles.historyIcon} />
-                      <span className={styles.historyUrl}>{item.url}</span>
-                      <span className={styles.historyDate}>{formatHistoryDate(item.analyzedAt)}</span>
-                    </button>
-                    <div className={styles.historyActions}>
-                      <button
-                        type="button"
-                        className={styles.historyActionBtn}
-                        onClick={() => handleHistoryCopy(item.url)}
-                        aria-label="URL 복사"
-                        title="클립보드에 복사"
-                      >
-                        <Icon
-                          icon={copiedUrl === item.url ? 'solar:check-circle-linear' : 'solar:copy-linear'}
-                          width={13}
-                          height={13}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.historyActionBtn} ${styles.historyActionDelete}`}
-                        onClick={() => handleHistoryDelete(item.url)}
-                        aria-label="히스토리 삭제"
-                        title="삭제"
-                      >
-                        <Icon icon="solar:close-circle-linear" width={13} height={13} />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {/* JSON 붙여넣기 임포트 */}
-          <div className={styles.jsonSection}>
-            <div className={styles.jsonDivider}>
-              <span className={styles.jsonDividerText}>또는</span>
-            </div>
+      {/* ── 2. 토큰 가져오기 (JSON 파일 / JSON 붙여넣기 탭) ── */}
+      <div className={styles.inputSection}>
+        <div className={styles.inputSectionInner}>
+          <span className={styles.sectionLabel}>토큰 가져오기</span>
+          <TokenImportTabs
+            onImportSuccess={() => {
+              invalidateTokens();
+              getTokenSummary().then(setSummary);
+            }}
+          />
 
-            {!jsonParsedData ? (
-              <div className={styles.jsonPasteBlock}>
-                <textarea
-                  className={styles.jsonTextarea}
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  onPaste={(e) => {
-                    const pasted = e.clipboardData.getData('text');
-                    handleJsonParse(pasted);
-                  }}
-                  placeholder='{ "meta": { ... }, "variables": { ... } }'
-                  spellCheck={false}
-                  aria-label="PixelForge JSON 붙여넣기"
-                  rows={4}
-                />
-                <div className={styles.jsonPasteFooter}>
-                  <span className={styles.jsonPasteHint}>
-                    <Icon icon="solar:info-circle-linear" width={11} height={11} />
-                    Figma 플러그인에서 내보낸 JSON을 붙여넣기
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.jsonParseBtn}
-                    onClick={() => handleJsonParse(jsonText)}
-                    disabled={!jsonText.trim()}
+          {/* 고급: Figma URL 직접 호출 */}
+          <details className={styles.advancedSection}>
+            <summary className={styles.advancedSummary}>
+              <Icon icon="solar:settings-minimalistic-linear" width={12} height={12} />
+              고급: Figma URL 직접 호출
+            </summary>
+
+            <div className={styles.advancedBody}>
+              {/* URL 입력 단계 */}
+              {urlStep === "url" && (
+                <>
+                  <form
+                    onSubmit={handleSubmit(onAnalyze, () => setFocus("url"))}
+                    className={styles.form}
+                    noValidate
                   >
-                    <Icon icon="solar:magnifer-linear" width={13} height={13} />
-                    분석
-                  </button>
-                </div>
-                {jsonError && (
-                  <p className={styles.error} role="alert">{jsonError}</p>
-                )}
-              </div>
-            ) : (
-              <JsonAnalysisPanel
-                data={jsonParsedData}
-                importing={jsonImporting}
-                error={jsonError}
-                onImport={handleJsonImport}
-                onReset={handleJsonReset}
-              />
-            )}
-
-            {jsonImportDone && (
-              <div className={styles.extractSuccess} role="status">
-                <Icon icon="solar:check-circle-linear" width={15} height={15} />
-                <span>
-                  JSON 임포트 완료 — 색상 {jsonImportDone.colors}개, 타이포그래피 {jsonImportDone.typography}개
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        </div>
-      )}
-
-      {/* ── Step 2: 토큰 타입 선택 + 추출 ────── */}
-      {step === 'select' && fileInfo && (
-        <div className={styles.inputSection}>
-        <div className={styles.inputSectionInner}>
-          <div className={styles.selectHeader}>
-            <div className={styles.selectHeaderLeft}>
-              <span className={styles.sectionLabel}>토큰 추출</span>
-              {fromCache && (
-                <span className={styles.cacheTag}>
-                  <Icon icon="solar:database-linear" width={11} height={11} />
-                  캐시됨
-                </span>
-              )}
-            </div>
-            <div className={styles.selectHeaderRight}>
-              {fromCache && (
-                <button type="button" className={styles.refreshBtn} onClick={handleRefresh} disabled={analyzing}>
-                  <Icon icon="solar:refresh-linear" width={12} height={12} />
-                  새로고침
-                </button>
-              )}
-              <button type="button" className={styles.backBtn} onClick={handleBack}>
-                <Icon icon="solar:arrow-left-linear" width={12} height={12} />
-                처음으로
-              </button>
-            </div>
-          </div>
-
-          <>
-              <div className={styles.selectorPanel}>
-                {/* 파일명 */}
-                <div className={styles.fileNameRow}>
-                  <Icon icon="solar:figma-linear" width={13} height={13} className={styles.fileIcon} />
-                  <span className={styles.fileName}>{fileInfo.fileName}</span>
-                </div>
-
-                {/* 페이지 목록 */}
-                {fileInfo.pages.length > 0 && (
-                  <div className={styles.pagesBlock}>
-                    <div className={styles.pagesHeader}>
-                      <Icon icon="solar:document-text-linear" width={11} height={11} />
-                      <span>Pages</span>
-                      <span className={styles.pageCount}>{fileInfo.pages.length}</span>
-                    </div>
-                    <ul className={styles.pageList} aria-label="Figma 페이지 목록">
-                      {fileInfo.pages.map((page) => (
-                        <li key={page.id} className={styles.pageItem}>
-                          <Icon icon="solar:layers-minimalistic-linear" width={11} height={11} className={styles.pageIcon} />
-                          <span className={styles.pageName}>{page.name}</span>
-                          {page.frames.length > 0 && (
-                            <span className={styles.frameCount}>{page.frames.length}</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 토큰 미리보기 */}
-                <div className={styles.previewBlock}>
-                  <div className={styles.previewHeader}>
-                    <span className={styles.filterLabel}>발견된 토큰</span>
-                    {previewing && <span className={styles.previewLoading}>스캔 중...</span>}
-                  </div>
-                  {preview && (
-                    <div className={styles.previewRows}>
-                      {/* 색상 */}
-                      <div className={styles.previewRow}>
-                        <div className={styles.previewRowMeta}>
-                          <Icon icon="solar:pallete-linear" width={12} height={12} className={styles.previewRowIcon} />
-                          <span className={styles.previewRowLabel}>Colors</span>
-                          <span className={styles.previewRowCount}>{preview.colors.length}</span>
-                        </div>
-                        <div className={styles.swatchRow}>
-                          {preview.colors.slice(0, 10).map((c) => (
-                            <span
-                              key={`${c.category}/${c.name}`}
-                              className={styles.swatch}
-                              style={{ background: c.hex }}
-                              title={`${c.category}/${c.name} ${c.hex}`}
-                            />
-                          ))}
-                        </div>
+                    <div className={styles.inputRow}>
+                      <div className={styles.inputWrapper}>
+                        <Icon icon="solar:link-linear" className={styles.inputIcon} />
+                        <label htmlFor="figma-url" className="sr-only">
+                          Figma URL
+                        </label>
+                        <input
+                          id="figma-url"
+                          type="url"
+                          placeholder="https://www.figma.com/file/..."
+                          className={styles.input}
+                          aria-invalid={!!errors.url}
+                          aria-describedby={errors.url ? "figma-url-error" : undefined}
+                          disabled={analyzing}
+                          {...register("url")}
+                        />
                       </div>
+                      <button
+                        type="submit"
+                        className={styles.extractBtn}
+                        disabled={analyzing}
+                      >
+                        <Icon icon="solar:magnifer-linear" width={15} height={15} />
+                        분석
+                      </button>
+                    </div>
+                    {errors.url && (
+                      <p id="figma-url-error" className={styles.error} role="alert">
+                        {errors.url.message}
+                      </p>
+                    )}
+                    {analyzeError && (
+                      <p className={styles.error} role="alert">{analyzeError}</p>
+                    )}
+                  </form>
 
-                      {/* 타이포그래피 */}
-                      {preview.typography.length > 0 && (
-                        <div className={styles.previewRow}>
-                          <div className={styles.previewRowMeta}>
-                            <Icon icon="solar:text-field-linear" width={12} height={12} className={styles.previewRowIcon} />
-                            <span className={styles.previewRowLabel}>Typography</span>
-                            <span className={styles.previewRowCount}>{preview.typography.length}</span>
-                          </div>
-                          <div className={styles.valueChips}>
-                            {preview.typography.filter((t) => t.category === 'size').map((t) => (
-                              <span key={t.name} className={styles.valueChip}>{t.value}px</span>
-                            ))}
-                          </div>
-                        </div>
+                  {analyzeProgress.isRunning && (
+                    <div className={styles.progressWrap}>
+                      <ProgressCard
+                        percent={analyzeProgress.percent}
+                        label={analyzeProgress.label}
+                      />
+                    </div>
+                  )}
+
+                  {!analyzeProgress.isRunning && urlHistory.length > 0 && (
+                    <div className={styles.historyBlock}>
+                      <span className={styles.historyLabel}>최근 검색</span>
+                      <ul className={styles.historyList} aria-label="최근 검색 목록">
+                        {urlHistory.map((item) => (
+                          <li key={item.url} className={styles.historyItem}>
+                            <button
+                              type="button"
+                              className={styles.historyUrlBtn}
+                              onClick={() => handleHistoryClick(item.url)}
+                              title={item.url}
+                            >
+                              <Icon icon="solar:history-linear" width={12} height={12} className={styles.historyIcon} />
+                              <span className={styles.historyUrl}>{item.url}</span>
+                              <span className={styles.historyDate}>{formatHistoryDate(item.analyzedAt)}</span>
+                            </button>
+                            <div className={styles.historyActions}>
+                              <button
+                                type="button"
+                                className={styles.historyActionBtn}
+                                onClick={() => handleHistoryCopy(item.url)}
+                                aria-label="URL 복사"
+                                title="클립보드에 복사"
+                              >
+                                <Icon
+                                  icon={copiedUrl === item.url ? "solar:check-circle-linear" : "solar:copy-linear"}
+                                  width={13} height={13}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.historyActionBtn} ${styles.historyActionDelete}`}
+                                onClick={() => handleHistoryDelete(item.url)}
+                                aria-label="히스토리 삭제"
+                                title="삭제"
+                              >
+                                <Icon icon="solar:close-circle-linear" width={13} height={13} />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* 타입 선택 단계 */}
+              {urlStep === "select" && fileInfo && (
+                <div className={styles.selectorPanel}>
+                  <div className={styles.selectHeader}>
+                    <div className={styles.selectHeaderLeft}>
+                      <span className={styles.sectionLabel}>토큰 추출</span>
+                      {fromCache && (
+                        <span className={styles.cacheTag}>
+                          <Icon icon="solar:database-linear" width={11} height={11} />
+                          캐시됨
+                        </span>
                       )}
+                    </div>
+                    <div className={styles.selectHeaderRight}>
+                      {fromCache && (
+                        <button type="button" className={styles.refreshBtn} onClick={handleRefresh} disabled={analyzing}>
+                          <Icon icon="solar:refresh-linear" width={12} height={12} />
+                          새로고침
+                        </button>
+                      )}
+                      <button type="button" className={styles.backBtn} onClick={handleUrlBack}>
+                        <Icon icon="solar:arrow-left-linear" width={12} height={12} />
+                        처음으로
+                      </button>
+                    </div>
+                  </div>
 
-                      {/* 간격 */}
-                      {preview.spacing.length > 0 && (
-                        <div className={styles.previewRow}>
-                          <div className={styles.previewRowMeta}>
-                            <Icon icon="solar:ruler-linear" width={12} height={12} className={styles.previewRowIcon} />
-                            <span className={styles.previewRowLabel}>Spacing</span>
-                            <span className={styles.previewRowCount}>{preview.spacing.length}</span>
-                          </div>
-                          <div className={styles.valueChips}>
-                            {preview.spacing.slice(0, 8).map((s) => (
-                              <span key={s.name} className={styles.valueChip}>{s.value}</span>
-                            ))}
-                            {preview.spacing.length > 8 && (
-                              <span className={styles.valueChipMore}>+{preview.spacing.length - 8}</span>
+                  <div className={styles.fileNameRow}>
+                    <Icon icon="solar:figma-linear" width={13} height={13} className={styles.fileIcon} />
+                    <span className={styles.fileName}>{fileInfo.fileName}</span>
+                  </div>
+
+                  {fileInfo.pages.length > 0 && (
+                    <div className={styles.pagesBlock}>
+                      <div className={styles.pagesHeader}>
+                        <Icon icon="solar:document-text-linear" width={11} height={11} />
+                        <span>Pages</span>
+                        <span className={styles.pageCount}>{fileInfo.pages.length}</span>
+                      </div>
+                      <ul className={styles.pageList} aria-label="Figma 페이지 목록">
+                        {fileInfo.pages.map((page) => (
+                          <li key={page.id} className={styles.pageItem}>
+                            <Icon icon="solar:layers-minimalistic-linear" width={11} height={11} className={styles.pageIcon} />
+                            <span className={styles.pageName}>{page.name}</span>
+                            {page.frames.length > 0 && (
+                              <span className={styles.frameCount}>{page.frames.length}</span>
                             )}
-                          </div>
-                        </div>
-                      )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                      {/* 반경 */}
-                      {preview.radius.length > 0 && (
+                  <div className={styles.previewBlock}>
+                    <div className={styles.previewHeader}>
+                      <span className={styles.filterLabel}>발견된 토큰</span>
+                      {previewing && <span className={styles.previewLoading}>스캔 중...</span>}
+                    </div>
+                    {preview && (
+                      <div className={styles.previewRows}>
                         <div className={styles.previewRow}>
                           <div className={styles.previewRowMeta}>
-                            <Icon icon="solar:crop-linear" width={12} height={12} className={styles.previewRowIcon} />
-                            <span className={styles.previewRowLabel}>Radius</span>
-                            <span className={styles.previewRowCount}>{preview.radius.length}</span>
+                            <Icon icon="solar:pallete-linear" width={12} height={12} className={styles.previewRowIcon} />
+                            <span className={styles.previewRowLabel}>Colors</span>
+                            <span className={styles.previewRowCount}>{preview.colors.length}</span>
                           </div>
-                          <div className={styles.valueChips}>
-                            {preview.radius.map((r) => (
-                              <span key={r.name} className={styles.valueChip}>{r.value}px</span>
+                          <div className={styles.swatchRow}>
+                            {preview.colors.slice(0, 10).map((c) => (
+                              <span
+                                key={`${c.category}/${c.name}`}
+                                className={styles.swatch}
+                                style={{ background: c.hex }}
+                                title={`${c.category}/${c.name} ${c.hex}`}
+                              />
                             ))}
                           </div>
                         </div>
-                      )}
+                        {preview.typography.length > 0 && (
+                          <div className={styles.previewRow}>
+                            <div className={styles.previewRowMeta}>
+                              <Icon icon="solar:text-field-linear" width={12} height={12} className={styles.previewRowIcon} />
+                              <span className={styles.previewRowLabel}>Typography</span>
+                              <span className={styles.previewRowCount}>{preview.typography.length}</span>
+                            </div>
+                            <div className={styles.valueChips}>
+                              {preview.typography.filter((t) => t.category === "size").map((t) => (
+                                <span key={t.name} className={styles.valueChip}>{t.value}px</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {preview.spacing.length > 0 && (
+                          <div className={styles.previewRow}>
+                            <div className={styles.previewRowMeta}>
+                              <Icon icon="solar:ruler-linear" width={12} height={12} className={styles.previewRowIcon} />
+                              <span className={styles.previewRowLabel}>Spacing</span>
+                              <span className={styles.previewRowCount}>{preview.spacing.length}</span>
+                            </div>
+                            <div className={styles.valueChips}>
+                              {preview.spacing.slice(0, 8).map((s) => (
+                                <span key={s.name} className={styles.valueChip}>{s.value}</span>
+                              ))}
+                              {preview.spacing.length > 8 && (
+                                <span className={styles.valueChipMore}>+{preview.spacing.length - 8}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {preview.radius.length > 0 && (
+                          <div className={styles.previewRow}>
+                            <div className={styles.previewRowMeta}>
+                              <Icon icon="solar:crop-linear" width={12} height={12} className={styles.previewRowIcon} />
+                              <span className={styles.previewRowLabel}>Radius</span>
+                              <span className={styles.previewRowCount}>{preview.radius.length}</span>
+                            </div>
+                            <div className={styles.valueChips}>
+                              {preview.radius.map((r) => (
+                                <span key={r.name} className={styles.valueChip}>{r.value}px</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.filterBlock}>
+                    <span className={styles.filterLabel}>추출할 타입 선택</span>
+                    <div className={styles.typeChips}>
+                      {TOKEN_TYPES.map(({ id, label, icon }) => {
+                        const cnt = getTypePreviewCount(id);
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            className={`${styles.typeChip} ${styles.typeChipAction}${cnt === 0 ? ` ${styles.typeChipEmpty}` : ""}`}
+                            onClick={() => onExtractType(id)}
+                            title={`${label} 토큰 추출하기`}
+                          >
+                            <Icon icon={icon} width={12} height={12} />
+                            {label}
+                            {cnt !== null && (
+                              <span className={cnt > 0 ? styles.typeChipCount : styles.typeChipCountZero}>{cnt}</span>
+                            )}
+                            <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.typeChipArrow} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {extractDone && (
+                    <div className={styles.extractSuccess} role="status">
+                      <Icon icon="solar:check-circle-linear" width={15} height={15} />
+                      <span>
+                        {TOKEN_TYPES.find((t) => t.id === extractDone.typeId)?.label ?? extractDone.typeId}{" "}
+                        토큰{extractDone.count > 0 ? ` ${extractDone.count}개` : ""} 추출 완료
+                      </span>
                     </div>
                   )}
                 </div>
-
-                {/* Token Types — 클릭 시 해당 타입 추출 후 페이지 이동 */}
-                <div className={styles.filterBlock}>
-                  <span className={styles.filterLabel}>추출할 타입 선택</span>
-                  <div className={styles.typeChips}>
-                    {TOKEN_TYPES.map(({ id, label, icon }) => {
-                      const cnt = getTypePreviewCount(id);
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          className={`${styles.typeChip} ${styles.typeChipAction}${cnt === 0 ? ` ${styles.typeChipEmpty}` : ''}`}
-                          onClick={() => onExtractType(id)}
-                          title={`${label} 토큰 추출하기`}
-                        >
-                          <Icon icon={icon} width={12} height={12} />
-                          {label}
-                          {cnt !== null && (
-                            <span className={cnt > 0 ? styles.typeChipCount : styles.typeChipCountZero}>
-                              {cnt}
-                            </span>
-                          )}
-                          <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.typeChipArrow} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {extractDone && (
-                <div className={styles.extractSuccess} role="status">
-                  <Icon icon="solar:check-circle-linear" width={15} height={15} />
-                  <span>
-                    {TOKEN_TYPES.find((t) => t.id === extractDone.typeId)?.label ?? extractDone.typeId} 토큰
-                    {extractDone.count > 0 ? ` ${extractDone.count}개` : ''} 추출 완료
-                  </span>
-                </div>
               )}
-          </>
+            </div>
+          </details>
         </div>
-        </div>
-      )}
+      </div>
 
-      {/* ── 대시보드 카드: Navigation + 인라인 토큰 카운트 ── */}
+      {/* ── 3. 대시보드: Navigation + 토큰 카운트 ── */}
       <div className={styles.dashboardCard}>
         <div className={styles.dashboardInner}>
           <div className={styles.cardHeader}>
@@ -669,14 +643,14 @@ export default function HomePage() {
               const count = getCount(item);
               const hasCount = count !== null;
               const isTokenGroup = index < 4;
-              const showDivider = index === 4; // 토큰 그룹 / 기타 구분선
+              const showDivider = index === 4;
 
               return (
                 <div key={item.path}>
                   {showDivider && <div className={styles.navDivider} />}
                   <button
                     type="button"
-                    className={`${styles.navItem}${isTokenGroup ? ` ${styles.navItemToken}` : ''}`}
+                    className={`${styles.navItem}${isTokenGroup ? ` ${styles.navItemToken}` : ""}`}
                     onClick={() => handleNav(item.path, item.section)}
                   >
                     <div className={styles.navIcon}>
@@ -684,7 +658,7 @@ export default function HomePage() {
                     </div>
                     <span className={styles.navLabel}>{item.label}</span>
                     {hasCount && (
-                      <span className={`${styles.countBadge}${count > 0 ? ` ${styles.countBadgeActive}` : ''}`}>
+                      <span className={`${styles.countBadge}${count > 0 ? ` ${styles.countBadgeActive}` : ""}`}>
                         {count}
                       </span>
                     )}

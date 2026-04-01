@@ -1,0 +1,252 @@
+/**
+ * 공통 토큰 수신 파이프라인
+ *
+ * 4가지 토큰 생성 방식(플러그인 / JSON 파일 / JSON 붙여넣기 / Figma URL)이
+ * 모두 이 함수를 통과하도록 한다.
+ *
+ * runTokenPipeline(projectId, normalizedTokens, options)
+ *   1. tokens 테이블 upsert (DELETE source=options.source → INSERT)
+ *   2. computeSnapshotDiff  (이전 스냅샷과 비교)
+ *   3. tokenSnapshots INSERT (tokenCounts, diffSummary)
+ *   4. CSS 재생성 → design-tokens/tokens.css 저장
+ *   5. 변경된 타입에 대해 백그라운드 스크린샷 트리거
+ */
+
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { db } from '@/lib/db';
+import { tokens, tokenSnapshots } from '@/lib/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import type { NormalizedToken } from '@/lib/sync/parse-variables';
+import {
+  computeSnapshotDiff,
+  computeTokenCounts,
+  type SnapshotTokenItem,
+} from '@/lib/tokens/snapshot-engine';
+import { generateAllCssCode } from '@/lib/tokens/css-generator';
+import type { TokenRow } from '@/lib/actions/tokens';
+
+// ─────────────────────────────────────────
+// 타입
+// ─────────────────────────────────────────
+
+export type TokenSource = 'variables' | 'styles-api' | 'section-scan' | 'node-scan';
+
+export interface PipelineOptions {
+  source: TokenSource;
+  figmaKey?: string;
+  figmaVersion?: string;
+}
+
+export interface PipelineResult {
+  version: number;
+  tokenCounts: Record<string, number>;
+  diff: {
+    added: number;
+    removed: number;
+    changed: number;
+    changedTypes: string[];
+  };
+  screenshotQueued: boolean;
+}
+
+// ─────────────────────────────────────────
+// 내부 헬퍼
+// ─────────────────────────────────────────
+
+function normalizedToSnapshotItem(t: NormalizedToken): SnapshotTokenItem {
+  return {
+    type: t.type,
+    name: t.name,
+    value: t.value,
+    raw: t.raw,
+    mode: t.mode,
+    collectionName: t.collectionName,
+    alias: t.alias,
+  };
+}
+
+function tokenRowToSnapshotItem(r: TokenRow): SnapshotTokenItem {
+  return {
+    type: r.type,
+    name: r.name,
+    value: r.value,
+    raw: r.raw,
+    mode: r.mode,
+    collectionName: r.collectionName,
+    alias: r.alias,
+  };
+}
+
+function normalizedToTokenRow(t: NormalizedToken): Omit<TokenRow, 'id'> {
+  return {
+    type: t.type,
+    name: t.name,
+    value: t.value,
+    raw: t.raw,
+    source: 'variables' as const,  // upsert 시 재지정됨
+    mode: t.mode,
+    collectionName: t.collectionName,
+    alias: t.alias,
+  };
+}
+
+/** 이전 스냅샷의 토큰 데이터를 파싱하여 SnapshotTokenItem[] 반환 */
+function parsePrevTokens(tokensDataJson: string | null): SnapshotTokenItem[] {
+  if (!tokensDataJson) return [];
+  try {
+    const parsed = JSON.parse(tokensDataJson) as unknown;
+    if (Array.isArray(parsed)) return parsed as SnapshotTokenItem[];
+  } catch {}
+  return [];
+}
+
+// ─────────────────────────────────────────
+// 메인 파이프라인
+// ─────────────────────────────────────────
+
+export async function runTokenPipeline(
+  projectId: string,
+  normalizedTokens: NormalizedToken[],
+  options: PipelineOptions,
+): Promise<PipelineResult> {
+  const { source, figmaKey, figmaVersion } = options;
+
+  // ── Step 1: tokens 테이블 upsert ──────────────
+  // 동일 source 기존 토큰 삭제 후 새 토큰 INSERT
+  await db.delete(tokens).where(
+    and(eq(tokens.projectId, projectId), eq(tokens.source, source)),
+  );
+
+  if (normalizedTokens.length > 0) {
+    await db.insert(tokens).values(
+      normalizedTokens.map((t) => ({
+        id: crypto.randomUUID(),
+        projectId,
+        source,
+        type: t.type,
+        name: t.name,
+        value: t.value,
+        raw: t.raw,
+        mode: t.mode,
+        collectionName: t.collectionName,
+        alias: t.alias,
+      })),
+    );
+  }
+
+  // ── Step 2: diff 계산 ─────────────────────────
+  const prevSnapshot = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.projectId, projectId))
+    .orderBy(desc(tokenSnapshots.version))
+    .limit(1)
+    .get();
+
+  const prevItems = parsePrevTokens(prevSnapshot?.tokensData ?? null);
+  const newItems = normalizedTokens.map(normalizedToSnapshotItem);
+  const diff = computeSnapshotDiff(prevItems, newItems);
+
+  const changedTypes = Object.keys(diff.countsByType);
+
+  // ── Step 3: tokenSnapshots INSERT ────────────
+  const tokenCounts = computeTokenCounts(newItems);
+  const nextVersion = (prevSnapshot?.version ?? 0) + 1;
+  const snapshotId = crypto.randomUUID();
+
+  await db.insert(tokenSnapshots).values({
+    id: snapshotId,
+    projectId,
+    version: nextVersion,
+    source,
+    figmaVersion: figmaVersion ?? null,
+    tokenCounts: JSON.stringify(tokenCounts),
+    tokensData: JSON.stringify(newItems),
+    diffSummary: JSON.stringify({
+      added: diff.added,
+      removed: diff.removed,
+      changed: diff.changed,
+    }),
+  });
+
+  // ── Step 4: CSS 재생성 ────────────────────────
+  try {
+    const allTokenRows = await db
+      .select({
+        id: tokens.id,
+        name: tokens.name,
+        type: tokens.type,
+        value: tokens.value,
+        raw: tokens.raw,
+        source: tokens.source,
+        mode: tokens.mode,
+        collectionName: tokens.collectionName,
+        alias: tokens.alias,
+      })
+      .from(tokens)
+      .where(eq(tokens.projectId, projectId))
+      .all() as TokenRow[];
+
+    const css = generateAllCssCode(allTokenRows);
+    const cssDir = path.join(process.cwd(), 'design-tokens');
+    fs.mkdirSync(cssDir, { recursive: true });
+    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+  } catch {
+    // CSS 재생성 실패는 파이프라인을 중단하지 않음
+  }
+
+  // ── Step 5: 스크린샷 백그라운드 트리거 ─────────
+  let screenshotQueued = false;
+  if (changedTypes.length > 0) {
+    screenshotQueued = true;
+    // 응답 블로킹 없이 백그라운드 실행
+    void triggerScreenshots(changedTypes, figmaKey ?? null, projectId);
+  }
+
+  return {
+    version: nextVersion,
+    tokenCounts,
+    diff: {
+      added: diff.added.length,
+      removed: diff.removed.length,
+      changed: diff.changed.length,
+      changedTypes,
+    },
+    screenshotQueued,
+  };
+}
+
+// ─────────────────────────────────────────
+// 스크린샷 백그라운드 실행
+// ─────────────────────────────────────────
+
+async function triggerScreenshots(
+  changedTypes: string[],
+  figmaKey: string | null,
+  projectId: string,
+): Promise<void> {
+  try {
+    const { captureTokenPageScreenshotAction, captureFigmaFrameAction } = await import(
+      '@/lib/actions/tokens'
+    );
+
+    // 변경된 타입에 대해 병렬 캡처 (캡처 가능한 타입만)
+    const captureableTypes = changedTypes.filter((t) =>
+      ['color', 'typography', 'spacing', 'radius'].includes(t),
+    );
+
+    await Promise.allSettled(
+      captureableTypes.flatMap((type) => {
+        const tasks = [captureTokenPageScreenshotAction(type)];
+        if (figmaKey) {
+          tasks.push(captureFigmaFrameAction(type, figmaKey, null));
+        }
+        return tasks;
+      }),
+    );
+  } catch {
+    // 스크린샷 실패는 무시 (백그라운드 작업)
+  }
+}

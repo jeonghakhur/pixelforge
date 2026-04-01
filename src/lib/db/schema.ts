@@ -1,5 +1,23 @@
 import { sqliteTable, text, integer, unique } from 'drizzle-orm/sqlite-core';
 
+export const syncPayloads = sqliteTable('sync_payloads', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  type: text('type', { enum: ['icons', 'images', 'themes', 'components'] }).notNull(),
+  version: integer('version').notNull().default(1),
+  contentHash: text('content_hash').notNull(),
+  data: text('data').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const apiKeys = sqliteTable('api_keys', {
+  id: text('id').primaryKey(),
+  keyHash: text('key_hash').notNull().unique(),
+  name: text('name').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+});
+
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -39,15 +57,38 @@ export const tokens = sqliteTable('tokens', {
 export const components = sqliteTable('components', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id),
+  figmaNodeId: text('figma_node_id'),
+  figmaFileKey: text('figma_file_key'),
   name: text('name').notNull(),
   category: text('category', { enum: ['action', 'form', 'navigation', 'feedback'] }).notNull(),
   scss: text('scss'),
   tsx: text('tsx'),
   description: text('description'),
+  defaultStyleMode: text('default_style_mode').notNull().default('css-modules'),
   menuOrder: integer('menu_order').notNull().default(0),
   isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const componentFiles = sqliteTable('component_files', {
+  id: text('id').primaryKey(),
+  componentId: text('component_id').notNull().references(() => components.id),
+  styleMode: text('style_mode', { enum: ['css-modules', 'styled', 'html'] }).notNull(),
+  fileType: text('file_type', { enum: ['tsx', 'css', 'html'] }).notNull(),
+  fileName: text('file_name').notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const componentNodeSnapshots = sqliteTable('component_node_snapshots', {
+  id: text('id').primaryKey(),
+  componentId: text('component_id').notNull().references(() => components.id),
+  figmaNodeData: text('figma_node_data').notNull(),
+  figmaVersion: text('figma_version'),
+  trigger: text('trigger', { enum: ['generate', 'update'] }).notNull().default('generate'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
 export const histories = sqliteTable('histories', {

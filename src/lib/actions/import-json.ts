@@ -1,9 +1,11 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { projects, tokens, histories } from '@/lib/db/schema';
+import { projects } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
+import type { NormalizedToken } from '@/lib/sync/parse-variables';
+import { runTokenPipeline } from '@/lib/tokens/pipeline';
 
 // ===========================
 // PixelForge JSON 포맷 타입
@@ -25,6 +27,7 @@ export interface PixelForgeJson {
       resolvedType: 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
       valuesByMode: Record<string, JsonColor | JsonVariableAlias>;
       collectionId: string;
+      scopes?: string[];
     }>;
   };
   styles?: {
@@ -66,20 +69,140 @@ export interface ImportJsonResult {
 // JSON 임포트 전용 프로젝트 식별 키
 const JSON_PROJECT_KEY = 'json-import';
 
-function generateId(): string {
-  return crypto.randomUUID();
-}
+// ───────────────────────────────────────────────
+// 파서 유틸리티
+// ───────────────────────────────────────────────
 
 function toHex(v: number): string {
   return Math.round(v * 255).toString(16).padStart(2, '0');
 }
 
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+function rgbToHex(r: number, g: number, b: number, a?: number): string {
+  const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  if (a !== undefined && a < 1) {
+    return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${Math.round(a * 100) / 100})`;
+  }
+  return hex;
 }
 
 function isAlias(v: JsonColor | JsonVariableAlias): v is JsonVariableAlias {
-  return 'type' in v;
+  return 'type' in v && (v as JsonVariableAlias).type === 'VARIABLE_ALIAS';
+}
+
+function inferFloatType(name: string, scopes: string[] = []): string {
+  if (scopes.includes('CORNER_RADIUS')) return 'radius';
+  if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
+  if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
+  const lower = name.toLowerCase();
+  if (/radius|corner|rounded/.test(lower)) return 'radius';
+  if (/spacing|gap|padding|margin|width|height/.test(lower)) return 'spacing';
+  if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
+  return 'float';
+}
+
+// ───────────────────────────────────────────────
+// JSON → NormalizedToken[] 변환
+// ───────────────────────────────────────────────
+
+function parseJsonToNormalizedTokens(data: PixelForgeJson): NormalizedToken[] {
+  const result: NormalizedToken[] = [];
+
+  if (data.variables) {
+    const collectionMap = new Map(data.variables.collections.map((c) => [c.id, c]));
+
+    // modeId → { modeName, collectionName }
+    const modeMap = new Map<string, { modeName: string; collectionName: string }>();
+    for (const col of data.variables.collections) {
+      for (const mode of col.modes) {
+        modeMap.set(mode.modeId, { modeName: mode.name, collectionName: col.name });
+      }
+    }
+
+    for (const variable of data.variables.variables) {
+      const collection = collectionMap.get(variable.collectionId);
+      // defaultModeId 없으면 첫 번째 mode 사용
+      const defaultModeId = collection?.modes[0]?.modeId ?? Object.keys(variable.valuesByMode)[0];
+      if (!defaultModeId) continue;
+
+      const rawValue = variable.valuesByMode[defaultModeId];
+      if (rawValue === undefined) continue;
+
+      const modeInfo = modeMap.get(defaultModeId);
+
+      const base: Omit<NormalizedToken, 'type' | 'value' | 'raw'> = {
+        name: variable.name,
+        mode: modeInfo?.modeName ?? null,
+        collectionName: modeInfo?.collectionName ?? null,
+        alias: isAlias(rawValue) ? rawValue.id : null,
+      };
+
+      if (isAlias(rawValue)) {
+        result.push({
+          ...base,
+          type: variable.resolvedType === 'COLOR' ? 'color' : inferFloatType(variable.name, variable.scopes),
+          value: '',
+          raw: rawValue.id,
+        });
+        continue;
+      }
+
+      switch (variable.resolvedType) {
+        case 'COLOR': {
+          const c = rawValue as JsonColor;
+          const hex = rgbToHex(c.r, c.g, c.b, c.a);
+          result.push({ ...base, type: 'color', value: hex, raw: hex });
+          break;
+        }
+        case 'FLOAT': {
+          const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
+          const type = inferFloatType(variable.name, variable.scopes);
+          result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
+          break;
+        }
+        case 'STRING': {
+          const strVal = String(rawValue);
+          result.push({ ...base, type: 'string', value: strVal, raw: strVal });
+          break;
+        }
+        case 'BOOLEAN': {
+          const boolVal = String(rawValue);
+          result.push({ ...base, type: 'boolean', value: boolVal, raw: boolVal });
+          break;
+        }
+      }
+    }
+  }
+
+  // variables에서 색상을 못 얻었으면 styles.colors로 폴백
+  const hasColors = result.some((t) => t.type === 'color');
+  if (!hasColors && data.styles?.colors) {
+    for (const style of data.styles.colors) {
+      const paint = style.paints.find((p) => p.type === 'SOLID' && p.color);
+      if (!paint?.color) continue;
+      const { r, g, b } = paint.color;
+      const hex = rgbToHex(r, g, b, paint.opacity);
+      result.push({ type: 'color', name: style.name, value: hex, raw: hex, mode: null, collectionName: null, alias: null });
+    }
+  }
+
+  // styles.texts → typography 토큰
+  if (data.styles?.texts) {
+    for (const text of data.styles.texts) {
+      const fontFamily = text.fontName?.family ?? '';
+      const fontSize = text.fontSize ?? 0;
+      result.push({
+        type: 'typography',
+        name: text.name,
+        value: `${fontFamily} ${fontSize}px`,
+        raw: `${fontFamily} ${fontSize}px`,
+        mode: null,
+        collectionName: null,
+        alias: null,
+      });
+    }
+  }
+
+  return result;
 }
 
 // ===========================
@@ -93,132 +216,38 @@ export async function importFromJsonAction(data: PixelForgeJson): Promise<Import
 
     const fileName = data.meta.fileName || 'JSON Import';
 
-    // ── 1. json-import 프로젝트 찾기 또는 생성
+    // 1. json-import 프로젝트 찾기 또는 생성
     const existing = db.select().from(projects).where(eq(projects.figmaKey, JSON_PROJECT_KEY)).get();
     let projectId: string;
 
     if (existing) {
       projectId = existing.id;
-      db.update(projects)
+      await db.update(projects)
         .set({ name: fileName, updatedAt: new Date() })
-        .where(eq(projects.id, projectId))
-        .run();
+        .where(eq(projects.id, projectId));
     } else {
-      projectId = generateId();
-      db.insert(projects).values({
+      projectId = crypto.randomUUID();
+      await db.insert(projects).values({
         id: projectId,
         name: fileName,
         figmaKey: JSON_PROJECT_KEY,
         figmaUrl: null,
-      }).run();
+      });
     }
 
-    type TokenRow = {
-      id: string; projectId: string; version: number; type: string;
-      name: string; value: string; raw: string;
-      source: 'variables' | 'styles-api';
-      mode: string | null; collectionName: string | null; alias: string | null;
-    };
+    // 2. JSON → NormalizedToken[] 변환
+    const normalizedTokens = parseJsonToNormalizedTokens(data);
 
-    const colorTokens: TokenRow[] = [];
-    const typoTokens: TokenRow[] = [];
+    // 3. 공통 파이프라인 실행
+    await runTokenPipeline(projectId, normalizedTokens, {
+      source: 'variables',
+      figmaKey: data.meta.figmaFileKey,
+    });
 
-    // ── 2. variables → color 토큰 (VARIABLE_ALIAS 제외)
-    if (data.variables) {
-      const collectionMap = new Map(data.variables.collections.map((c) => [c.id, c]));
+    const colors = normalizedTokens.filter((t) => t.type === 'color').length;
+    const typography = normalizedTokens.filter((t) => t.type === 'typography').length;
 
-      // modeId → { modeName, collectionName }
-      const modeMap = new Map<string, { modeName: string; collectionName: string }>();
-      for (const col of data.variables.collections) {
-        for (const mode of col.modes) {
-          modeMap.set(mode.modeId, { modeName: mode.name, collectionName: col.name });
-        }
-      }
-
-      for (const variable of data.variables.variables) {
-        if (variable.resolvedType !== 'COLOR') continue;
-        if (!collectionMap.has(variable.collectionId)) continue;
-
-        for (const [modeId, rawValue] of Object.entries(variable.valuesByMode)) {
-          if (isAlias(rawValue)) continue; // VARIABLE_ALIAS 건너뜀
-
-          const { r, g, b, a } = rawValue as JsonColor;
-          const hex = rgbToHex(r, g, b);
-          const rgba = { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: a ?? 1 };
-          const modeInfo = modeMap.get(modeId);
-
-          colorTokens.push({
-            id: generateId(), projectId, version: 1, type: 'color',
-            name: variable.name,
-            value: JSON.stringify({ hex, rgba }),
-            raw: hex,
-            source: 'variables',
-            mode: modeInfo?.modeName ?? null,
-            collectionName: modeInfo?.collectionName ?? null,
-            alias: null,
-          });
-        }
-      }
-    }
-
-    // variables에서 색상을 못 얻었으면 styles.colors로 폴백
-    if (colorTokens.length === 0 && data.styles?.colors) {
-      for (const style of data.styles.colors) {
-        const paint = style.paints.find((p) => p.type === 'SOLID' && p.color);
-        if (!paint?.color) continue;
-
-        const { r, g, b } = paint.color;
-        const hex = rgbToHex(r, g, b);
-        const rgba = { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: paint.opacity ?? 1 };
-
-        colorTokens.push({
-          id: generateId(), projectId, version: 1, type: 'color',
-          name: style.name,
-          value: JSON.stringify({ hex, rgba }),
-          raw: hex,
-          source: 'styles-api',
-          mode: null, collectionName: null, alias: null,
-        });
-      }
-    }
-
-    // ── 3. styles.texts → typography 토큰
-    if (data.styles?.texts) {
-      for (const text of data.styles.texts) {
-        const fontFamily = text.fontName?.family ?? '';
-        const fontSize = text.fontSize ?? 0;
-        const fontWeight = text.fontWeight ?? 400;
-        const lineHeight = text.lineHeight?.value ?? undefined;
-        const letterSpacing = text.letterSpacing?.value ?? undefined;
-
-        typoTokens.push({
-          id: generateId(), projectId, version: 1, type: 'typography',
-          name: text.name,
-          value: JSON.stringify({ fontFamily, fontSize, fontWeight, lineHeight, letterSpacing }),
-          raw: `${fontFamily} ${fontSize}px`,
-          source: 'styles-api',
-          mode: null, collectionName: null, alias: null,
-        });
-      }
-    }
-
-    // ── 4. 기존 토큰 삭제 후 삽입
-    db.delete(tokens).where(eq(tokens.projectId, projectId)).run();
-
-    for (const token of [...colorTokens, ...typoTokens]) {
-      db.insert(tokens).values(token).run();
-    }
-
-    // ── 5. 히스토리 기록
-    db.insert(histories).values({
-      id: generateId(),
-      projectId,
-      action: 'extract_tokens',
-      summary: `JSON 임포트: 색상 ${colorTokens.length}개, 타이포그래피 ${typoTokens.length}개`,
-      metadata: JSON.stringify({ source: 'json-import', fileName }),
-    }).run();
-
-    return { error: null, colors: colorTokens.length, typography: typoTokens.length, projectId };
+    return { error: null, colors, typography, projectId };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'JSON 임포트에 실패했습니다.';
     return { error: message, colors: 0, typography: 0, projectId: null };
