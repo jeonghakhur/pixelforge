@@ -14,7 +14,6 @@ import {
 } from '@/lib/actions/snapshots';
 import { getProjectInfo } from '@/lib/actions/tokens';
 import { extractTokensAction } from '@/lib/actions/project';
-import TokenCommitHistory from './TokenCommitHistory';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './page.module.scss';
 
@@ -307,8 +306,6 @@ export default function DiffPage() {
         </p>
       </div>
 
-      {/* ── 커밋 이력 ── */}
-      <TokenCommitHistory />
 
       <>
         {/* ── Drift Detection ── */}

@@ -1,4 +1,4 @@
-# Design: 토큰 변경 히스토리 (git auto-commit)
+# Design: 토큰 변경 히스토리 (snapshot 기반)
 
 > Plan: `docs/01-plan/features/token-history.plan.md`
 
@@ -9,24 +9,23 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Presentation (React)                                   │
-│  src/app/(ide)/diff/page.tsx  ← "커밋 이력" 섹션 추가    │
-│  src/app/(ide)/diff/TokenCommitHistory.tsx  ← 신규       │
+│  src/app/(ide)/TokenDashboard.tsx  ← SnapshotHistory 섹션 추가    
+│                                  SnapshotHistory 추가    │
+│  src/app/(ide)/SnapshotHistory.tsx  ← 신규          │
 └─────────────────┬───────────────────────────────────────┘
                   │ Server Actions (use server)
 ┌─────────────────▼───────────────────────────────────────┐
 │  Application (Server Actions)                           │
-│  src/lib/actions/token-history.ts  ← 신규               │
-│    getTokenCssHistoryAction()                           │
-│    getTokenCssDiffAction(hashA, hashB)                  │
-│    getTokenCssAtCommitAction(hash)                      │
+│  src/lib/actions/tokens.ts                              │
+│    getSnapshotListAction()   ← 기존 (수정 없음)           │
+│    getSnapshotDetailAction() ← 신규                      │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
-│  Infrastructure (git + fs)                              │
-│  src/lib/git/token-commits.ts  ← 신규                   │
-│    commitTokensCss(css, message)                        │
-│  src/lib/tokens/css-generator.ts  ← 기존 재사용         │
-│    generateAllCssCode(allTokens)                        │
+│  Infrastructure (DB + snapshot-engine)                  │
+│  tokenSnapshots 테이블  ← 스키마 변경 없음                │
+│  src/lib/tokens/pipeline.ts ← diffSummary 구조 확장      │
+│  src/lib/tokens/snapshot-engine.ts ← 기존 재사용         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -38,542 +37,490 @@
 
 | 파일 | 역할 | 규모 |
 |------|------|------|
-| `src/lib/git/token-commits.ts` | git 파일 쓰기 + commit 유틸 | ~60줄 |
-| `src/lib/actions/token-history.ts` | git log/diff/show server actions | ~80줄 |
-| `src/app/(ide)/diff/TokenCommitHistory.tsx` | 커밋 이력 UI 컴포넌트 | ~200줄 |
-| `src/app/(ide)/diff/token-commit-history.module.scss` | 스타일 | ~150줄 |
+| `src/app/(ide)/SnapshotHistory.tsx` | 히스토리 타임라인 + 상세 패널 | ~200줄 |
+| `src/app/(ide)/snapshot-history.module.scss` | 스타일 | ~150줄 |
 
 ### 수정 파일
 
-| 파일 | 변경 내용 | 규모 |
-|------|-----------|------|
-| `src/lib/actions/project.ts:589-594` | `createSnapshotAction` → `commitTokensCss` | ~10줄 교체 |
-| `src/app/(ide)/diff/page.tsx` | `TokenCommitHistory` 섹션 추가 | ~5줄 추가 |
+| 파일 | 변경 내용 |
+|------|-----------|
+| `src/lib/tokens/pipeline.ts` | `diffSummary` — 숫자 → 토큰 목록으로 확장 |
+| `src/lib/actions/tokens.ts` | `getSnapshotDetailAction()` 추가 |
+| `src/app/(ide)/diff/page.tsx` | `TokenCommitHistory` 제거, `SnapshotHistory` 추가 |
+
+### 제거 파일
+
+| 파일 | 이유 |
+|------|------|
+| `src/app/(ide)/diff/TokenCommitHistory.tsx` | git 기반 — 대체됨 |
+| `src/app/(ide)/diff/token-commit-history.module.scss` | 함께 제거 |
+| `src/lib/git/token-commits.ts` | git auto-commit 불필요 |
+| `src/lib/actions/token-history.ts` | git 기반 server actions — 대체됨 |
 
 ---
 
-## 3. `src/lib/git/token-commits.ts` 상세 설계
+## 3. `pipeline.ts` 수정 — diffSummary 확장
+
+### 변경 전
 
 ```typescript
-import { execSync, ExecSyncOptionsWithBufferEncoding } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+diffSummary: JSON.stringify({
+  added: diff.added.length,
+  removed: diff.removed.length,
+  changed: diff.changed.length,
+}),
+```
 
-const CWD = process.cwd();
-const TOKENS_CSS_PATH = path.join(CWD, 'design-tokens', 'tokens.css');
+### 변경 후
 
-const GIT_AUTHOR_FLAGS =
-  '-c user.name="PixelForge" -c user.email="bot@pixelforge.local"';
-
-function exec(cmd: string): string {
-  const opts: ExecSyncOptionsWithBufferEncoding = { cwd: CWD, stdio: ['pipe', 'pipe', 'pipe'] };
-  return execSync(cmd, opts).toString().trim();
+```typescript
+/** diffSummary에 저장할 토큰 항목 (용량 최소화: value 제외) */
+interface DiffSummaryItem {
+  name: string;
+  type: string;
+  oldRaw?: string | null;
+  newRaw?: string | null;
 }
 
-export interface CommitTokensResult {
-  committed: boolean;
-  hash: string | null;
-  error: string | null;
+interface DiffSummaryData {
+  added: DiffSummaryItem[];
+  removed: DiffSummaryItem[];
+  changed: DiffSummaryItem[];
 }
 
-/**
- * tokens.css 파일을 저장하고 변경이 있을 때만 git commit.
- * git 저장소가 없거나 실패해도 에러를 throw하지 않음 (추출 자체를 막으면 안 됨).
- */
-export function commitTokensCss(
-  cssContent: string,
-  commitMessage: string,
-): CommitTokensResult {
+diffSummary: JSON.stringify({
+  added:   diff.added.map((t)   => ({ name: t.name, type: t.type })),
+  removed: diff.removed.map((t) => ({ name: t.name, type: t.type })),
+  changed: diff.changed.map((t) => ({ name: t.name, type: t.type, oldRaw: t.oldRaw, newRaw: t.newRaw })),
+} satisfies DiffSummaryData),
+```
+
+> 두 곳 수정 (메인 upsert + `upsertTokenTypeConfigs` 이전 INSERT)
+> `value` JSON 원본은 제외 — `raw`(표시용 문자열)만 저장해 용량 최소화
+
+---
+
+## 4. `getSnapshotDetailAction()` 상세 설계
+
+**`src/lib/actions/tokens.ts`** 에 추가:
+
+```typescript
+export interface SnapshotDiffEntry {
+  name: string;
+  type: string;
+  oldRaw?: string | null;
+  newRaw?: string | null;
+}
+
+export interface SnapshotDetail {
+  id: string;
+  version: number;
+  source: string;
+  createdAt: string;
+  tokenCounts: Record<string, number>;
+  diff: {
+    added: SnapshotDiffEntry[];
+    removed: SnapshotDiffEntry[];
+    changed: SnapshotDiffEntry[];
+  };
+}
+
+export async function getSnapshotDetailAction(
+  snapshotId: string,
+): Promise<{ error: string | null; detail: SnapshotDetail | null }> {
+  // 1. 대상 스냅샷 조회
+  const row = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.id, snapshotId))
+    .get();
+
+  if (!row) return { error: '스냅샷을 찾을 수 없습니다.', detail: null };
+
+  // 2. diffSummary 파싱 — 신규 형식(목록) vs 구형식(숫자) 구분
+  let diff: SnapshotDetail['diff'] = { added: [], removed: [], changed: [] };
+
   try {
-    // 1. 디렉토리 + 파일 쓰기
-    fs.mkdirSync(path.dirname(TOKENS_CSS_PATH), { recursive: true });
-    fs.writeFileSync(TOKENS_CSS_PATH, cssContent, 'utf-8');
+    const parsed = JSON.parse(row.diffSummary ?? '{}') as Record<string, unknown>;
 
-    // 2. git 저장소 확인
-    try {
-      exec('git rev-parse --git-dir');
-    } catch {
-      return { committed: false, hash: null, error: 'git 저장소가 없습니다.' };
+    if (Array.isArray(parsed.added)) {
+      // 신규 형식 — 목록 그대로 사용
+      diff = parsed as SnapshotDetail['diff'];
+    } else {
+      // 구형식(숫자만) — tokensData 비교로 on-demand 계산
+      const prevRow = await db
+        .select({ tokensData: tokenSnapshots.tokensData })
+        .from(tokenSnapshots)
+        .where(
+          and(
+            eq(tokenSnapshots.projectId, row.projectId),
+            lt(tokenSnapshots.version, row.version),
+          ),
+        )
+        .orderBy(desc(tokenSnapshots.version))
+        .limit(1)
+        .get();
+
+      const prevItems = prevRow?.tokensData
+        ? (JSON.parse(prevRow.tokensData) as SnapshotTokenItem[])
+        : [];
+      const currItems = JSON.parse(row.tokensData) as SnapshotTokenItem[];
+      const computed = computeSnapshotDiff(prevItems, currItems);
+
+      diff = {
+        added:   computed.added.map((t)   => ({ name: t.name, type: t.type })),
+        removed: computed.removed.map((t) => ({ name: t.name, type: t.type })),
+        changed: computed.changed.map((t) => ({
+          name: t.name, type: t.type, oldRaw: t.oldRaw, newRaw: t.newRaw,
+        })),
+      };
     }
+  } catch {}
 
-    // 3. 변경 여부 확인 (동일 내용이면 커밋 스킵)
-    const statusOutput = exec('git status --porcelain design-tokens/tokens.css');
-    if (!statusOutput) {
-      return { committed: false, hash: null, error: null }; // 변경 없음 — 정상
-    }
+  let tokenCounts: Record<string, number> = {};
+  try { tokenCounts = JSON.parse(row.tokenCounts) as Record<string, number>; } catch {}
 
-    // 4. git add + commit (--no-verify: pre-commit 훅 우회)
-    exec('git add design-tokens/tokens.css');
-    const safeMsg = commitMessage.replace(/"/g, '\\"');
-    exec(`git ${GIT_AUTHOR_FLAGS} commit -m "${safeMsg}" --no-verify`);
-
-    // 5. 커밋 해시 반환
-    const hash = exec('git rev-parse --short HEAD');
-    return { committed: true, hash, error: null };
-  } catch (err) {
-    return {
-      committed: false,
-      hash: null,
-      error: err instanceof Error ? err.message : 'git commit 실패',
-    };
-  }
-}
-
-/** 커밋 메시지 생성 헬퍼 */
-export function buildCommitMessage(counts: {
-  colors: number;
-  typography: number;
-  spacing: number;
-  radii: number;
-}): string {
-  const parts = [
-    counts.colors    > 0 && `색상 ${counts.colors}`,
-    counts.typography > 0 && `타이포 ${counts.typography}`,
-    counts.spacing   > 0 && `간격 ${counts.spacing}`,
-    counts.radii     > 0 && `반경 ${counts.radii}`,
-  ].filter(Boolean) as string[];
-
-  return `tokens: ${parts.join(' · ')}`;
+  return {
+    error: null,
+    detail: {
+      id: row.id,
+      version: row.version,
+      source: row.source,
+      createdAt: row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : new Date((row.createdAt as number) * 1000).toISOString(),
+      tokenCounts,
+      diff,
+    },
+  };
 }
 ```
 
 ---
 
-## 4. `src/lib/actions/token-history.ts` 상세 설계
+## 5. `SnapshotHistory` 컴포넌트 설계
+
+### 5-1. Props
 
 ```typescript
-'use server';
-
-import { execSync } from 'child_process';
-import path from 'path';
-
-const CWD = process.cwd();
-const TOKEN_FILE = 'design-tokens/tokens.css';
-
-function exec(cmd: string): string {
-  return execSync(cmd, { cwd: CWD, stdio: ['pipe', 'pipe', 'pipe'] })
-    .toString()
-    .trim();
-}
-
-// ===========================
-// 타입 정의
-// ===========================
-
-export interface TokenCommit {
-  hash: string;    // 7자리 short hash
-  fullHash: string;
-  date: string;    // ISO 8601
-  message: string; // "tokens: 색상 106 · 타이포 42"
-  author: string;
-}
-
-// ===========================
-// git log: 커밋 이력 목록
-// ===========================
-
-export async function getTokenCssHistoryAction(): Promise<{
-  error: string | null;
-  commits: TokenCommit[];
-}> {
-  try {
-    // 파일 존재 여부 체크
-    const exists = exec(`git ls-files --error-unmatch ${TOKEN_FILE} 2>/dev/null || echo "missing"`);
-    if (exists === 'missing') {
-      return { error: null, commits: [] }; // 아직 커밋 없음 — 빈 목록
-    }
-
-    const log = exec(
-      `git log --follow --format="%h|%H|%ai|%s|%an" -- ${TOKEN_FILE}`
-    );
-    if (!log) return { error: null, commits: [] };
-
-    const commits: TokenCommit[] = log.split('\n').map((line) => {
-      const [hash, fullHash, date, message, author] = line.split('|');
-      return { hash, fullHash, date, message, author };
-    });
-
-    return { error: null, commits };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : 'git log 실패',
-      commits: [],
-    };
-  }
-}
-
-// ===========================
-// git diff: 두 커밋 간 diff
-// ===========================
-
-export async function getTokenCssDiffAction(
-  hashA: string,   // 이전 (older)
-  hashB: string,   // 이후 (newer)
-): Promise<{ error: string | null; diff: string }> {
-  try {
-    // git diff는 변경 없으면 빈 문자열 반환 (exit code 0)
-    const diff = exec(`git diff ${hashA} ${hashB} -- ${TOKEN_FILE}`);
-    return { error: null, diff };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'diff 실패', diff: '' };
-  }
-}
-
-// ===========================
-// git show: 특정 커밋의 파일 내용
-// ===========================
-
-export async function getTokenCssAtCommitAction(hash: string): Promise<{
-  error: string | null;
-  content: string;
-}> {
-  try {
-    const content = exec(`git show ${hash}:${TOKEN_FILE}`);
-    return { error: null, content };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : 'git show 실패',
-      content: '',
-    };
-  }
-}
+// Props 없음 — 내부에서 server action 직접 호출
 ```
 
----
-
-## 5. `project.ts` 수정 — 트리거 교체
-
-**변경 전 (`line 589-594`):**
-```typescript
-// 스냅샷 자동 생성 (전체 타입 추출 시에만)
-if (isAllTypes) {
-  const figmaVer = db.select({ figmaVersion: projects.figmaVersion })
-    .from(projects).where(eq(projects.id, projectId)).get();
-  await createSnapshotAction(projectId, extractionSource, figmaVer?.figmaVersion);
-}
-```
-
-**변경 후:**
-```typescript
-// tokens.css git auto-commit (변경이 있을 때 항상)
-const hasChanges = finalColors.length > 0 || finalTypo.length > 0
-  || finalSpacing.length > 0 || finalRadius.length > 0;
-
-if (hasChanges) {
-  const { getAllTokensForProject } = await import('@/lib/db/queries');
-  const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
-  const { commitTokensCss, buildCommitMessage } = await import('@/lib/git/token-commits');
-
-  const allTokens = getAllTokensForProject(projectId);
-  const css = generateAllCssCode(allTokens);
-  const message = buildCommitMessage({
-    colors: finalColors.length,
-    typography: finalTypo.length,
-    spacing: finalSpacing.length,
-    radii: finalRadius.length,
-  });
-  commitTokensCss(css, message); // 에러 무시 — 추출 성공을 막지 않음
-}
-```
-
-> **Dynamic import** 사용: `project.ts`는 이미 큰 파일이므로 tree-shaking + 순환 의존 방지
-
----
-
-## 6. DB 직접 조회 함수: `src/lib/db/queries.ts`
-
-`project.ts`에서 `getAllTokens`를 직접 호출하기 위한 유틸:
-
-```typescript
-// src/lib/db/queries.ts (신규 또는 기존 파일에 추가)
-import { db } from '@/lib/db';
-import { tokens } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import type { TokenRow } from '@/lib/actions/tokens';
-
-export function getAllTokensForProject(projectId: string): TokenRow[] {
-  return db.select({
-    id: tokens.id,
-    name: tokens.name,
-    type: tokens.type,
-    value: tokens.value,
-    raw: tokens.raw,
-    source: tokens.source,
-    mode: tokens.mode,
-    collectionName: tokens.collectionName,
-    alias: tokens.alias,
-  })
-    .from(tokens)
-    .where(eq(tokens.projectId, projectId))
-    .all() as TokenRow[];
-}
-```
-
-> `project.ts`에 이미 동일한 select 패턴이 `createSnapshotAction` 내부에 존재 — 추출
-
----
-
-## 7. `TokenCommitHistory` 컴포넌트 설계
-
-### 7-1. Props
-
-```typescript
-// src/app/(ide)/diff/TokenCommitHistory.tsx
-interface TokenCommitHistoryProps {
-  // 없음 — 내부에서 server action 직접 호출
-}
-```
-
-### 7-2. 상태
+### 5-2. 상태
 
 | state | type | 역할 |
 |-------|------|------|
-| `commits` | `TokenCommit[]` | git log 결과 |
+| `snapshots` | `SnapshotInfo[]` | 스냅샷 목록 (version, date, counts) |
 | `loading` | `boolean` | 초기 로드 |
-| `expandedHash` | `string \| null` | 펼쳐진 커밋 (diff 표시) |
-| `diffHtml` | `string \| null` | diff2html 렌더링 결과 |
-| `diffLoading` | `boolean` | diff 로드 중 |
-| `cssModalHash` | `string \| null` | CSS 보기 모달 트리거 |
-| `cssContent` | `string` | git show 결과 |
+| `expandedId` | `string \| null` | 펼쳐진 스냅샷 ID |
+| `detail` | `SnapshotDetail \| null` | 상세 데이터 (diff 목록) |
+| `detailLoading` | `boolean` | 상세 로드 중 |
 
-### 7-3. 렌더 구조
+### 5-3. 렌더 구조
 
 ```
-TokenCommitHistory
-├── 섹션 헤더 ("커밋 이력")
-│   └── 파일 경로 배지 (design-tokens/tokens.css)
-├── [빈 상태] commits.length === 0
-│   └── "아직 추출된 토큰이 없습니다."
-└── [커밋 목록] commits.map(commit)
-    ├── CommitRow
-    │   ├── short hash (monospace)
-    │   ├── 상대 날짜 ("2일 전")
-    │   ├── 커밋 메시지 ("tokens: 색상 106 · 타이포 42")
-    │   ├── [diff 보기] 버튼 → expandedHash 토글
-    │   └── [CSS 보기] 버튼 → cssModalHash 세팅
-    └── [expanded] expandedHash === commit.hash
-        └── DiffViewer (dangerouslySetInnerHTML)
-            └── diff2html HTML (unified diff 렌더링)
+SnapshotHistory
+├── 섹션 헤더 ("토큰 변경 이력")
+├── [빈 상태] snapshots.length === 0
+│   └── 빈 상태 메시지 + 아이콘
+└── [목록] snapshots.map(snap)
+    ├── SnapshotRow (항상 표시)
+    │   ├── 버전 배지 (v8)
+    │   ├── 날짜 (04/02 14:20)
+    │   ├── 소스 배지 (plugin / api)
+    │   ├── 타입별 토큰 수 요약 (색상 273 · 간격 15 · ...)
+    │   ├── 변경 요약 칩 (+3 -1 ~2)
+    │   └── [상세 보기] 토글 버튼
+    └── [expanded] expandedId === snap.id
+        └── DetailPanel
+            ├── [로딩] detailLoading
+            ├── [추가] added 목록
+            │   └── TokenChangeRow (+ name, type badge)
+            ├── [삭제] removed 목록
+            │   └── TokenChangeRow (- name, type badge)
+            └── [변경] changed 목록
+                └── TokenChangeRow (~ name, type badge, oldRaw → newRaw)
 ```
 
-### 7-4. diff2html 사용
+### 5-4. 핵심 동작
 
 ```typescript
-import { html as diff2html } from 'diff2html';
-import 'diff2html/bundles/css/diff2html.min.css';
-
-// diff 문자열 → HTML
-const diffHtml = diff2html(diffString, {
-  inputFormat: 'diff',
-  showFiles: false,       // 파일 헤더 숨김 (이미 알고 있음)
-  matching: 'lines',
-  outputFormat: 'line-by-line',
-  renderNothingWhenEmpty: false,
-});
+const handleToggle = async (snapshotId: string) => {
+  if (expandedId === snapshotId) {
+    setExpandedId(null);
+    return;
+  }
+  setExpandedId(snapshotId);
+  setDetailLoading(true);
+  const result = await getSnapshotDetailAction(snapshotId);
+  setDetail(result.detail);
+  setDetailLoading(false);
+};
 ```
 
-> `diff2html`는 이미 설치됨 (`package.json: "diff2html": "^3.4.56"`).
-> 이번엔 실제 `git diff` 결과이므로 `+`/`-` 라인이 올바르게 렌더링됨.
+### 5-5. 변경 수 요약 계산
 
-### 7-5. CSS 보기 통합
+`SnapshotInfo`에 `diffSummary` 숫자는 없으므로, `getSnapshotListAction()` 응답에
+`diffCounts` 필드를 추가:
 
 ```typescript
-// cssModalHash 세팅 시:
-const result = await getTokenCssAtCommitAction(hash);
-setCssContent(result.content);
-// → CssPreviewModal을 직접 재사용하기 어려우므로
-//   동일한 createPortal 다크 모달 패턴으로 인라인 구현
-//   OR CssPreviewModal에 content prop 오버라이드 추가
+// getSnapshotListAction 반환값 확장
+export interface SnapshotInfo {
+  id: string;
+  version: number;
+  source: string;
+  tokenCounts: Record<string, number>;
+  total: number;
+  createdAt: Date;
+  diffCounts: { added: number; removed: number; changed: number }; // 신규
+}
+```
+
+`diffSummary` 파싱 로직:
+```typescript
+let diffCounts = { added: 0, removed: 0, changed: 0 };
+try {
+  const parsed = JSON.parse(r.diffSummary ?? '{}') as Record<string, unknown>;
+  if (Array.isArray(parsed.added)) {
+    // 신규 형식
+    diffCounts = {
+      added: (parsed.added as unknown[]).length,
+      removed: (parsed.removed as unknown[]).length,
+      changed: (parsed.changed as unknown[]).length,
+    };
+  } else {
+    // 구형식 숫자
+    diffCounts = {
+      added: (parsed.added as number) ?? 0,
+      removed: (parsed.removed as number) ?? 0,
+      changed: (parsed.changed as number) ?? 0,
+    };
+  }
+} catch {}
 ```
 
 ---
 
-## 8. 스타일 설계 (`token-commit-history.module.scss`)
-
-GitHub 커밋 히스토리 UI와 유사한 패턴:
+## 6. 스타일 설계 (`snapshot-history.module.scss`)
 
 ```scss
-// 기존 diff 페이지 SCSS 변수 재사용
-@use '../../../../styles/variables' as *;
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
-.section { /* 섹션 컨테이너 */ }
+.section { margin-bottom: 32px; }
 
-.commitList {
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+// 목록 컨테이너
+.list {
   border: 1px solid var(--glass-border);
   border-radius: $border-radius-lg;
   overflow: hidden;
 }
 
-.commitRow {
+// 스냅샷 행
+.row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: $transition-fast;
   &:last-child { border-bottom: none; }
   &:hover { background: var(--bg-elevated); }
+  &.expanded { background: var(--bg-elevated); }
 }
 
-.hash {
+// 버전 배지
+.versionBadge {
   font-family: $font-family-mono;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--accent);
-  min-width: 64px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: center;
+}
+
+// 날짜
+.date {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 88px;
+}
+
+// 소스 배지
+.sourceBadge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--glass-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 
-.message {
+// 토큰 수 요약
+.countSummary {
   flex: 1;
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: 12px;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.date {
+// 변경 수 칩 묶음
+.diffChips {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.chip {
+  font-size: 11px;
+  font-family: $font-family-mono;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.chipAdded   { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+.chipRemoved { color: #f87171; background: rgba(248, 113, 113, 0.12); }
+.chipChanged { color: #fb923c; background: rgba(251, 146, 60, 0.12); }
+
+// 토글 버튼
+.toggleBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  &:hover { color: var(--text-primary); }
+}
+
+// 상세 패널
+.detailPanel {
+  border-top: 1px solid var(--glass-border);
+  padding: 16px;
+  background: var(--bg-base);
+}
+
+.detailSection {
+  margin-bottom: 12px;
+  &:last-child { margin-bottom: 0; }
+}
+
+.detailSectionTitle {
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+// 토큰 변경 행
+.tokenRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
   font-size: 12px;
+}
+
+.tokenPrefix {
+  font-family: $font-family-mono;
+  font-size: 12px;
+  width: 12px;
+  flex-shrink: 0;
+}
+.prefixAdded   { color: #4ade80; }
+.prefixRemoved { color: #f87171; }
+.prefixChanged { color: #fb923c; }
+
+.tokenName {
+  font-family: $font-family-mono;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeBadge {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--glass-bg);
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.rawChange {
+  font-family: $font-family-mono;
+  font-size: 11px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.diffPanel {
-  background: #0d1117;  // GitHub dark
-  border-top: 1px solid var(--glass-border);
-  overflow-x: auto;
-  max-height: 400px;
-  overflow-y: auto;
+// 빈 상태
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 ```
 
 ---
 
-## 9. `/diff/page.tsx` 통합
-
-기존 페이지 헤더 바로 아래, Drift Detection 위에 `TokenCommitHistory` 섹션 추가:
+## 7. `diff/page.tsx` 수정
 
 ```tsx
-// page.tsx 변경 최소화 — 섹션 하나만 추가
-return (
-  <div className={styles.page}>
-    <div className={styles.header}>...</div>
+// 제거
+- import TokenCommitHistory from './TokenCommitHistory';
 
-    {/* ── [신규] 커밋 이력 ── */}
-    <TokenCommitHistory />
+// 추가
++ import SnapshotHistory from './SnapshotHistory';
 
-    {/* ── 기존 Drift Detection ── */}
-    <section className={styles.driftSection}>...
-
-    {/* ── 기존 스냅샷 비교 ── */}
-    ...
-  </div>
-);
+// JSX 교체
+- <TokenCommitHistory />
++ <SnapshotHistory />
 ```
 
 ---
 
-## 10. `.gitignore` 처리
+## 8. 구현 순서
 
-`design-tokens/` 디렉토리가 git에 포함되어야 하므로:
-
-1. `.gitignore`에 `design-tokens/` 항목이 없음 — 현재 파악된 내용으로 추가 불필요
-2. `design-tokens/` 첫 커밋 시 `git add` 가 자동으로 추적 시작
-
----
-
-## 11. 에러 처리 전략
-
-| 상황 | 처리 |
-|------|------|
-| git 저장소 없음 | `CommitTokensResult.error` 설정, 추출은 성공 반환 |
-| git user 미설정 | `-c user.name -c user.email` 플래그로 강제 지정 |
-| pre-commit 훅 실패 | `--no-verify` 로 우회 |
-| `design-tokens/` .gitignore | 현재 없음 — 체크 불필요 |
-| `git show` 실패 (hash 없음) | 에러 메시지 UI 표시 |
-| diff 결과 빈 문자열 | "변경 없음" 메시지 표시 |
-| Server Action 실행 환경 비 git | `commits: []` 반환, 섹션 숨김 |
+| # | 파일 | 작업 |
+|---|------|------|
+| 1 | `pipeline.ts` | `diffSummary` — 토큰 목록 저장으로 확장 |
+| 2 | `actions/tokens.ts` | `SnapshotInfo.diffCounts` 필드 추가, `getSnapshotDetailAction()` 신규 |
+| 3 | `snapshot-history.module.scss` | 스타일 작성 |
+| 4 | `SnapshotHistory.tsx` | UI 컴포넌트 구현 |
+| 5 | `diff/page.tsx` | `TokenCommitHistory` → `SnapshotHistory` 교체 |
+| 6 | 파일 4개 제거 | `TokenCommitHistory.tsx`, `token-commit-history.module.scss`, `token-commits.ts`, `token-history.ts` |
 
 ---
 
-## 12. 데이터 흐름 전체
+## 9. 성공 기준
 
-```
-사용자: "추출 시작하기" 클릭
-  │
-  ▼
-extractTokensByTypeAction(type, figmaUrl)
-  │  project.ts 내부
-  ▼
-① DB에 토큰 저장
-  │
-② histories 테이블에 로그
-  │
-③ [신규] commitTokensCss(css, message)
-      ├─ design-tokens/tokens.css 저장
-      ├─ git status --porcelain → 변경 있으면
-      ├─ git add design-tokens/tokens.css
-      └─ git commit -m "tokens: 색상 106"
-  │
-  ▼
-TokenExtractModal: 1.5초 후 자동 닫기 + router.refresh()
-
-──────────────────────────────────────────
-사용자: /diff 페이지 방문
-  │
-  ▼
-TokenCommitHistory 컴포넌트 마운트
-  │
-  ▼
-getTokenCssHistoryAction()
-  └─ git log --follow --format ... -- design-tokens/tokens.css
-  │
-  ▼
-커밋 목록 렌더링
-
-사용자: "diff 보기" 클릭 (커밋 N)
-  │
-  ▼
-getTokenCssDiffAction(commitN.hash + "~1", commitN.hash)
-  └─ git diff <hash~1> <hash> -- design-tokens/tokens.css
-  │
-  ▼
-diff2html 렌더링 (unified diff → HTML)
-
-사용자: "CSS 보기" 클릭 (커밋 N)
-  │
-  ▼
-getTokenCssAtCommitAction(commitN.hash)
-  └─ git show <hash>:design-tokens/tokens.css
-  │
-  ▼
-CssPreviewModal (content 모드)
-```
-
----
-
-## 13. 구현 순서
-
-| # | 파일 | 작업 | 의존 |
-|---|------|------|------|
-| 1 | `src/lib/db/queries.ts` | `getAllTokensForProject()` 추가 | - |
-| 2 | `src/lib/git/token-commits.ts` | `commitTokensCss`, `buildCommitMessage` | 1 |
-| 3 | `src/lib/actions/project.ts` | snapshot → commitTokensCss 교체 | 2 |
-| 4 | `src/lib/actions/token-history.ts` | server actions 3종 | - |
-| 5 | `token-commit-history.module.scss` | 스타일 | - |
-| 6 | `TokenCommitHistory.tsx` | UI 컴포넌트 | 4, 5 |
-| 7 | `diff/page.tsx` | 섹션 추가 | 6 |
-
----
-
-## 14. 비범위 (이번 구현 외)
-
-- CSS → DB 역파싱 롤백 (git checkout + 재임포트) — 추후
-- 타임스탬프 기반 상대 시간 (`date-fns` 미설치 — `Intl.RelativeTimeFormat` 사용)
-- 커밋 별 태그/메모 추가
-- 기존 `tokenSnapshots` 데이터 마이그레이션
+- [ ] sync 후 `diffSummary`에 토큰 이름 목록이 저장됨
+- [ ] `/diff` 페이지에 sync 이력 타임라인이 표시됨 (버전, 날짜, 소스, 토큰 수 요약, +/-/~ 칩)
+- [ ] 행 클릭 시 추가/삭제/변경된 토큰 이름 목록이 상세 패널로 표시됨
+- [ ] 구형식 스냅샷(숫자만)도 `tokensData` 비교로 상세 표시됨
+- [ ] 스냅샷 없을 때 빈 상태 메시지 표시
+- [ ] `TokenCommitHistory` 관련 파일 4개 제거 완료
+- [ ] `npm run build` 통과

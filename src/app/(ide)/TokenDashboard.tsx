@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
 import type { TokenSummary, HistoryEntry } from '@/lib/actions/tokens';
 import type { TokenMenuEntry } from '@/lib/actions/token-menu';
+import SnapshotHistory from './SnapshotHistory';
 import styles from './TokenDashboard.module.scss';
 
 interface Props {
@@ -202,6 +203,9 @@ export default function TokenDashboard({
             )}
           </ul>
         </div>
+
+        {/* 토큰 변경 이력 */}
+        <SnapshotHistory />
 
         {/* 활동 로그 */}
         <div className={styles.logCard}>

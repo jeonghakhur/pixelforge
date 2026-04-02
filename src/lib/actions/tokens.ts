@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
-import { eq, desc, sql, and } from 'drizzle-orm';
+import { eq, desc, sql, and, lt } from 'drizzle-orm';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
@@ -11,7 +11,9 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { generateTokensCss } from '@/lib/tokens/css-exporter';
-import { commitTokensCss, deleteTokensCss, buildCommitMessage } from '@/lib/git/token-commits';
+function deleteTokensCss() {
+  try { fs.unlinkSync(path.join(process.cwd(), 'design-tokens', 'tokens.css')); } catch { /* 없으면 무시 */ }
+}
 
 // ─────────────────────────────────────────────────────────
 // 활성 프로젝트 관리 (단일 프로젝트 원칙)
@@ -171,29 +173,6 @@ export async function deleteTokenAction(id: string): Promise<{ error: string | n
   try {
     db.delete(tokens).where(eq(tokens.id, id)).run();
 
-    // 남은 토큰으로 tokens.css 재생성
-    const remaining = db.select().from(tokens).all();
-    if (remaining.length === 0) {
-      deleteTokensCss();
-    } else {
-      const project = getActiveProject();
-      const counts = remaining.reduce((acc, t) => {
-        acc[t.type] = (acc[t.type] ?? 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const css = generateTokensCss(remaining as TokenRow[], {
-        fileName: project?.name ?? 'Design Tokens',
-        extractedAt: new Date().toISOString(),
-      });
-      const msg = buildCommitMessage({
-        colors: counts['color'] ?? 0,
-        typography: counts['typography'] ?? 0,
-        spacing: counts['spacing'] ?? 0,
-        radii: counts['radius'] ?? 0,
-      });
-      commitTokensCss(css, msg);
-    }
-
     return { error: null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패' };
@@ -231,28 +210,6 @@ export async function deleteTokensByTypeAction(
     ).run();
 
     db.delete(tokens).where(and(eq(tokens.projectId, project.id), eq(tokens.type, type))).run();
-
-    // 남은 토큰으로 tokens.css 재생성 또는 삭제
-    const remaining = db.select().from(tokens).where(eq(tokens.projectId, project.id)).all();
-    if (remaining.length === 0) {
-      deleteTokensCss();
-    } else {
-      const counts = remaining.reduce((acc, t) => {
-        acc[t.type] = (acc[t.type] ?? 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const css = generateTokensCss(remaining as TokenRow[], {
-        fileName: project?.name ?? 'Design Tokens',
-        extractedAt: new Date().toISOString(),
-      });
-      const msg = buildCommitMessage({
-        colors: counts['color'] ?? 0,
-        typography: counts['typography'] ?? 0,
-        spacing: counts['spacing'] ?? 0,
-        radii: counts['radius'] ?? 0,
-      });
-      commitTokensCss(css, msg);
-    }
 
     return { error: null, deleted: rows.length };
   } catch (err) {
@@ -799,6 +756,7 @@ export interface SnapshotInfo {
   tokenCounts: Record<string, number>;
   total: number;
   createdAt: Date;
+  diffCounts: { added: number; removed: number; changed: number };
 }
 
 export async function getSnapshotListAction(projectId: string): Promise<SnapshotInfo[]> {
@@ -813,6 +771,25 @@ export async function getSnapshotListAction(projectId: string): Promise<Snapshot
     let counts: Record<string, number> = {};
     try { counts = JSON.parse(r.tokenCounts) as Record<string, number>; } catch {}
     const total = counts.total ?? (Object.values(counts) as number[]).reduce((a, b) => a + b, 0);
+
+    let diffCounts = { added: 0, removed: 0, changed: 0 };
+    try {
+      const parsed = JSON.parse(r.diffSummary ?? '{}') as Record<string, unknown>;
+      if (Array.isArray(parsed.added)) {
+        diffCounts = {
+          added:   (parsed.added as unknown[]).length,
+          removed: (parsed.removed as unknown[]).length,
+          changed: (parsed.changed as unknown[]).length,
+        };
+      } else {
+        diffCounts = {
+          added:   (parsed.added as number) ?? 0,
+          removed: (parsed.removed as number) ?? 0,
+          changed: (parsed.changed as number) ?? 0,
+        };
+      }
+    } catch {}
+
     return {
       id: r.id,
       version: r.version,
@@ -820,8 +797,106 @@ export async function getSnapshotListAction(projectId: string): Promise<Snapshot
       tokenCounts: counts,
       total,
       createdAt: r.createdAt!,
+      diffCounts,
     };
   });
+}
+
+// ── 스냅샷 상세 (토큰 변경 목록) ─────────────────────────
+
+export interface SnapshotDiffEntry {
+  name: string;
+  type: string;
+  oldRaw?: string | null;
+  newRaw?: string | null;
+}
+
+export interface SnapshotDetail {
+  id: string;
+  version: number;
+  source: string;
+  createdAt: string;
+  tokenCounts: Record<string, number>;
+  diff: {
+    added: SnapshotDiffEntry[];
+    removed: SnapshotDiffEntry[];
+    changed: SnapshotDiffEntry[];
+  };
+}
+
+export async function getSnapshotDetailAction(
+  snapshotId: string,
+): Promise<{ error: string | null; detail: SnapshotDetail | null }> {
+  const row = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.id, snapshotId))
+    .get();
+
+  if (!row) return { error: '스냅샷을 찾을 수 없습니다.', detail: null };
+
+  let diff: SnapshotDetail['diff'] = { added: [], removed: [], changed: [] };
+
+  try {
+    const parsed = JSON.parse(row.diffSummary ?? '{}') as Record<string, unknown>;
+
+    if (Array.isArray(parsed.added)) {
+      // 신규 형식 — 목록 그대로 사용
+      diff = {
+        added:   (parsed.added   as SnapshotDiffEntry[]),
+        removed: (parsed.removed as SnapshotDiffEntry[]),
+        changed: (parsed.changed as SnapshotDiffEntry[]),
+      };
+    } else {
+      // 구형식(숫자만) — tokensData 비교로 on-demand 계산
+      const prevRow = await db
+        .select({ tokensData: tokenSnapshots.tokensData })
+        .from(tokenSnapshots)
+        .where(
+          and(
+            eq(tokenSnapshots.projectId, row.projectId),
+            lt(tokenSnapshots.version, row.version),
+          ),
+        )
+        .orderBy(desc(tokenSnapshots.version))
+        .limit(1)
+        .get();
+
+      const { computeSnapshotDiff } = await import('@/lib/tokens/snapshot-engine');
+      type SnapshotItem = { type: string; name: string; value: string; raw?: string | null };
+      const prevItems: SnapshotItem[] = prevRow?.tokensData
+        ? (JSON.parse(prevRow.tokensData) as SnapshotItem[])
+        : [];
+      const currItems: SnapshotItem[] = JSON.parse(row.tokensData) as SnapshotItem[];
+      const computed = computeSnapshotDiff(
+        prevItems as Parameters<typeof computeSnapshotDiff>[0],
+        currItems as Parameters<typeof computeSnapshotDiff>[1],
+      );
+
+      diff = {
+        added:   computed.added.map((t)   => ({ name: t.name, type: t.type })),
+        removed: computed.removed.map((t) => ({ name: t.name, type: t.type })),
+        changed: computed.changed.map((t) => ({ name: t.name, type: t.type, oldRaw: t.oldRaw ?? null, newRaw: t.newRaw ?? null })),
+      };
+    }
+  } catch {}
+
+  let tokenCounts: Record<string, number> = {};
+  try { tokenCounts = JSON.parse(row.tokenCounts) as Record<string, number>; } catch {}
+
+  return {
+    error: null,
+    detail: {
+      id: row.id,
+      version: row.version,
+      source: row.source,
+      createdAt: row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : new Date((row.createdAt as number) * 1000).toISOString(),
+      tokenCounts,
+      diff,
+    },
+  };
 }
 
 export async function rollbackSnapshotAction(
@@ -892,4 +967,12 @@ export async function rollbackSnapshotAction(
   } catch {}
 
   return { error: null, restoredVersion: prev?.version ?? null };
+}
+
+// ── 활성 프로젝트 스냅샷 목록 (컴포넌트 직접 호출용) ─────
+
+export async function getActiveSnapshotListAction(): Promise<SnapshotInfo[]> {
+  const projectId = getActiveProjectId();
+  if (!projectId) return [];
+  return getSnapshotListAction(projectId);
 }

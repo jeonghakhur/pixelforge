@@ -672,25 +672,6 @@ export async function extractTokensAction(
       }),
     }).run();
 
-    // tokens.css git auto-commit (변경이 있을 때 항상)
-    const hasChanges = finalColors.length > 0 || finalTypo.length > 0
-      || finalSpacing.length > 0 || finalRadius.length > 0;
-
-    if (hasChanges) {
-      const { getAllTokensForProject } = await import('@/lib/db/queries');
-      const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
-      const { commitTokensCss, buildCommitMessage } = await import('@/lib/git/token-commits');
-
-      const allTokens = getAllTokensForProject(projectId);
-      const css = generateAllCssCode(allTokens);
-      const message = buildCommitMessage({
-        colors: finalColors.length,
-        typography: finalTypo.length,
-        spacing: finalSpacing.length,
-        radii: finalRadius.length,
-      });
-      commitTokensCss(css, message); // 에러 무시 — 추출 성공을 막지 않음
-    }
 
     return {
       error: null,
