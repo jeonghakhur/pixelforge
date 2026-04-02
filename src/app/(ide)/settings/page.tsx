@@ -12,6 +12,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
 import { createApiKey, getApiKeys, deleteApiKey } from '@/lib/actions/api-keys';
 import { getSyncStatus, type SyncProjectStatus, type SyncItem } from '@/lib/actions/sync-status';
+import { getSnapshotListAction, rollbackSnapshotAction, type SnapshotInfo } from '@/lib/actions/tokens';
 import TokenTypeSettings from './TokenTypeSettings';
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
@@ -97,6 +98,9 @@ export default function SettingsPage() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncProjectStatus[]>([]);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const [snapshotList, setSnapshotList] = useState<SnapshotInfo[]>([]);
+  const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
 
   const tokenForm = useForm<TokenForm>({
     resolver: zodResolver(tokenSchema),
@@ -162,6 +166,35 @@ export default function SettingsPage() {
       const updated = await getUsers();
       setUsers(updated);
     }
+  };
+
+  const onToggleSnapshots = async (projectId: string) => {
+    if (expandedProjectId === projectId) {
+      setExpandedProjectId(null);
+      setSnapshotList([]);
+      return;
+    }
+    setExpandedProjectId(projectId);
+    const list = await getSnapshotListAction(projectId);
+    setSnapshotList(list);
+  };
+
+  const onRollback = async (snapshotId: string, projectId: string) => {
+    if (!confirm('이 스냅샷을 삭제하고 이전 버전으로 복원할까요?')) return;
+    setRollbackLoading(snapshotId);
+    const result = await rollbackSnapshotAction(snapshotId);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      const [updated, list] = await Promise.all([
+        getSyncStatus(),
+        getSnapshotListAction(projectId),
+      ]);
+      setSyncStatus(updated);
+      setSnapshotList(list);
+      if (list.length === 0) setExpandedProjectId(null);
+    }
+    setRollbackLoading(null);
   };
 
   const onChangePassword = async (data: ChangePasswordForm) => {
@@ -369,16 +402,25 @@ export default function SettingsPage() {
                         <Icon icon="solar:figma-linear" width={14} height={14} />
                         {proj.name}
                       </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', alignItems: 'center' }}>
                         {(['tokens', 'icons', 'images', 'themes', 'components'] as const).map((type) => {
                           const item = proj.syncs.find((s) => s.type === type) as SyncItem | undefined;
                           return (
-                            <span key={type} className={styles.memberEmail} style={{ whiteSpace: 'nowrap' }}>
+                            <span key={type} className={styles.memberEmail} style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               {SYNC_TYPE_LABEL[type]}:{' '}
                               {item ? (
                                 <>
                                   v{item.version} · {relativeTime(item.syncedAt)}
                                   {item.count != null ? ` (${item.count.toLocaleString()}개)` : ''}
+                                  {type === 'tokens' && (
+                                    <button
+                                      onClick={() => onToggleSnapshots(proj.id)}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'var(--color-text-muted, #94a3b8)', display: 'inline-flex', alignItems: 'center' }}
+                                      title="스냅샷 이력"
+                                    >
+                                      <Icon icon={expandedProjectId === proj.id ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} width={12} height={12} />
+                                    </button>
+                                  )}
                                 </>
                               ) : (
                                 <span style={{ color: 'var(--color-text-muted, #94a3b8)' }}>미전송</span>
@@ -387,6 +429,27 @@ export default function SettingsPage() {
                           );
                         })}
                       </div>
+                      {expandedProjectId === proj.id && snapshotList.length > 0 && (
+                        <div style={{ marginTop: 8, width: '100%' }}>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #94a3b8)', marginBottom: 4 }}>스냅샷 이력</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {snapshotList.map((snap) => (
+                              <div key={snap.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--color-surface-2, rgba(255,255,255,0.04))', borderRadius: 4 }}>
+                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary, #cbd5e1)' }}>
+                                  v{snap.version} · {relativeTime(snap.createdAt)} · {snap.total.toLocaleString()}개
+                                </span>
+                                <button
+                                  onClick={() => onRollback(snap.id, proj.id)}
+                                  disabled={rollbackLoading === snap.id}
+                                  style={{ background: 'none', border: '1px solid var(--color-border, rgba(255,255,255,0.08))', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--color-error, #f87171)', cursor: 'pointer', opacity: rollbackLoading === snap.id ? 0.5 : 1 }}
+                                >
+                                  {rollbackLoading === snap.id ? '삭제 중...' : '삭제'}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

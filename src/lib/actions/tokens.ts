@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { tokens, projects, histories, tokenSources, appSettings } from '@/lib/db/schema';
+import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
@@ -752,4 +752,111 @@ export async function captureTokenPageScreenshotAction(
       screenshotPath: null,
     };
   }
+}
+
+// ─────────────────────────────────────────────────────────
+// 스냅샷 롤백
+// ─────────────────────────────────────────────────────────
+
+export interface SnapshotInfo {
+  id: string;
+  version: number;
+  source: string;
+  tokenCounts: Record<string, number>;
+  total: number;
+  createdAt: Date;
+}
+
+export async function getSnapshotListAction(projectId: string): Promise<SnapshotInfo[]> {
+  const rows = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.projectId, projectId))
+    .orderBy(desc(tokenSnapshots.version))
+    .all();
+
+  return rows.map((r) => {
+    let counts: Record<string, number> = {};
+    try { counts = JSON.parse(r.tokenCounts) as Record<string, number>; } catch {}
+    const total = counts.total ?? (Object.values(counts) as number[]).reduce((a, b) => a + b, 0);
+    return {
+      id: r.id,
+      version: r.version,
+      source: r.source,
+      tokenCounts: counts,
+      total,
+      createdAt: r.createdAt!,
+    };
+  });
+}
+
+export async function rollbackSnapshotAction(
+  snapshotId: string,
+): Promise<{ error: string | null; restoredVersion: number | null }> {
+  // 1. 삭제할 스냅샷 조회
+  const target = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.id, snapshotId))
+    .get();
+
+  if (!target) return { error: '스냅샷을 찾을 수 없습니다.', restoredVersion: null };
+
+  const { projectId, source } = target;
+
+  // 2. 스냅샷 삭제
+  await db.delete(tokenSnapshots).where(eq(tokenSnapshots.id, snapshotId));
+
+  // 3. 이전 스냅샷(새로운 최신) 조회
+  const prev = await db
+    .select()
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.projectId, projectId))
+    .orderBy(desc(tokenSnapshots.version))
+    .limit(1)
+    .get();
+
+  // 4. tokens 테이블 복원
+  await db.delete(tokens).where(
+    and(eq(tokens.projectId, projectId), eq(tokens.source, source as 'variables' | 'styles-api' | 'section-scan' | 'node-scan')),
+  );
+
+  if (prev?.tokensData) {
+    type SnapshotItem = { type: string; name: string; value: string; raw?: string | null; mode?: string | null; collectionName?: string | null; alias?: string | null };
+    let items: SnapshotItem[] = [];
+    try { items = JSON.parse(prev.tokensData) as SnapshotItem[]; } catch {}
+
+    if (items.length > 0) {
+      await db.insert(tokens).values(
+        items.map((t) => ({
+          id: crypto.randomUUID(),
+          projectId,
+          source: source as 'variables' | 'styles-api' | 'section-scan' | 'node-scan',
+          type: t.type,
+          name: t.name,
+          value: t.value,
+          raw: t.raw ?? null,
+          mode: t.mode ?? null,
+          collectionName: t.collectionName ?? null,
+          alias: t.alias ?? null,
+        })),
+      );
+    }
+  }
+
+  // 5. CSS 재생성
+  try {
+    const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
+    const allTokenRows = await db
+      .select()
+      .from(tokens)
+      .where(eq(tokens.projectId, projectId))
+      .all() as TokenRow[];
+    const css = generateAllCssCode(allTokenRows);
+    const cssDir = path.join(process.cwd(), 'design-tokens');
+    fs.mkdirSync(cssDir, { recursive: true });
+    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+  } catch {}
+
+  return { error: null, restoredVersion: prev?.version ?? null };
 }

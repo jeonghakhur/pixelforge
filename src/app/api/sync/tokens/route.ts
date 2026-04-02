@@ -49,8 +49,13 @@ export async function POST(req: Request) {
   const projectId = project!.id;
 
   // 파싱 먼저 → 정규화된 토큰 기준으로 해시 비교
+  // pipeline이 tokensData를 저장할 때와 동일한 키 순서로 직렬화해야 hash가 일치함
   const normalizedTokens = parseVariablesPayload(tokenData);
-  const newHash = crypto.createHash('sha256').update(JSON.stringify(normalizedTokens)).digest('hex');
+  const normalizedForHash = normalizedTokens.map((t) => ({
+    type: t.type, name: t.name, value: t.value, raw: t.raw,
+    mode: t.mode, collectionName: t.collectionName, alias: t.alias,
+  }));
+  const newHash = crypto.createHash('sha256').update(JSON.stringify(normalizedForHash)).digest('hex');
 
   const latestSnapshot = await db
     .select()
