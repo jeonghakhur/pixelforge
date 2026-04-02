@@ -9,7 +9,8 @@ import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
 import { getSyncStatus } from '@/lib/actions/sync-status';
 import { getTokenSummary } from '@/lib/actions/tokens';
-import { TOKEN_TYPE_MAP, TOKEN_TYPES } from '@/lib/tokens/token-types';
+import { getTokenMenuAction } from '@/lib/actions/token-menu';
+import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
@@ -56,22 +57,30 @@ export default function AppShell({ children, userRole }: { children: React.React
 
   // 토큰 타입 탭 로딩 (revision 변경 시 갱신)
   useEffect(() => {
-    getTokenSummary().then((summary) => {
-      const knownOrder = TOKEN_TYPES.map((t) => t.id);
-      const allTypes = [
-        ...knownOrder.filter((id) => (summary.counts[id] ?? 0) > 0),
-        ...Object.keys(summary.counts).filter(
-          (id) => !knownOrder.includes(id) && (summary.counts[id] ?? 0) > 0,
-        ),
-      ];
-      setTokenTabs(
-        allTypes.map((id) => ({
-          id,
-          label: TOKEN_TYPE_MAP[id]?.label ?? id,
-          icon: TOKEN_TYPE_MAP[id]?.icon ?? 'solar:box-linear',
-          count: summary.counts[id] ?? 0,
-        })),
-      );
+    Promise.all([getTokenMenuAction(), getTokenSummary()]).then(([menu, summary]) => {
+      const menuTypes = new Set(menu.map((e) => e.type));
+
+      // DB 등록 타입 — menuOrder 순, count > 0인 것만 표시
+      const dbTabs = menu
+        .filter((e) => (summary.counts[e.type] ?? 0) > 0)
+        .map((e) => ({
+          id: e.type,
+          label: e.label,
+          icon: e.icon,
+          count: summary.counts[e.type] ?? 0,
+        }));
+
+      // fallback — DB에 없는 타입 (구 데이터 역호환)
+      const fallbackTabs = Object.entries(summary.counts)
+        .filter(([type, cnt]) => !menuTypes.has(type) && cnt > 0)
+        .map(([type, cnt]) => ({
+          id: type,
+          label: TOKEN_TYPE_MAP[type]?.label ?? type,
+          icon: TOKEN_TYPE_MAP[type]?.icon ?? 'solar:box-linear',
+          count: cnt,
+        }));
+
+      setTokenTabs([...dbTabs, ...fallbackTabs]);
     });
   }, [tokenRevision]);
 

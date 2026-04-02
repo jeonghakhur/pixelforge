@@ -64,22 +64,75 @@ function toCssVar(type: string, name: string): string {
   return `--${type}-${name.replace(/[/ ]+/g, '-').toLowerCase()}`;
 }
 
+// ── 색상각(HSL) 변환 ─────────────────────────────────────
+
+function hexToHSL(hex: string): { h: number; s: number; l: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h * 60, s, l };
+}
+
 // ── 그룹핑 ───────────────────────────────────────────────
 
 function groupTokens(tokens: TokenRow[]): [string, TokenRow[]][] {
-  const map = new Map<string, TokenRow[]>();
+  // 1. 컬렉션 단위로 묶기
+  const collectionMap = new Map<string, TokenRow[]>();
   for (const token of tokens) {
-    // collectionName 우선, 없으면 첫 세그먼트, 없으면 'Uncategorized'
     const key = token.collectionName
       || (token.name.includes('/') ? token.name.split('/')[0] : 'Uncategorized');
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(token);
+    if (!collectionMap.has(key)) collectionMap.set(key, []);
+    collectionMap.get(key)!.push(token);
   }
-  // 그룹 내 토큰을 이름 기준 알파벳 정렬
-  return Array.from(map.entries()).map(([key, list]) => [
-    key,
-    [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
-  ]);
+
+  return Array.from(collectionMap.entries()).map(([collection, list]) => {
+    // 2. 컬렉션 내에서 색상 계열(family)로 분류
+    //    이름이 "a/b/c" 구조면 "a/b" 를 family key로, 아니면 이름 전체
+    const familyMap = new Map<string, TokenRow[]>();
+    for (const token of list) {
+      const segs = token.name.split('/');
+      const familyKey = segs.length >= 3 ? `${segs[0]}/${segs[1]}` : segs[0];
+      if (!familyMap.has(familyKey)) familyMap.set(familyKey, []);
+      familyMap.get(familyKey)!.push(token);
+    }
+
+    // 3. 각 family의 대표 hue 계산 (채도 0.1 이하 = 무채색)
+    const families = Array.from(familyMap.entries()).map(([family, ft]) => {
+      const hsls = ft
+        .map((t) => parseColor(t.value))
+        .filter((c): c is ParsedColor => c !== null)
+        .map((c) => hexToHSL(c.hex));
+      const avgSat = hsls.length ? hsls.reduce((s, c) => s + c.s, 0) / hsls.length : 0;
+      const avgHue = hsls.length ? hsls.reduce((s, c) => s + c.h, 0) / hsls.length : 0;
+      return { family, tokens: ft, avgHue, avgSat };
+    });
+
+    // 4. 유채색은 색상각 순(빨→주→노→초→파→남→보), 무채색은 맨 뒤
+    families.sort((a, b) => {
+      const aNeutral = a.avgSat < 0.1;
+      const bNeutral = b.avgSat < 0.1;
+      if (aNeutral !== bNeutral) return aNeutral ? 1 : -1;
+      if (aNeutral && bNeutral) return a.family.localeCompare(b.family);
+      return a.avgHue - b.avgHue;
+    });
+
+    // 5. family 내부는 이름 숫자 순 정렬
+    const sorted = families.flatMap(({ tokens: ft }) =>
+      [...ft].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
+    );
+
+    return [collection, sorted] as [string, TokenRow[]];
+  });
 }
 
 // ── 컴포넌트 ─────────────────────────────────────────────
