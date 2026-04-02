@@ -117,10 +117,12 @@ export async function runTokenPipeline(
 ): Promise<PipelineResult> {
   const { source, figmaKey, figmaVersion } = options;
 
-  // ── Step 1: tokens 테이블 완전 교체 ───────────
-  // sync = 보낸 데이터가 전부 → 프로젝트 토큰 전체 삭제 후 재삽입
-  await db.delete(tokens).where(eq(tokens.projectId, projectId));
+  // ── Step 1: 들어온 타입만 교체 (다른 타입 토큰은 유지) ──
   const incomingTypes = [...new Set(normalizedTokens.map((t) => t.type))];
+
+  for (const type of incomingTypes) {
+    await db.delete(tokens).where(and(eq(tokens.projectId, projectId), eq(tokens.type, type)));
+  }
 
   if (normalizedTokens.length > 0) {
     await db.insert(tokens).values(
@@ -140,7 +142,6 @@ export async function runTokenPipeline(
   }
 
   // ── Step 2: diff 계산 ─────────────────────────
-  // 이번 sync에서 보낸 데이터만 기준으로 diff 계산 및 스냅샷 저장
   const prevSnapshot = await db
     .select()
     .from(tokenSnapshots)
@@ -159,7 +160,25 @@ export async function runTokenPipeline(
   const changedTypes = Object.keys(diff.countsByType);
 
   // ── Step 3: tokenSnapshots INSERT ────────────
-  const tokenCounts = computeTokenCounts(newItems);
+  // 스냅샷은 전체 토큰 상태(부분 업데이트 반영 후)를 저장
+  const allTokenRowsForSnapshot = await db
+    .select({
+      id: tokens.id,
+      name: tokens.name,
+      type: tokens.type,
+      value: tokens.value,
+      raw: tokens.raw,
+      source: tokens.source,
+      mode: tokens.mode,
+      collectionName: tokens.collectionName,
+      alias: tokens.alias,
+    })
+    .from(tokens)
+    .where(eq(tokens.projectId, projectId))
+    .all() as TokenRow[];
+
+  const allItems = allTokenRowsForSnapshot.map(tokenRowToSnapshotItem);
+  const tokenCounts = computeTokenCounts(allItems);
   const nextVersion = (prevSnapshot?.version ?? 0) + 1;
   const snapshotId = crypto.randomUUID();
 
@@ -170,7 +189,7 @@ export async function runTokenPipeline(
     source,
     figmaVersion: figmaVersion ?? null,
     tokenCounts: JSON.stringify(tokenCounts),
-    tokensData: JSON.stringify(newItems),
+    tokensData: JSON.stringify(allItems),
     diffSummary: JSON.stringify({
       added: diff.added.length,
       removed: diff.removed.length,

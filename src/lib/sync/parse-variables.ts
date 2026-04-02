@@ -205,6 +205,41 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
   // variableCollections 또는 collections 키 모두 지원
   const collections = vars?.variableCollections ?? vars?.collections;
   const collectionMap = buildCollectionMap(collections);
+
+  // ── 1차 패스: variableId → 실제값 맵 구축 (alias 해소용) ──
+  const valueMap = new Map<string, { value: string; raw: string }>();
+  for (const variable of uniqueVars) {
+    const collection = variable.collectionId ? collectionMap.get(variable.collectionId) : undefined;
+    const defaultModeId = collection?.defaultModeId ?? Object.keys(variable.valuesByMode)[0];
+    const rawValue = variable.valuesByMode[defaultModeId];
+    if (rawValue === undefined || isAlias(rawValue)) continue;
+
+    switch (variable.resolvedType) {
+      case 'COLOR': {
+        if (!isColor(rawValue)) break;
+        const hex = rgbaToHex(rawValue);
+        valueMap.set(variable.id, { value: hex, raw: hex });
+        break;
+      }
+      case 'FLOAT': {
+        const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
+        valueMap.set(variable.id, { value: String(floatVal), raw: `${floatVal}px` });
+        break;
+      }
+      case 'STRING': {
+        const strVal = String(rawValue);
+        valueMap.set(variable.id, { value: strVal, raw: strVal });
+        break;
+      }
+      case 'BOOLEAN': {
+        const boolVal = String(rawValue);
+        valueMap.set(variable.id, { value: boolVal, raw: boolVal });
+        break;
+      }
+    }
+  }
+
+  // ── 2차 패스: 토큰 생성 (alias는 valueMap에서 해소) ──
   const result: NormalizedToken[] = [];
 
   for (const variable of uniqueVars) {
@@ -222,13 +257,14 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
       alias: isAlias(rawValue) ? rawValue.id : null,
     };
 
-    // Alias — value는 빈 문자열로, alias 컬럼에 id 저장
     if (isAlias(rawValue)) {
+      const resolved = valueMap.get(rawValue.id);
+      const type = variable.resolvedType === 'COLOR' ? 'color' : inferFloatType(variable.name, variable.scopes);
       result.push({
         ...base,
-        type: variable.resolvedType === 'COLOR' ? 'color' : inferFloatType(variable.name, variable.scopes),
-        value: '',
-        raw: rawValue.id,
+        type,
+        value: resolved?.value ?? '',
+        raw: resolved?.raw ?? rawValue.id,
       });
       continue;
     }

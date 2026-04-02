@@ -75,7 +75,11 @@ function groupTokens(tokens: TokenRow[]): [string, TokenRow[]][] {
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(token);
   }
-  return Array.from(map.entries());
+  // 그룹 내 토큰을 이름 기준 알파벳 정렬
+  return Array.from(map.entries()).map(([key, list]) => [
+    key,
+    [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
+  ]);
 }
 
 // ── 컴포넌트 ─────────────────────────────────────────────

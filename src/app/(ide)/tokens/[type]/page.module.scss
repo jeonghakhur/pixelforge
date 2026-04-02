@@ -7,11 +7,16 @@
 }
 
 .header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: map-get($spacers, 4);
   margin-bottom: map-get($spacers, 6);
 }
 
 .headerText {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .sourceBannerRow {
