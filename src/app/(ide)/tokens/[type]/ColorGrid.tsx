@@ -15,11 +15,34 @@ interface ColorData {
 }
 
 function parseColor(value: string): ColorData | null {
+  // JSON 포맷 { hex, rgba }
   try {
-    return JSON.parse(value) as ColorData;
+    const parsed = JSON.parse(value) as ColorData;
+    if (parsed.hex) return parsed;
   } catch {
-    return null;
+    // fall through
   }
+
+  // plain hex: #rrggbb / #rrggbbaa
+  const hexMatch = value.match(/^#([0-9a-fA-F]{6,8})$/);
+  if (hexMatch) {
+    const hex = value.slice(0, 7); // alpha 무시하고 6자리만
+    return { hex, rgba: hexToRgba(hex) };
+  }
+
+  // rgba(r, g, b, a)
+  const rgbaMatch = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+  if (rgbaMatch) {
+    const [, r, g, b, a] = rgbaMatch;
+    const toHex2 = (n: string) => parseInt(n).toString(16).padStart(2, '0');
+    const hex = `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+    return {
+      hex,
+      rgba: { r: parseInt(r) / 255, g: parseInt(g) / 255, b: parseInt(b) / 255, a: parseFloat(a ?? '1') },
+    };
+  }
+
+  return null;
 }
 
 function hexToRgba(hex: string): { r: number; g: number; b: number; a: number } {
