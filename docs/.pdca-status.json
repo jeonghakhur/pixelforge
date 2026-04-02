@@ -1,0 +1,119 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-03-31T09:42:15.330Z",
+  "activeFeatures": [
+    "scripts",
+    "tokens",
+    "actions",
+    "layout"
+  ],
+  "primaryFeature": "scripts",
+  "features": {
+    "scripts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-23T13:14:02.168Z",
+        "lastUpdated": "2026-03-23T13:58:03.204Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/scripts/extract-figma-tokens.ts"
+    },
+    "tokens": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-23T13:57:38.984Z",
+        "lastUpdated": "2026-03-23T13:57:40.116Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/lib/tokens/extractor.ts"
+    },
+    "actions": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-31T09:40:19.132Z",
+        "lastUpdated": "2026-03-31T09:40:19.132Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/lib/actions/project.ts"
+    },
+    "layout": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-31T09:41:28.989Z",
+        "lastUpdated": "2026-03-31T09:42:15.330Z"
+      },
+      "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/components/layout/TabBar.tsx"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Dynamic",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-03-23T13:14:02.168Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-03-31T09:42:15.330Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-03-23T13:14:02.168Z",
+      "feature": "scripts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-23T13:57:38.984Z",
+      "feature": "tokens",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-23T13:57:40.116Z",
+      "feature": "tokens",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-23T13:58:03.204Z",
+      "feature": "scripts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-31T09:40:19.132Z",
+      "feature": "actions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-31T09:41:28.989Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-31T09:42:15.330Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    }
+  ]
+}
