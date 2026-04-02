@@ -1,18 +1,8 @@
 import path from 'path';
 import fs from 'fs';
 
-export interface StoredTokenType {
-  id: string;
-  label: string;
-  icon: string;
-  /** 정규식 패턴 문자열 (/, i 플래그 포함 불필요) */
-  pattern: string;
-  cssPrefix: string;
-}
-
 interface PixelForgeConfig {
   figmaToken?: string;
-  tokenTypes?: StoredTokenType[];
 }
 
 const CONFIG_DIR = path.join(process.cwd(), '.pixelforge');
@@ -53,13 +43,3 @@ export function setFigmaToken(token: string): void {
   writeConfig(config);
 }
 
-export function getStoredTokenTypes(): StoredTokenType[] | null {
-  const config = readConfig();
-  return config.tokenTypes ?? null;
-}
-
-export function setStoredTokenTypes(types: StoredTokenType[]): void {
-  const config = readConfig();
-  config.tokenTypes = types;
-  writeConfig(config);
-}

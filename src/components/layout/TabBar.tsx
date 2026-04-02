@@ -2,6 +2,7 @@
 
 import { Icon } from '@iconify/react';
 import type { Section } from './ActivityBar';
+import type { TokenMenuEntry } from '@/lib/actions/token-menu';
 import styles from './TabBar.module.scss';
 
 export interface TabItem {
@@ -10,20 +11,11 @@ export interface TabItem {
   icon: string;
 }
 
-const SECTION_TABS: Record<Section, TabItem[]> = {
-  home: [],
-  tokens: [
-    { id: 'color', label: 'Colors', icon: 'solar:pallete-linear' },
-    { id: 'typography', label: 'Typography', icon: 'solar:text-field-linear' },
-    { id: 'spacing', label: 'Spacing', icon: 'solar:ruler-linear' },
-    { id: 'radius', label: 'Radius', icon: 'solar:crop-linear' },
-  ],
+const STATIC_SECTION_TABS: Partial<Record<Section, TabItem[]>> = {
   components: [
     { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
     { id: 'new', label: '+ 추가', icon: 'solar:add-circle-linear' },
   ],
-  screens: [],
-  diff: [],
   settings: [
     { id: 'general', label: '일반', icon: 'solar:settings-linear' },
     { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },
@@ -31,17 +23,20 @@ const SECTION_TABS: Record<Section, TabItem[]> = {
     { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
     { id: 'tokens', label: '토큰 타입', icon: 'solar:layers-minimalistic-linear' },
   ],
-  admin: [],
 };
 
 interface TabBarProps {
   section: Section;
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  tokenTabs?: TokenMenuEntry[];
 }
 
-export default function TabBar({ section, activeTab, onTabChange }: TabBarProps) {
-  const tabs = SECTION_TABS[section];
+export default function TabBar({ section, activeTab, onTabChange, tokenTabs = [] }: TabBarProps) {
+  const tabs: TabItem[] =
+    section === 'tokens'
+      ? tokenTabs.map((t) => ({ id: t.type, label: t.label, icon: t.icon }))
+      : (STATIC_SECTION_TABS[section] ?? []);
 
   if (tabs.length === 0) {
     return (

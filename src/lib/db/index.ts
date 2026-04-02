@@ -218,5 +218,23 @@ sqlite.exec(`
   );
 `);
 
+// ── token_type_configs 테이블 마이그레이션 ────
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS token_type_configs (
+    id          TEXT PRIMARY KEY,
+    project_id  TEXT NOT NULL REFERENCES projects(id),
+    type        TEXT NOT NULL,
+    label       TEXT NOT NULL,
+    icon        TEXT NOT NULL,
+    menu_order  INTEGER NOT NULL DEFAULT 0,
+    is_visible  INTEGER NOT NULL DEFAULT 1,
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    UNIQUE(project_id, type)
+  );
+  CREATE INDEX IF NOT EXISTS idx_token_type_configs_project_id
+    ON token_type_configs(project_id);
+`);
+
 export const db = drizzle(sqlite, { schema });
 export { schema };

@@ -17,7 +17,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/db';
-import { tokens, tokenSnapshots, tokenSources } from '@/lib/db/schema';
+import { tokens, tokenSnapshots, tokenSources, tokenTypeConfigs } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import type { NormalizedToken } from '@/lib/sync/parse-variables';
 import {
@@ -27,6 +27,7 @@ import {
 } from '@/lib/tokens/snapshot-engine';
 import { generateAllCssCode } from '@/lib/tokens/css-generator';
 import type { TokenRow } from '@/lib/actions/tokens';
+import { getTypeDefault } from '@/lib/tokens/token-type-defaults';
 
 // ─────────────────────────────────────────
 // 타입
@@ -241,6 +242,14 @@ export async function runTokenPipeline(
     // token_sources 업데이트 실패는 파이프라인을 중단하지 않음
   }
 
+  // ── Step 5b: token_type_configs 자동 등록 ────────
+  try {
+    const distinctTypes = [...new Set(normalizedTokens.map((t) => t.type))];
+    await upsertTokenTypeConfigs(projectId, distinctTypes);
+  } catch {
+    // token_type_configs 등록 실패는 파이프라인을 중단하지 않음
+  }
+
   // ── Step 6: 스크린샷 백그라운드 트리거 ─────────
   let screenshotQueued = false;
   if (changedTypes.length > 0) {
@@ -260,6 +269,43 @@ export async function runTokenPipeline(
     },
     screenshotQueued,
   };
+}
+
+// ─────────────────────────────────────────
+// token_type_configs 자동 등록
+// ─────────────────────────────────────────
+
+async function upsertTokenTypeConfigs(
+  projectId: string,
+  types: string[],
+): Promise<void> {
+  if (types.length === 0) return;
+
+  const existing = await db
+    .select({ type: tokenTypeConfigs.type })
+    .from(tokenTypeConfigs)
+    .where(eq(tokenTypeConfigs.projectId, projectId))
+    .all();
+
+  const existingTypes = new Set(existing.map((r) => r.type));
+  const newTypes = types.filter((t) => !existingTypes.has(t));
+  if (newTypes.length === 0) return;
+
+  const baseOrder = existing.length;
+  await db.insert(tokenTypeConfigs).values(
+    newTypes.map((type, i) => {
+      const meta = getTypeDefault(type);
+      return {
+        id: crypto.randomUUID(),
+        projectId,
+        type,
+        label: meta.label,
+        icon: meta.icon,
+        menuOrder: baseOrder + i,
+        isVisible: true,
+      };
+    }),
+  );
 }
 
 // ─────────────────────────────────────────

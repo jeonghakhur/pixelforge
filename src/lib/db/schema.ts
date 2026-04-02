@@ -187,6 +187,21 @@ export const tokenSnapshots = sqliteTable('token_snapshots', {
 });
 
 // ===========================
+// 토큰 타입 메뉴 설정 (프로젝트별, DB 자동 생성)
+// ===========================
+export const tokenTypeConfigs = sqliteTable('token_type_configs', {
+  id:        text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  type:      text('type').notNull(),
+  label:     text('label').notNull(),
+  icon:      text('icon').notNull(),
+  menuOrder: integer('menu_order').notNull().default(0),
+  isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (t) => [unique().on(t.projectId, t.type)]);
+
+// ===========================
 // 앱 전역 설정
 // ===========================
 export const appSettings = sqliteTable('app_settings', {

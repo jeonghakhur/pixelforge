@@ -7,8 +7,7 @@ import { Icon } from '@iconify/react';
 import { type Section } from '@/components/layout/ActivityBar';
 import { getTokenSummary, type TokenSummary } from '@/lib/actions/tokens';
 import { getComponentsByProject } from '@/lib/actions/components';
-import { getActiveTokenTypesAction } from '@/lib/actions/token-type-config';
-import type { StoredTokenType } from '@/lib/config';
+import { getTokenMenuAction, type TokenMenuEntry } from '@/lib/actions/token-menu';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './Sidebar.module.scss';
 
@@ -46,13 +45,13 @@ export default function Sidebar({ activeSection }: SidebarProps) {
   const pathname = usePathname();
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
-  const [tokenTypes, setTokenTypes] = useState<StoredTokenType[]>([]);
+  const [tokenTypes, setTokenTypes] = useState<TokenMenuEntry[]>([]);
   const [generatedNames, setGeneratedNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (activeSection === 'tokens') {
       getTokenSummary().then(setSummary);
-      getActiveTokenTypesAction().then(setTokenTypes);
+      getTokenMenuAction().then(setTokenTypes);
     }
     if (activeSection === 'components') {
       getComponentsByProject().then((rows) =>
@@ -85,13 +84,13 @@ export default function Sidebar({ activeSection }: SidebarProps) {
           </div>
           <nav className={styles.nav}>
             {tokenTypes.map((token) => {
-              const count = summary ? (summary.counts[token.id] ?? 0) : 0;
+              const count = summary ? (summary.counts[token.type] ?? 0) : 0;
               const hasTokens = count > 0;
               return (
                 <Link
                   key={token.id}
-                  href={`/tokens/${token.id}`}
-                  className={`${styles.navItem} ${pathname === `/tokens/${token.id}` ? styles.active : ''} ${!hasTokens ? styles.dimmed : ''}`}
+                  href={`/tokens/${token.type}`}
+                  className={`${styles.navItem} ${pathname === `/tokens/${token.type}` ? styles.active : ''} ${!hasTokens ? styles.dimmed : ''}`}
                 >
                   <Icon
                     icon={hasTokens ? token.icon : 'solar:lock-linear'}

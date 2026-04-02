@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
 import Sidebar from '@/components/layout/Sidebar';
 import TabBar from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
+import { getTokenMenuAction, type TokenMenuEntry } from '@/lib/actions/token-menu';
 
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
@@ -42,10 +43,15 @@ export default function AppShell({ children, userRole }: { children: React.React
   const activeTab = useUIStore((s) => s.activeTab);
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
+  const [tokenTabs, setTokenTabs] = useState<TokenMenuEntry[]>([]);
 
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  useEffect(() => {
+    getTokenMenuAction().then(setTokenTabs);
+  }, []);
 
   // Sync store from URL on pathname change
   useEffect(() => {
@@ -61,9 +67,11 @@ export default function AppShell({ children, userRole }: { children: React.React
       case 'home':
         router.push('/');
         break;
-      case 'tokens':
-        router.push('/tokens/color');
+      case 'tokens': {
+        const firstTab = tokenTabs[0]?.type ?? 'color';
+        router.push(`/tokens/${firstTab}`);
         break;
+      }
       case 'components':
         router.push('/components/new');
         break;
@@ -109,6 +117,7 @@ export default function AppShell({ children, userRole }: { children: React.React
             section={activeSection}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            tokenTabs={tokenTabs}
           />
           <main className="ide-main">
             {children}

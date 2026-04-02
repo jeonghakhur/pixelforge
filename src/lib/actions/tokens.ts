@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
+import { getActiveProjectId } from '@/lib/db/active-project';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
 import { getFigmaToken } from '@/lib/config';
@@ -16,21 +17,11 @@ import { commitTokensCss, deleteTokensCss, buildCommitMessage } from '@/lib/git/
 // 활성 프로젝트 관리 (단일 프로젝트 원칙)
 // ─────────────────────────────────────────────────────────
 
-/** app_settings에서 active_project_id를 읽어 해당 프로젝트를 반환.
- *  설정이 없으면 updated_at 기준 가장 최근 프로젝트로 fallback. */
+/** 활성 프로젝트 전체 레코드 반환 (active-project 헬퍼 기반). */
 function getActiveProject() {
-  const setting = db
-    .select()
-    .from(appSettings)
-    .where(eq(appSettings.key, 'active_project_id'))
-    .get();
-
-  if (setting?.value) {
-    const project = db.select().from(projects).where(eq(projects.id, setting.value)).get();
-    if (project) return project;
-  }
-
-  return db.select().from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const id = getActiveProjectId();
+  if (!id) return undefined;
+  return db.select().from(projects).where(eq(projects.id, id)).get();
 }
 
 /** 플러그인 sync 또는 JSON 임포트 후 활성 프로젝트를 명시적으로 설정. */
