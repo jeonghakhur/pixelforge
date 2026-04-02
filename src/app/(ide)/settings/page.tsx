@@ -9,11 +9,12 @@ import { Icon } from '@iconify/react';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
 import { createApiKey, getApiKeys, deleteApiKey } from '@/lib/actions/api-keys';
 import { getSyncStatus, type SyncProjectStatus, type SyncItem } from '@/lib/actions/sync-status';
 import { getSnapshotListAction, rollbackSnapshotAction, type SnapshotInfo } from '@/lib/actions/tokens';
-import TokenTypeSettings from './TokenTypeSettings';
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
 import { useUIStore } from '@/stores/useUIStore';
@@ -101,6 +102,12 @@ export default function SettingsPage() {
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [snapshotList, setSnapshotList] = useState<SnapshotInfo[]>([]);
   const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
+  const [confirmSnapshot, setConfirmSnapshot] = useState<{ id: string; projectId: string } | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const addToast = (message: string, variant: ToastItem['variant'] = 'danger') => {
+    setToasts((prev) => [...prev, { id: crypto.randomUUID(), variant, message }]);
+  };
 
   const tokenForm = useForm<TokenForm>({
     resolver: zodResolver(tokenSchema),
@@ -179,12 +186,14 @@ export default function SettingsPage() {
     setSnapshotList(list);
   };
 
-  const onRollback = async (snapshotId: string, projectId: string) => {
-    if (!confirm('이 스냅샷을 삭제하고 이전 버전으로 복원할까요?')) return;
+  const onRollbackConfirm = async () => {
+    if (!confirmSnapshot) return;
+    const { id: snapshotId, projectId } = confirmSnapshot;
+    setConfirmSnapshot(null);
     setRollbackLoading(snapshotId);
     const result = await rollbackSnapshotAction(snapshotId);
     if (result.error) {
-      alert(result.error);
+      addToast(result.error, 'danger');
     } else {
       const [updated, list] = await Promise.all([
         getSyncStatus(),
@@ -193,6 +202,10 @@ export default function SettingsPage() {
       setSyncStatus(updated);
       setSnapshotList(list);
       if (list.length === 0) setExpandedProjectId(null);
+      addToast(
+        result.restoredVersion ? `v${result.restoredVersion}으로 복원되었습니다.` : '스냅샷이 삭제되었습니다.',
+        'success',
+      );
     }
     setRollbackLoading(null);
   };
@@ -439,7 +452,7 @@ export default function SettingsPage() {
                                   v{snap.version} · {relativeTime(snap.createdAt)} · {snap.total.toLocaleString()}개
                                 </span>
                                 <button
-                                  onClick={() => onRollback(snap.id, proj.id)}
+                                  onClick={() => setConfirmSnapshot({ id: snap.id, projectId: proj.id })}
                                   disabled={rollbackLoading === snap.id}
                                   style={{ background: 'none', border: '1px solid var(--color-border, rgba(255,255,255,0.08))', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--color-error, #f87171)', cursor: 'pointer', opacity: rollbackLoading === snap.id ? 0.5 : 1 }}
                                 >
@@ -802,10 +815,28 @@ export default function SettingsPage() {
       {validTab === 'tokens' && (
         <div className={styles.tabContent}>
           <Card className={styles.settingsCard}>
-            <TokenTypeSettings />
+            <p className={styles.settingsDesc}>
+              토큰 타입 메뉴는 Figma sync 시 자동으로 생성됩니다.
+              세부 관리(라벨·아이콘·순서·표시여부)는 관리자 페이지에서 할 수 있습니다.
+            </p>
           </Card>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmSnapshot}
+        onClose={() => setConfirmSnapshot(null)}
+        onConfirm={onRollbackConfirm}
+        title="스냅샷 삭제"
+        message="이 스냅샷을 삭제하고 이전 버전으로 복원합니다. 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        variant="danger"
+        loading={!!rollbackLoading}
+      />
+
+      <ToastContainer
+        toasts={toasts}
+        onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
     </div>
   );
 }
