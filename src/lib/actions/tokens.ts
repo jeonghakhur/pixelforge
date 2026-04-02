@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
-import { eq, desc, sql, and } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray } from 'drizzle-orm';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
@@ -850,19 +850,28 @@ export async function rollbackSnapshotAction(
     .limit(1)
     .get();
 
-  // 4. tokens 테이블 복원
-  await db.delete(tokens).where(
-    and(eq(tokens.projectId, projectId), eq(tokens.source, source as 'variables' | 'styles-api' | 'section-scan' | 'node-scan')),
-  );
+  // 4. 이번 스냅샷의 타입만 삭제 후 이전 스냅샷의 해당 타입으로 복원
+  type SnapshotItem = { type: string; name: string; value: string; raw?: string | null; mode?: string | null; collectionName?: string | null; alias?: string | null };
+  let targetItems: SnapshotItem[] = [];
+  try { targetItems = JSON.parse(target.tokensData) as SnapshotItem[]; } catch {}
+
+  const targetTypes = [...new Set(targetItems.map((t) => t.type))];
+
+  if (targetTypes.length > 0) {
+    await db.delete(tokens).where(
+      and(eq(tokens.projectId, projectId), inArray(tokens.type, targetTypes)),
+    );
+  }
 
   if (prev?.tokensData) {
-    type SnapshotItem = { type: string; name: string; value: string; raw?: string | null; mode?: string | null; collectionName?: string | null; alias?: string | null };
-    let items: SnapshotItem[] = [];
-    try { items = JSON.parse(prev.tokensData) as SnapshotItem[]; } catch {}
+    let prevItems: SnapshotItem[] = [];
+    try { prevItems = JSON.parse(prev.tokensData) as SnapshotItem[]; } catch {}
 
-    if (items.length > 0) {
+    // 이전 스냅샷에서 이번 타입에 해당하는 것만 복원
+    const restoreItems = prevItems.filter((t) => targetTypes.includes(t.type));
+    if (restoreItems.length > 0) {
       await db.insert(tokens).values(
-        items.map((t) => ({
+        restoreItems.map((t) => ({
           id: crypto.randomUUID(),
           projectId,
           source: source as 'variables' | 'styles-api' | 'section-scan' | 'node-scan',

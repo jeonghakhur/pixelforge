@@ -148,7 +148,7 @@ export async function runTokenPipeline(
   }
 
   // ── Step 2: diff 계산 ─────────────────────────
-  // upsert 후 DB의 전체 토큰을 스냅샷 기준으로 사용 (부분 sync 대응)
+  // 이번 sync에서 보낸 데이터만 기준으로 diff 계산 및 스냅샷 저장
   const prevSnapshot = await db
     .select()
     .from(tokenSnapshots)
@@ -157,14 +157,11 @@ export async function runTokenPipeline(
     .limit(1)
     .get();
 
-  const allCurrentTokens = await db
-    .select()
-    .from(tokens)
-    .where(eq(tokens.projectId, projectId))
-    .all();
+  const newItems = normalizedTokens.map(normalizedToSnapshotItem);
 
-  const prevItems = parsePrevTokens(prevSnapshot?.tokensData ?? null);
-  const newItems = allCurrentTokens.map(tokenRowToSnapshotItem);
+  // 이전 스냅샷에서 동일 타입만 추출해서 diff 계산
+  const prevAllItems = parsePrevTokens(prevSnapshot?.tokensData ?? null);
+  const prevItems = prevAllItems.filter((t) => incomingTypes.includes(t.type));
   const diff = computeSnapshotDiff(prevItems, newItems);
 
   const changedTypes = Object.keys(diff.countsByType);
