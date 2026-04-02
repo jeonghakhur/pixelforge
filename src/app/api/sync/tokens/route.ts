@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { validateApiKey } from '@/lib/auth/api-key';
 import { db } from '@/lib/db';
-import { projects, tokenSnapshots } from '@/lib/db/schema';
+import { projects, tokenSnapshots, syncPayloads } from '@/lib/db/schema';
 import { CORS_HEADERS } from '@/lib/sync/cors';
 import { eq, desc } from 'drizzle-orm';
 import { parseVariablesPayload } from '@/lib/sync/parse-variables';
@@ -47,6 +47,18 @@ export async function POST(req: Request) {
   }
 
   const projectId = project!.id;
+
+  // 원본 payload 저장 (디버깅/검증용)
+  const rawPayload = JSON.stringify(tokenData);
+  const rawHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
+  await db.insert(syncPayloads).values({
+    id: crypto.randomUUID(),
+    projectId,
+    type: 'tokens',
+    version: 1,
+    contentHash: rawHash,
+    data: rawPayload,
+  });
 
   // 파싱 먼저 → 정규화된 토큰 기준으로 해시 비교
   // pipeline이 tokensData를 저장할 때와 동일한 키 순서로 직렬화해야 hash가 일치함
