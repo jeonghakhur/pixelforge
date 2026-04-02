@@ -81,6 +81,7 @@ function relativeTime(date: Date): string {
 export default function SettingsPage() {
   const activeTab = useUIStore((s) => s.activeTab) as SettingsTab;
   const setTab = useUIStore((s) => s.setTab);
+  const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [maskedToken, setMaskedToken] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -202,6 +203,7 @@ export default function SettingsPage() {
       setSyncStatus(updated);
       setSnapshotList(list);
       if (list.length === 0) setExpandedProjectId(null);
+      invalidateTokens();
       addToast(
         result.restoredVersion ? `v${result.restoredVersion}으로 복원되었습니다.` : '스냅샷이 삭제되었습니다.',
         'success',

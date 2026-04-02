@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from 'next/navigation';
 import { getTokensByType, getTokenSourceAction } from '@/lib/actions/tokens';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
