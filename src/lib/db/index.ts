@@ -236,5 +236,35 @@ sqlite.exec(`
     ON token_type_configs(project_id);
 `);
 
+// ── sync_payloads CHECK constraint에 'tokens' 추가 ──
+function migrateSyncPayloadsType(): void {
+  const row = sqlite.prepare(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='sync_payloads'`,
+  ).get() as { sql: string } | undefined;
+
+  if (!row || row.sql.includes("'tokens'")) return; // 이미 포함됨
+
+  sqlite.pragma('foreign_keys = OFF');
+  sqlite.exec(`
+    BEGIN;
+    DROP TABLE IF EXISTS sync_payloads_new;
+    CREATE TABLE sync_payloads_new (
+      id           TEXT PRIMARY KEY,
+      project_id   TEXT NOT NULL REFERENCES projects(id),
+      type         TEXT NOT NULL CHECK(type IN ('tokens','icons','images','themes','components')),
+      version      INTEGER NOT NULL DEFAULT 1,
+      content_hash TEXT NOT NULL,
+      data         TEXT NOT NULL,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    INSERT INTO sync_payloads_new SELECT * FROM sync_payloads;
+    DROP TABLE sync_payloads;
+    ALTER TABLE sync_payloads_new RENAME TO sync_payloads;
+    COMMIT;
+  `);
+  sqlite.pragma('foreign_keys = ON');
+}
+migrateSyncPayloadsType();
+
 export const db = drizzle(sqlite, { schema });
 export { schema };
