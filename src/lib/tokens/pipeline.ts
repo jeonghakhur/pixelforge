@@ -18,7 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/db';
 import { tokens, tokenSnapshots, tokenSources, tokenTypeConfigs } from '@/lib/db/schema';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import type { NormalizedToken } from '@/lib/sync/parse-variables';
 import {
   computeSnapshotDiff,
@@ -117,18 +117,10 @@ export async function runTokenPipeline(
 ): Promise<PipelineResult> {
   const { source, figmaKey, figmaVersion } = options;
 
-  // ── Step 1: tokens 테이블 upsert ──────────────
-  // 보내온 타입만 삭제 후 교체 — 나머지 타입은 유지
+  // ── Step 1: tokens 테이블 완전 교체 ───────────
+  // sync = 보낸 데이터가 전부 → 프로젝트 토큰 전체 삭제 후 재삽입
+  await db.delete(tokens).where(eq(tokens.projectId, projectId));
   const incomingTypes = [...new Set(normalizedTokens.map((t) => t.type))];
-  if (incomingTypes.length > 0) {
-    await db.delete(tokens).where(
-      and(
-        eq(tokens.projectId, projectId),
-        eq(tokens.source, source),
-        inArray(tokens.type, incomingTypes),
-      ),
-    );
-  }
 
   if (normalizedTokens.length > 0) {
     await db.insert(tokens).values(

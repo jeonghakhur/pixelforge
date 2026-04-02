@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 
-import { notFound } from 'next/navigation';
 import { getTokensByType, getTokenSourceAction } from '@/lib/actions/tokens';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 import ColorGrid from './ColorGrid';
@@ -54,8 +53,13 @@ function getSourceBadge(source: TokenSource): SourceBadge | null {
 export default async function TokenPage({ params }: TokenPageProps) {
   const { type } = await params;
 
-  const typeConfig = TOKEN_TYPE_MAP[type];
-  if (!typeConfig) notFound();
+  const typeConfig = TOKEN_TYPE_MAP[type] ?? {
+    id: type,
+    label: type.charAt(0).toUpperCase() + type.slice(1),
+    description: `${type} 타입 디자인 토큰입니다.`,
+    icon: 'solar:box-linear',
+    cssPrefix: type,
+  };
 
   const [tokenRows, tokenSource] = await Promise.all([
     getTokensByType(type),

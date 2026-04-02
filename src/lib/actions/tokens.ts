@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
-import { eq, desc, sql, and, inArray } from 'drizzle-orm';
+import { eq, desc, sql, and } from 'drizzle-orm';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
@@ -850,28 +850,18 @@ export async function rollbackSnapshotAction(
     .limit(1)
     .get();
 
-  // 4. 이번 스냅샷의 타입만 삭제 후 이전 스냅샷의 해당 타입으로 복원
+  // 4. 프로젝트 토큰 전체 삭제 후 이전 스냅샷 데이터로 완전 복원
   type SnapshotItem = { type: string; name: string; value: string; raw?: string | null; mode?: string | null; collectionName?: string | null; alias?: string | null };
-  let targetItems: SnapshotItem[] = [];
-  try { targetItems = JSON.parse(target.tokensData) as SnapshotItem[]; } catch {}
 
-  const targetTypes = [...new Set(targetItems.map((t) => t.type))];
-
-  if (targetTypes.length > 0) {
-    await db.delete(tokens).where(
-      and(eq(tokens.projectId, projectId), inArray(tokens.type, targetTypes)),
-    );
-  }
+  await db.delete(tokens).where(eq(tokens.projectId, projectId));
 
   if (prev?.tokensData) {
     let prevItems: SnapshotItem[] = [];
     try { prevItems = JSON.parse(prev.tokensData) as SnapshotItem[]; } catch {}
 
-    // 이전 스냅샷에서 이번 타입에 해당하는 것만 복원
-    const restoreItems = prevItems.filter((t) => targetTypes.includes(t.type));
-    if (restoreItems.length > 0) {
+    if (prevItems.length > 0) {
       await db.insert(tokens).values(
-        restoreItems.map((t) => ({
+        prevItems.map((t) => ({
           id: crypto.randomUUID(),
           projectId,
           source: source as 'variables' | 'styles-api' | 'section-scan' | 'node-scan',

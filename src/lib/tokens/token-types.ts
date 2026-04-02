@@ -51,6 +51,30 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
     sectionPattern: /^(radius|corner|rounded|반경|모서리|round)/i,
     cssPrefix: 'radius',
   },
+  {
+    id: 'float',
+    label: 'Numbers',
+    description: '숫자형 디자인 변수(크기, 비율 등)를 관리합니다.',
+    icon: 'solar:hashtag-square-linear',
+    sectionPattern: /^(float|number|num|숫자)/i,
+    cssPrefix: 'number',
+  },
+  {
+    id: 'string',
+    label: 'Strings',
+    description: '문자열 디자인 변수(폰트 패밀리, 텍스트 등)를 관리합니다.',
+    icon: 'solar:text-square-linear',
+    sectionPattern: /^(string|str|text|문자)/i,
+    cssPrefix: 'string',
+  },
+  {
+    id: 'boolean',
+    label: 'Booleans',
+    description: '불리언 디자인 변수를 관리합니다.',
+    icon: 'solar:slider-minimalistic-horizontal-linear',
+    sectionPattern: /^(bool|boolean|불린)/i,
+    cssPrefix: 'boolean',
+  },
 ];
 
 /** id → TokenTypeConfig 빠른 조회 */

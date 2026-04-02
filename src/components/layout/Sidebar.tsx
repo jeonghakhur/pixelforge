@@ -7,7 +7,7 @@ import { Icon } from '@iconify/react';
 import { type Section } from '@/components/layout/ActivityBar';
 import { getTokenSummary, type TokenSummary } from '@/lib/actions/tokens';
 import { getComponentsByProject } from '@/lib/actions/components';
-import { getTokenMenuAction, type TokenMenuEntry } from '@/lib/actions/token-menu';
+import { TOKEN_TYPE_MAP, TOKEN_TYPES } from '@/lib/tokens/token-types';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './Sidebar.module.scss';
 
@@ -45,13 +45,11 @@ export default function Sidebar({ activeSection }: SidebarProps) {
   const pathname = usePathname();
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const [summary, setSummary] = useState<TokenSummary | null>(null);
-  const [tokenTypes, setTokenTypes] = useState<TokenMenuEntry[]>([]);
   const [generatedNames, setGeneratedNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (activeSection === 'tokens') {
       getTokenSummary().then(setSummary);
-      getTokenMenuAction().then(setTokenTypes);
     }
     if (activeSection === 'components') {
       getComponentsByProject().then((rows) =>
@@ -83,26 +81,34 @@ export default function Sidebar({ activeSection }: SidebarProps) {
             <span className={styles.panelTitle}>토큰</span>
           </div>
           <nav className={styles.nav}>
-            {tokenTypes.map((token) => {
-              const count = summary ? (summary.counts[token.type] ?? 0) : 0;
-              const hasTokens = count > 0;
-              return (
-                <Link
-                  key={token.id}
-                  href={`/tokens/${token.type}`}
-                  className={`${styles.navItem} ${pathname === `/tokens/${token.type}` ? styles.active : ''} ${!hasTokens ? styles.dimmed : ''}`}
-                >
-                  <Icon
-                    icon={hasTokens ? token.icon : 'solar:lock-linear'}
-                    width={16}
-                    height={16}
-                    className={styles.icon}
-                  />
-                  <span className={styles.navLabel}>{token.label}</span>
-                  {hasTokens && <span className={styles.badge}>{count}</span>}
-                </Link>
-              );
-            })}
+            {(() => {
+              if (!summary) return null;
+              // counts에 있는 타입 기준으로 TOKEN_TYPES 순서 유지, 없는 타입은 뒤에 추가
+              const knownOrder = TOKEN_TYPES.map((t) => t.id);
+              const allTypes = [
+                ...knownOrder.filter((id) => (summary.counts[id] ?? 0) > 0),
+                ...Object.keys(summary.counts).filter(
+                  (id) => !knownOrder.includes(id) && summary.counts[id] > 0,
+                ),
+              ];
+              return allTypes.map((typeId) => {
+                const config = TOKEN_TYPE_MAP[typeId];
+                const count = summary.counts[typeId] ?? 0;
+                const label = config?.label ?? typeId;
+                const icon = config?.icon ?? 'solar:box-linear';
+                return (
+                  <Link
+                    key={typeId}
+                    href={`/tokens/${typeId}`}
+                    className={`${styles.navItem} ${pathname === `/tokens/${typeId}` ? styles.active : ''}`}
+                  >
+                    <Icon icon={icon} width={16} height={16} className={styles.icon} />
+                    <span className={styles.navLabel}>{label}</span>
+                    <span className={styles.badge}>{count}</span>
+                  </Link>
+                );
+              });
+            })()}
             {summary?.lastExtracted && (
               <span className={styles.lastSync}>
                 <Icon icon="solar:clock-circle-linear" width={13} height={13} />

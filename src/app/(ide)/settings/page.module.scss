@@ -438,3 +438,147 @@
   font-size: $font-size-sm;
   color: var(--text-secondary);
 }
+
+// ── 스냅샷 이력 ──────────────────────────────────
+// ── 연동 현황 프로젝트 행 ─────────────────────────
+.syncProjectItem {
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: $border-radius;
+  overflow: hidden;
+}
+
+.syncProjectHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-elevated);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-elevated-hover, rgba(255,255,255,0.06));
+  }
+}
+
+.syncProjectLeft {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+  flex: 1;
+  min-width: 0;
+}
+
+.syncProjectName {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.syncProjectTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.syncTypeItem {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.syncTypeLabel {
+  color: var(--text-muted);
+}
+
+.syncChevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform $transition-fast;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+// ── 스냅샷 이력 ──────────────────────────────────
+.snapshotList {
+  border-top: 1px solid var(--border);
+}
+
+.snapshotItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-base);
+
+  & + & {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.snapshotMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  flex: 1;
+  min-width: 0;
+}
+
+.snapshotVersion {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 8px;
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
+}
+
+.snapshotInfo {
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.snapshotTypes {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.snapshotDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: $border-radius-sm;
+  background: none;
+  font-size: $font-size-sm;
+  color: var(--danger, #f87171);
+  cursor: pointer;
+  transition: $transition-fast;
+  flex-shrink: 0;
+  margin-left: auto;
+
+  &:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: var(--danger, #f87171);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

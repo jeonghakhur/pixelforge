@@ -425,59 +425,69 @@ export default function SettingsPage() {
                   아직 전송된 데이터가 없습니다. Figma 플러그인에서 데이터를 전송해보세요.
                 </p>
               ) : (
-                <ul className={styles.memberList}>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {syncStatus.map((proj) => (
-                    <li key={proj.id} className={styles.memberItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                      <span className={styles.memberName} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Icon icon="solar:figma-linear" width={14} height={14} />
-                        {proj.name}
-                      </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', alignItems: 'center' }}>
-                        {(['tokens', 'icons', 'images', 'themes', 'components'] as const).map((type) => {
-                          const item = proj.syncs.find((s) => s.type === type) as SyncItem | undefined;
-                          return (
-                            <span key={type} className={styles.memberEmail} style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              {SYNC_TYPE_LABEL[type]}:{' '}
-                              {item ? (
-                                <>
-                                  v{item.version} · {relativeTime(item.syncedAt)}
-                                  {item.count != null ? ` (${item.count.toLocaleString()}개)` : ''}
-                                  {type === 'tokens' && (
-                                    <button
-                                      onClick={() => onToggleSnapshots(proj.id)}
-                                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: 'var(--color-text-muted, #94a3b8)', display: 'inline-flex', alignItems: 'center' }}
-                                      title="스냅샷 이력"
-                                    >
-                                      <Icon icon={expandedProjectId === proj.id ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} width={12} height={12} />
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                <span style={{ color: 'var(--color-text-muted, #94a3b8)' }}>미전송</span>
-                              )}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      {expandedProjectId === proj.id && snapshotList.length > 0 && (
-                        <div style={{ marginTop: 8, width: '100%' }}>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #94a3b8)', marginBottom: 4 }}>스냅샷 이력</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {snapshotList.map((snap) => (
-                              <div key={snap.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--color-surface-2, rgba(255,255,255,0.04))', borderRadius: 4 }}>
-                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary, #cbd5e1)' }}>
-                                  v{snap.version} · {relativeTime(snap.createdAt)} · {snap.total.toLocaleString()}개
+                    <li key={proj.id} className={styles.syncProjectItem}>
+                      <button
+                        className={styles.syncProjectHeader}
+                        onClick={() => onToggleSnapshots(proj.id)}
+                      >
+                        <div className={styles.syncProjectLeft}>
+                          <span className={styles.syncProjectName}>
+                            <Icon icon="solar:figma-linear" width={16} height={16} />
+                            {proj.name}
+                          </span>
+                          <div className={styles.syncProjectTypes}>
+                            {(['tokens', 'icons', 'images', 'themes', 'components'] as const).map((type) => {
+                              const item = proj.syncs.find((s) => s.type === type) as SyncItem | undefined;
+                              return (
+                                <span key={type} className={styles.syncTypeItem}>
+                                  <span className={styles.syncTypeLabel}>{SYNC_TYPE_LABEL[type]}: </span>
+                                  {item
+                                    ? `v${item.version} · ${relativeTime(item.syncedAt)}${item.count != null ? ` (${item.count.toLocaleString()}개)` : ''}`
+                                    : '미전송'}
                                 </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <Icon
+                          icon="solar:alt-arrow-down-linear"
+                          width={16}
+                          height={16}
+                          className={`${styles.syncChevron}${expandedProjectId === proj.id ? ` ${styles.open}` : ''}`}
+                        />
+                      </button>
+                      {expandedProjectId === proj.id && snapshotList.length > 0 && (
+                        <div className={styles.snapshotList}>
+                          {snapshotList.map((snap) => {
+                            const typeSummary = Object.entries(snap.tokenCounts)
+                              .map(([k, v]) => `${k} ${v}개`)
+                              .join(' · ');
+                            return (
+                              <div key={snap.id} className={styles.snapshotItem}>
+                                <div className={styles.snapshotMeta}>
+                                  <span className={styles.snapshotVersion}>v{snap.version}</span>
+                                  <div>
+                                    <div className={styles.snapshotInfo}>
+                                      {relativeTime(snap.createdAt)} · 총 {snap.total.toLocaleString()}개
+                                    </div>
+                                    {typeSummary && (
+                                      <div className={styles.snapshotTypes}>{typeSummary}</div>
+                                    )}
+                                  </div>
+                                </div>
                                 <button
+                                  className={styles.snapshotDeleteBtn}
                                   onClick={() => setConfirmSnapshot({ id: snap.id, projectId: proj.id })}
-                                  disabled={rollbackLoading === snap.id}
-                                  style={{ background: 'none', border: '1px solid var(--color-border, rgba(255,255,255,0.08))', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: 'var(--color-error, #f87171)', cursor: 'pointer', opacity: rollbackLoading === snap.id ? 0.5 : 1 }}
+                                  disabled={!!rollbackLoading}
                                 >
-                                  {rollbackLoading === snap.id ? '삭제 중...' : '삭제'}
+                                  <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+                                  {rollbackLoading === snap.id ? '삭제 중...' : '이 버전 삭제'}
                                 </button>
                               </div>
-                            ))}
-                          </div>
+                            );
+                          })}
                         </div>
                       )}
                     </li>

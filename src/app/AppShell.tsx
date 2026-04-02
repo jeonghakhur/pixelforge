@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
 import Sidebar from '@/components/layout/Sidebar';
@@ -47,7 +47,7 @@ export default function AppShell({ children, userRole }: { children: React.React
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokenTabs, setTokenTabs] = useState<TokenMenuEntry[]>([]);
-  const [lastSyncVersion, setLastSyncVersion] = useState(0);
+  const lastSyncVersionRef = useRef(0);
 
   useEffect(() => {
     initTheme();
@@ -66,19 +66,17 @@ export default function AppShell({ children, userRole }: { children: React.React
         const latest = status.flatMap((p) => p.syncs.filter((s) => s.type === 'tokens'))
           .reduce((max, s) => Math.max(max, s.version), 0);
         if (mounted && latest > 0) {
-          setLastSyncVersion((prev) => {
-            if (prev > 0 && latest > prev) {
-              invalidateTokens();
-            }
-            return latest;
-          });
+          if (lastSyncVersionRef.current > 0 && latest > lastSyncVersionRef.current) {
+            invalidateTokens();
+          }
+          lastSyncVersionRef.current = latest;
         }
       } catch {}
     };
     poll();
     const timer = setInterval(poll, 5000);
     return () => { mounted = false; clearInterval(timer); };
-  }, [invalidateTokens, setLastSyncVersion]);
+  }, [invalidateTokens]);
 
   // tokenRevision 변경 시 토큰 페이지 서버 컴포넌트 갱신
   useEffect(() => {

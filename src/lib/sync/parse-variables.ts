@@ -45,6 +45,20 @@ interface PluginStyleColor {
   paints: Array<{ type: string; color?: FigmaColor; opacity?: number }>;
 }
 
+interface PluginTextStyle {
+  id: string;
+  name: string;
+  description?: string;
+  fontName: { family: string; style: string };
+  fontSize: number;
+  fontWeight: number;
+  letterSpacing: { unit: string; value: number };
+  lineHeight: { unit: string; value: number };
+  textCase?: string;
+  textDecoration?: string;
+  usageCount?: number;
+}
+
 export interface PluginTokenPayload {
   variables?: {
     // 플러그인은 variableCollections 또는 collections 키를 사용
@@ -58,6 +72,10 @@ export interface PluginTokenPayload {
   // 플러그인 스타일 포맷 (Variables 없을 때 colors 폴백)
   styles?: {
     colors?: PluginStyleColor[];
+    textStyles?: PluginTextStyle[];
+    headings?: PluginTextStyle[];
+    texts?: PluginTextStyle[];
+    fonts?: PluginTextStyle[];
   };
 }
 
@@ -114,6 +132,28 @@ function buildCollectionMap(
     for (const [id, c] of Object.entries(collections)) map.set(id, c);
   }
   return map;
+}
+
+// ───────────────────────────────────────────────────────
+// 타이포그래피 헬퍼
+// ───────────────────────────────────────────────────────
+
+function formatLineHeight(lh: { unit: string; value: number } | undefined): string {
+  if (!lh) return 'normal';
+  if (lh.unit === 'PIXELS') return `${lh.value}px`;
+  if (lh.unit === 'PERCENT') return `${lh.value}%`;
+  return 'normal'; // AUTO
+}
+
+function formatLetterSpacing(
+  ls: { unit: string; value: number } | undefined,
+): string {
+  if (!ls || ls.value === 0) return '0';
+  if (ls.unit === 'PIXELS') return `${ls.value}px`;
+  // PERCENT: Figma uses % of font-size → convert to em (divide by 100)
+  const em = Math.round((ls.value / 100) * 1000) / 1000;
+  if (em === 0) return '0';
+  return `${em}em`;
 }
 
 // ───────────────────────────────────────────────────────
@@ -192,6 +232,43 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         break;
       }
     }
+  }
+
+  // styles.textStyles / styles.headings / styles.texts / styles.fonts → typography
+  const textStyleArrays = [
+    ...(payload.styles?.textStyles ?? []),
+    ...(payload.styles?.headings ?? []),
+    ...(payload.styles?.texts ?? []),
+    ...(payload.styles?.fonts ?? []),
+  ];
+  const seenTextIds = new Set<string>();
+  for (const ts of textStyleArrays) {
+    if (seenTextIds.has(ts.id)) continue;
+    seenTextIds.add(ts.id);
+
+    const lineHeight = formatLineHeight(ts.lineHeight);
+    const letterSpacing = formatLetterSpacing(ts.letterSpacing);
+    const raw = [
+      `${ts.fontWeight} ${ts.fontSize}px/${lineHeight} '${ts.fontName.family}'`,
+      letterSpacing !== '0' ? `ls:${letterSpacing}` : '',
+    ].filter(Boolean).join(' ');
+
+    result.push({
+      type: 'typography',
+      name: ts.name,
+      value: JSON.stringify({
+        fontFamily: ts.fontName.family,
+        fontStyle: ts.fontName.style,
+        fontSize: ts.fontSize,
+        fontWeight: ts.fontWeight,
+        lineHeight,
+        letterSpacing,
+      }),
+      raw,
+      mode: null,
+      collectionName: null,
+      alias: null,
+    });
   }
 
   // styles.colors 폴백 — variables에 색상이 없을 때
