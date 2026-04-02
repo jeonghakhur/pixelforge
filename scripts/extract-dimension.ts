@@ -1,16 +1,17 @@
 /**
- * Radius 토큰 추출 스크립트
+ * Spacing / Radius 토큰 추출 스크립트
  *
  * Usage:
- *   npx tsx scripts/extract-radius.ts [input.json] [output.json]
+ *   npx tsx scripts/extract-dimension.ts <spacing|radius> [input.json] [output.json]
  *
  * Defaults:
- *   input  = data/figma-node-spacing.json   (spacing과 같은 노드에 포함)
- *   output = data/extracted-radius.json
+ *   input  = data/figma-node-spacing.json
+ *   output = data/extracted-{type}.json
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getRootNode } from './shared';
 
 interface FigmaNode {
   name: string;
@@ -19,29 +20,28 @@ interface FigmaNode {
   children?: FigmaNode[];
 }
 
-interface RadiusToken {
+interface DimensionToken {
   name: string;
   value: number;
 }
 
-const VAR_PATTERN = /^Variable\/radius\/(.+)$/;
-
-const inputPath = resolve(process.argv[2] ?? 'data/figma-node-spacing.json');
-const outputPath = resolve(process.argv[3] ?? 'data/extracted-radius.json');
-
-const raw = JSON.parse(readFileSync(inputPath, 'utf-8'));
-
-let rootNode: FigmaNode;
-if (raw.nodes) {
-  const firstKey = Object.keys(raw.nodes)[0];
-  rootNode = raw.nodes[firstKey].document as FigmaNode;
-} else if (raw.document) {
-  rootNode = raw.document as FigmaNode;
-} else {
-  rootNode = raw as FigmaNode;
+const tokenType = process.argv[2];
+if (tokenType !== 'spacing' && tokenType !== 'radius') {
+  process.stderr.write(
+    '사용법: npx tsx scripts/extract-dimension.ts <spacing|radius> [input.json] [output.json]\n',
+  );
+  process.exit(1);
 }
 
-function extract(node: FigmaNode, result: RadiusToken[]): void {
+const VAR_PATTERN = new RegExp(`^Variable\\/${tokenType}\\/(.+)$`);
+
+const inputPath = resolve(process.argv[3] ?? 'data/figma-node-spacing.json');
+const outputPath = resolve(process.argv[4] ?? `data/extracted-${tokenType}.json`);
+
+const raw = JSON.parse(readFileSync(inputPath, 'utf-8')) as unknown;
+const rootNode = getRootNode<FigmaNode>(raw);
+
+function extract(node: FigmaNode, result: DimensionToken[]): void {
   const match = node.name.match(VAR_PATTERN);
   if (match) {
     const varInfo = node.children?.find((c) => c.name === 'Variable Information');
@@ -60,13 +60,13 @@ function extract(node: FigmaNode, result: RadiusToken[]): void {
   }
 }
 
-const tokens: RadiusToken[] = [];
+const tokens: DimensionToken[] = [];
 extract(rootNode, tokens);
 tokens.sort((a, b) => a.value - b.value);
 
 writeFileSync(outputPath, JSON.stringify(tokens, null, 2), 'utf-8');
 
-process.stderr.write(`\nExtracted ${tokens.length} radius tokens:\n\n`);
+process.stderr.write(`\nExtracted ${tokens.length} ${tokenType} tokens:\n\n`);
 process.stderr.write(`${'Name'.padEnd(8)} Value\n`);
 process.stderr.write(`${'─'.repeat(8)} ─────\n`);
 for (const t of tokens) {

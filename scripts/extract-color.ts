@@ -11,6 +11,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getRootNode } from './shared';
 
 interface FigmaColor {
   r: number;
@@ -44,17 +45,8 @@ const VAR_PATTERN = /^Variable\/([^/]+)\/.+$/;
 const inputPath = resolve(process.argv[2] ?? 'data/figma-node-color.json');
 const outputPath = resolve(process.argv[3] ?? 'data/extracted-color.json');
 
-const raw = JSON.parse(readFileSync(inputPath, 'utf-8'));
-
-let rootNode: FigmaNode;
-if (raw.nodes) {
-  const firstKey = Object.keys(raw.nodes)[0];
-  rootNode = raw.nodes[firstKey].document as FigmaNode;
-} else if (raw.document) {
-  rootNode = raw.document as FigmaNode;
-} else {
-  rootNode = raw as FigmaNode;
-}
+const raw = JSON.parse(readFileSync(inputPath, 'utf-8')) as unknown;
+const rootNode = getRootNode<FigmaNode>(raw);
 
 function toHex(n: number): string {
   return Math.round(n * 255).toString(16).padStart(2, '0');

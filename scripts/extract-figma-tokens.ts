@@ -10,6 +10,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getRootNode } from './shared';
 import { extractTokens } from '@/lib/tokens/extractor';
 import type { ColorToken } from '@/lib/tokens/extractor';
 import type { FigmaNode } from '@/lib/figma/api';
@@ -26,18 +27,8 @@ const inputPath = resolve(process.argv[2] ?? 'data/figma-node-2028-1034.json');
 const outputPath = resolve(process.argv[3] ?? 'data/extracted-tokens.json');
 
 // ── 1. JSON 읽기 + document 언래핑 ──────────────────
-const raw = JSON.parse(readFileSync(inputPath, 'utf-8'));
-
-let rootNode: FigmaNode;
-if (raw.nodes) {
-  // Figma API 응답: nodes[nodeId].document 구조
-  const firstKey = Object.keys(raw.nodes)[0];
-  rootNode = raw.nodes[firstKey].document as FigmaNode;
-} else if (raw.document) {
-  rootNode = raw.document as FigmaNode;
-} else {
-  rootNode = raw as FigmaNode;
-}
+const raw = JSON.parse(readFileSync(inputPath, 'utf-8')) as unknown;
+const rootNode = getRootNode<FigmaNode>(raw);
 
 // ── 2. 기존 extractTokens() 호출 ────────────────────
 const { tokens, source } = extractTokens(rootNode);

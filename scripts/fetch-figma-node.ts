@@ -2,19 +2,29 @@
  * Figma 노드 데이터를 JSON으로 저장하는 스크립트
  *
  * 사용법:
- *   FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts
+ *   FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts <FILE_KEY> <NODE_ID> [output.json]
+ *
+ * 예시:
+ *   FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts zfG6A4VYBeW6EXZKlveUd3 120085:168888
  */
 
-const FILE_KEY = 'zfG6A4VYBeW6EXZKlveUd3';
-const NODE_ID = '120085:168888';
-const OUTPUT_PATH = 'data/figma-node-120085-168888.json';
+const FILE_KEY = process.argv[2];
+const NODE_ID = process.argv[3];
+const OUTPUT_PATH = process.argv[4] ?? `data/figma-node-${NODE_ID?.replace(':', '-')}.json`;
 
 async function main() {
+  if (!FILE_KEY || !NODE_ID) {
+    process.stderr.write(
+      '사용법: FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts <FILE_KEY> <NODE_ID> [output.json]\n'
+    );
+    process.exit(1);
+  }
+
   const token = process.env.FIGMA_TOKEN;
   if (!token) {
     process.stderr.write(
       'FIGMA_TOKEN 환경변수가 필요합니다.\n' +
-      '사용법: FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts\n'
+      '사용법: FIGMA_TOKEN=figd_xxx npx tsx scripts/fetch-figma-node.ts <FILE_KEY> <NODE_ID>\n'
     );
     process.exit(1);
   }
