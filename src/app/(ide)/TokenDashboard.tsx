@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { useTransition, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
 import type { TokenSummary, HistoryEntry } from '@/lib/actions/tokens';
+import { extractAllTokensAction } from '@/lib/actions/tokens';
 import type { TokenMenuEntry } from '@/lib/actions/token-menu';
 import SnapshotHistory from './SnapshotHistory';
 import styles from './TokenDashboard.module.scss';
@@ -15,6 +16,7 @@ interface Props {
   histories: HistoryEntry[];
   tokenVersion: number | null;
   lastSyncedAt: string | null;
+  hasFigmaUrl: boolean;
 }
 
 const TYPE_COLORS = [
@@ -50,17 +52,22 @@ function actionLabel(action: string): string {
   return action;
 }
 
+type ExtractState = 'idle' | 'loading' | 'success' | 'error';
+
 export default function TokenDashboard({
   summary,
   tokenMenu,
   histories,
   tokenVersion,
   lastSyncedAt,
+  hasFigmaUrl,
 }: Props) {
   const router = useRouter();
-  const [syncing, startSync] = useTransition();
+  const [, startSync] = useTransition();
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
+  const [extractState, setExtractState] = useState<ExtractState>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const total = Object.values(summary.counts).reduce((a, b) => a + b, 0);
 
@@ -70,8 +77,20 @@ export default function TokenDashboard({
     router.push(`/tokens/${type}`);
   };
 
-  const handleSync = () => {
-    startSync(() => { router.refresh(); });
+  const handleExtract = () => {
+    setErrorMsg(null);
+    setExtractState('loading');
+    startSync(async () => {
+      const result = await extractAllTokensAction();
+      if (result.error) {
+        setExtractState('error');
+        setErrorMsg(result.error);
+      } else {
+        setExtractState('success');
+        router.refresh();
+        setTimeout(() => setExtractState('idle'), 2000);
+      }
+    });
   };
 
   // 도넛 세그먼트
@@ -114,8 +133,45 @@ export default function TokenDashboard({
             </>
           )}
         </div>
-        <div className={styles.topBarRight} />
+        <div className={styles.topBarRight}>
+          <button
+            type="button"
+            className={styles.syncBtn}
+            onClick={handleExtract}
+            disabled={!hasFigmaUrl || extractState === 'loading'}
+            title={!hasFigmaUrl ? 'Figma URL을 먼저 설정해주세요 (설정 > Figma URL)' : undefined}
+          >
+            <Icon
+              icon={extractState === 'loading'
+                ? 'solar:refresh-linear'
+                : extractState === 'success'
+                ? 'solar:check-circle-linear'
+                : 'solar:download-minimalistic-linear'}
+              width={14}
+              height={14}
+              className={extractState === 'loading' ? styles.spinning : undefined}
+            />
+            {extractState === 'loading' ? 'Extracting...'
+              : extractState === 'success' ? 'Done'
+              : 'Extract Tokens'}
+          </button>
+        </div>
       </div>
+
+      {extractState === 'error' && errorMsg && (
+        <div className={styles.errorBanner}>
+          <Icon icon="solar:danger-triangle-linear" width={14} height={14} />
+          <span>{errorMsg}</span>
+          <button
+            type="button"
+            className={styles.errorClose}
+            onClick={() => { setExtractState('idle'); setErrorMsg(null); }}
+            aria-label="닫기"
+          >
+            <Icon icon="solar:close-linear" width={12} height={12} />
+          </button>
+        </div>
+      )}
 
       {/* ── 페이지 타이틀 ── */}
       <div className={styles.titleArea}>
