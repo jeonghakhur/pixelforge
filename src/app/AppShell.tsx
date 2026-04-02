@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
 import Sidebar from '@/components/layout/Sidebar';
 import TabBar from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
-import { getTokenMenuAction, type TokenMenuEntry } from '@/lib/actions/token-menu';
 import { getSyncStatus } from '@/lib/actions/sync-status';
 
 function sectionFromPath(pathname: string): Section {
@@ -46,16 +45,11 @@ export default function AppShell({ children, userRole }: { children: React.React
   const setTab = useUIStore((s) => s.setTab);
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
-  const [tokenTabs, setTokenTabs] = useState<TokenMenuEntry[]>([]);
   const lastSyncVersionRef = useRef(0);
 
   useEffect(() => {
     initTheme();
   }, [initTheme]);
-
-  useEffect(() => {
-    getTokenMenuAction().then(setTokenTabs);
-  }, []);
 
   // 플러그인 sync 감지: 5초마다 polling → 버전 바뀌면 자동 갱신
   useEffect(() => {
@@ -99,11 +93,9 @@ export default function AppShell({ children, userRole }: { children: React.React
       case 'home':
         router.push('/');
         break;
-      case 'tokens': {
-        const firstTab = tokenTabs[0]?.type ?? 'color';
-        router.push(`/tokens/${firstTab}`);
+      case 'tokens':
+        router.push('/tokens/color');
         break;
-      }
       case 'components':
         router.push('/components/new');
         break;
@@ -124,9 +116,7 @@ export default function AppShell({ children, userRole }: { children: React.React
 
   const handleTabChange = useCallback((tabId: string) => {
     setTab(tabId);
-    if (activeSection === 'tokens') {
-      router.push(`/tokens/${tabId}`);
-    } else if (activeSection === 'components') {
+    if (activeSection === 'components') {
       if (tabId === 'new') {
         router.push('/components/new');
       } else {
@@ -149,7 +139,6 @@ export default function AppShell({ children, userRole }: { children: React.React
             section={activeSection}
             activeTab={activeTab}
             onTabChange={handleTabChange}
-            tokenTabs={tokenTabs}
           />
           <main className="ide-main">
             {children}

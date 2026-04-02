@@ -2,7 +2,6 @@
 
 import { Icon } from '@iconify/react';
 import type { Section } from './ActivityBar';
-import type { TokenMenuEntry } from '@/lib/actions/token-menu';
 import styles from './TabBar.module.scss';
 
 export interface TabItem {
@@ -21,7 +20,6 @@ const STATIC_SECTION_TABS: Partial<Record<Section, TabItem[]>> = {
     { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },
     { id: 'team', label: '팀원', icon: 'solar:users-group-two-rounded-linear' },
     { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
-    { id: 'tokens', label: '토큰 타입', icon: 'solar:layers-minimalistic-linear' },
   ],
 };
 
@@ -29,14 +27,10 @@ interface TabBarProps {
   section: Section;
   activeTab: string;
   onTabChange: (tabId: string) => void;
-  tokenTabs?: TokenMenuEntry[];
 }
 
-export default function TabBar({ section, activeTab, onTabChange, tokenTabs = [] }: TabBarProps) {
-  const tabs: TabItem[] =
-    section === 'tokens'
-      ? tokenTabs.map((t) => ({ id: t.type, label: t.label, icon: t.icon }))
-      : (STATIC_SECTION_TABS[section] ?? []);
+export default function TabBar({ section, activeTab, onTabChange }: TabBarProps) {
+  const tabs: TabItem[] = STATIC_SECTION_TABS[section] ?? [];
 
   if (tabs.length === 0) {
     return (

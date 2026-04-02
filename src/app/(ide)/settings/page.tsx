@@ -42,7 +42,7 @@ const figmaUrlSchema = z.object({
 
 type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
-type SettingsTab = 'general' | 'account' | 'team' | 'figma' | 'tokens';
+type SettingsTab = 'general' | 'account' | 'team' | 'figma';
 
 interface ApiKeyRow {
   id: string;
@@ -90,7 +90,7 @@ export default function SettingsPage() {
   const [figmaUrlSaved, setFigmaUrlSaved] = useState(false);
   const [figmaUrlError, setFigmaUrlError] = useState<string | null>(null);
 
-  const validTab = ['general', 'account', 'team', 'figma', 'tokens'].includes(activeTab) ? activeTab : 'general';
+  const validTab = ['general', 'account', 'team', 'figma'].includes(activeTab) ? activeTab : 'general';
   const [users, setUsers] = useState<UserRow[]>([]);
   const [addUserError, setAddUserError] = useState<string | null>(null);
   const [changePwSuccess, setChangePwSuccess] = useState(false);
@@ -836,17 +836,6 @@ export default function SettingsPage() {
             </div>
           </Card>
           {/* /Figma API 토큰 */}
-        </div>
-      )}
-
-      {validTab === 'tokens' && (
-        <div className={styles.tabContent}>
-          <Card className={styles.settingsCard}>
-            <p className={styles.settingsDesc}>
-              토큰 타입 메뉴는 Figma sync 시 자동으로 생성됩니다.
-              세부 관리(라벨·아이콘·순서·표시여부)는 관리자 페이지에서 할 수 있습니다.
-            </p>
-          </Card>
 
           {/* Danger Zone */}
           <div className={styles.dangerZone}>
