@@ -55,6 +55,8 @@ export interface TokenRow {
 }
 
 export async function getTokensByType(type: string): Promise<TokenRow[]> {
+  const project = getActiveProject();
+  if (!project) return [];
   return db.select({
     id: tokens.id,
     name: tokens.name,
@@ -67,11 +69,13 @@ export async function getTokensByType(type: string): Promise<TokenRow[]> {
     alias: tokens.alias,
   })
     .from(tokens)
-    .where(eq(tokens.type, type))
+    .where(and(eq(tokens.projectId, project.id), eq(tokens.type, type)))
     .all();
 }
 
 export async function getAllTokensAction(): Promise<TokenRow[]> {
+  const project = getActiveProject();
+  if (!project) return [];
   return db.select({
     id: tokens.id,
     name: tokens.name,
@@ -84,6 +88,7 @@ export async function getAllTokensAction(): Promise<TokenRow[]> {
     alias: tokens.alias,
   })
     .from(tokens)
+    .where(eq(tokens.projectId, project.id))
     .all();
 }
 
@@ -94,13 +99,17 @@ export interface TokenSummary {
 }
 
 export async function getTokenSummary(): Promise<TokenSummary> {
-  const counts = db.select({
-    type: tokens.type,
-    count: sql<number>`count(*)`,
-  })
-    .from(tokens)
-    .groupBy(tokens.type)
-    .all();
+  const project = getActiveProject();
+  const counts = project
+    ? db.select({
+        type: tokens.type,
+        count: sql<number>`count(*)`,
+      })
+        .from(tokens)
+        .where(eq(tokens.projectId, project.id))
+        .groupBy(tokens.type)
+        .all()
+    : [];
 
   const countMap: Record<string, number> = {};
   for (const row of counts) {
