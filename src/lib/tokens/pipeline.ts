@@ -5,7 +5,7 @@
  * 모두 이 함수를 통과하도록 한다.
  *
  * runTokenPipeline(projectId, normalizedTokens, options)
- *   1. tokens 테이블 upsert (DELETE source=options.source → INSERT)
+ *   1. tokens 테이블 upsert (DELETE 보내온 타입만 → INSERT, 나머지 타입 유지)
  *   2. computeSnapshotDiff  (이전 스냅샷과 비교)
  *   3. tokenSnapshots INSERT (tokenCounts, diffSummary)
  *   4. CSS 재생성 → design-tokens/tokens.css 저장
@@ -18,7 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/db';
 import { tokens, tokenSnapshots, tokenSources, tokenTypeConfigs } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import type { NormalizedToken } from '@/lib/sync/parse-variables';
 import {
   computeSnapshotDiff,
@@ -118,10 +118,17 @@ export async function runTokenPipeline(
   const { source, figmaKey, figmaVersion } = options;
 
   // ── Step 1: tokens 테이블 upsert ──────────────
-  // 동일 source 기존 토큰 삭제 후 새 토큰 INSERT
-  await db.delete(tokens).where(
-    and(eq(tokens.projectId, projectId), eq(tokens.source, source)),
-  );
+  // 보내온 타입만 삭제 후 교체 — 나머지 타입은 유지
+  const incomingTypes = [...new Set(normalizedTokens.map((t) => t.type))];
+  if (incomingTypes.length > 0) {
+    await db.delete(tokens).where(
+      and(
+        eq(tokens.projectId, projectId),
+        eq(tokens.source, source),
+        inArray(tokens.type, incomingTypes),
+      ),
+    );
+  }
 
   if (normalizedTokens.length > 0) {
     await db.insert(tokens).values(
@@ -169,9 +176,9 @@ export async function runTokenPipeline(
     tokenCounts: JSON.stringify(tokenCounts),
     tokensData: JSON.stringify(newItems),
     diffSummary: JSON.stringify({
-      added: diff.added,
-      removed: diff.removed,
-      changed: diff.changed,
+      added: diff.added.length,
+      removed: diff.removed.length,
+      changed: diff.changed.length,
     }),
   });
 
