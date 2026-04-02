@@ -172,9 +172,11 @@ export async function deleteTokenAction(id: string): Promise<{ error: string | n
 
 export async function deleteAllTokensAction(): Promise<{ error: string | null; deleted: number }> {
   try {
-    const rows = db.select({ id: tokens.id }).from(tokens).all();
-    db.delete(tokens).run();
-    db.delete(tokenSources).run();
+    const project = getActiveProject();
+    if (!project) return { error: null, deleted: 0 };
+    const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.projectId, project.id)).all();
+    db.delete(tokens).where(eq(tokens.projectId, project.id)).run();
+    db.delete(tokenSources).where(eq(tokenSources.projectId, project.id)).run();
     deleteTokensCss();
     return { error: null, deleted: rows.length };
   } catch (err) {
@@ -186,20 +188,21 @@ export async function deleteTokensByTypeAction(
   type: string,
 ): Promise<{ error: string | null; deleted: number }> {
   try {
-    const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.type, type)).all();
+    const project = getActiveProject();
+    if (!project) return { error: null, deleted: 0 };
+
+    const rows = db.select({ id: tokens.id }).from(tokens)
+      .where(and(eq(tokens.projectId, project.id), eq(tokens.type, type))).all();
 
     // token_sources 삭제
-    const project = getActiveProject();
-    if (project) {
-      db.delete(tokenSources).where(
-        and(eq(tokenSources.projectId, project.id), eq(tokenSources.type, type)),
-      ).run();
-    }
+    db.delete(tokenSources).where(
+      and(eq(tokenSources.projectId, project.id), eq(tokenSources.type, type)),
+    ).run();
 
-    db.delete(tokens).where(eq(tokens.type, type)).run();
+    db.delete(tokens).where(and(eq(tokens.projectId, project.id), eq(tokens.type, type))).run();
 
     // 남은 토큰으로 tokens.css 재생성 또는 삭제
-    const remaining = db.select().from(tokens).all();
+    const remaining = db.select().from(tokens).where(eq(tokens.projectId, project.id)).all();
     if (remaining.length === 0) {
       deleteTokensCss();
     } else {
