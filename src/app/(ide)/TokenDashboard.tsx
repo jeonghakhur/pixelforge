@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTransition, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
 import type { TokenSummary, HistoryEntry } from '@/lib/actions/tokens';
-import { extractAllTokensAction } from '@/lib/actions/tokens';
 import type { TokenMenuEntry } from '@/lib/actions/token-menu';
+import TokenImportTabs from '@/components/common/TokenImportTabs';
 import SnapshotHistory from './SnapshotHistory';
 import styles from './TokenDashboard.module.scss';
 
@@ -16,7 +17,6 @@ interface Props {
   histories: HistoryEntry[];
   tokenVersion: number | null;
   lastSyncedAt: string | null;
-  hasFigmaUrl: boolean;
 }
 
 const TYPE_COLORS = [
@@ -52,22 +52,26 @@ function actionLabel(action: string): string {
   return action;
 }
 
-type ExtractState = 'idle' | 'loading' | 'success' | 'error';
-
 export default function TokenDashboard({
   summary,
   tokenMenu,
   histories,
   tokenVersion,
   lastSyncedAt,
-  hasFigmaUrl,
 }: Props) {
   const router = useRouter();
-  const [, startSync] = useTransition();
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
-  const [extractState, setExtractState] = useState<ExtractState>('idle');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isImportOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsImportOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isImportOpen]);
 
   const total = Object.values(summary.counts).reduce((a, b) => a + b, 0);
 
@@ -75,22 +79,6 @@ export default function TokenDashboard({
     setSection('tokens');
     setTab(type);
     router.push(`/tokens/${type}`);
-  };
-
-  const handleExtract = () => {
-    setErrorMsg(null);
-    setExtractState('loading');
-    startSync(async () => {
-      const result = await extractAllTokensAction();
-      if (result.error) {
-        setExtractState('error');
-        setErrorMsg(result.error);
-      } else {
-        setExtractState('success');
-        router.refresh();
-        setTimeout(() => setExtractState('idle'), 2000);
-      }
-    });
   };
 
   // 도넛 세그먼트
@@ -137,41 +125,13 @@ export default function TokenDashboard({
           <button
             type="button"
             className={styles.syncBtn}
-            onClick={handleExtract}
-            disabled={!hasFigmaUrl || extractState === 'loading'}
-            title={!hasFigmaUrl ? 'Figma URL을 먼저 설정해주세요 (설정 > Figma URL)' : undefined}
+            onClick={() => setIsImportOpen(true)}
           >
-            <Icon
-              icon={extractState === 'loading'
-                ? 'solar:refresh-linear'
-                : extractState === 'success'
-                ? 'solar:check-circle-linear'
-                : 'solar:download-minimalistic-linear'}
-              width={14}
-              height={14}
-              className={extractState === 'loading' ? styles.spinning : undefined}
-            />
-            {extractState === 'loading' ? 'Extracting...'
-              : extractState === 'success' ? 'Done'
-              : 'Extract Tokens'}
+            <Icon icon="solar:import-linear" width={14} height={14} />
+            Import Tokens
           </button>
         </div>
       </div>
-
-      {extractState === 'error' && errorMsg && (
-        <div className={styles.errorBanner}>
-          <Icon icon="solar:danger-triangle-linear" width={14} height={14} />
-          <span>{errorMsg}</span>
-          <button
-            type="button"
-            className={styles.errorClose}
-            onClick={() => { setExtractState('idle'); setErrorMsg(null); }}
-            aria-label="닫기"
-          >
-            <Icon icon="solar:close-linear" width={12} height={12} />
-          </button>
-        </div>
-      )}
 
       {/* ── 페이지 타이틀 ── */}
       <div className={styles.titleArea}>
@@ -312,6 +272,42 @@ export default function TokenDashboard({
           )}
         </div>
       </div>
+
+      {/* ── JSON 임포트 모달 ── */}
+      {isImportOpen && (
+        <div className={styles.modalOverlay} aria-hidden="true">
+          <button
+            type="button"
+            className={styles.modalBackdrop}
+            onClick={() => setIsImportOpen(false)}
+            aria-label="모달 닫기"
+          />
+          <div
+            className={styles.modalContainer}
+            role="dialog"
+            aria-modal="true"
+            aria-label="토큰 가져오기"
+          >
+            <div className={styles.modalHeader}>
+              <span className={styles.modalTitle}>Import Tokens</span>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setIsImportOpen(false)}
+                aria-label="닫기"
+              >
+                <Icon icon="solar:close-linear" width={16} height={16} />
+              </button>
+            </div>
+            <TokenImportTabs
+              onImportSuccess={() => {
+                setIsImportOpen(false);
+                router.refresh();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

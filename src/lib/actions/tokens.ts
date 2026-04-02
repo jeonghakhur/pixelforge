@@ -167,58 +167,6 @@ export async function getRecentHistoriesAction(limit = 8): Promise<HistoryEntry[
 }
 
 // ===========================
-// 대시보드 수동 추출
-// ===========================
-
-export async function getActiveProjectHasFigmaUrl(): Promise<boolean> {
-  const projectId = getActiveProjectId();
-  if (!projectId) return false;
-  const row = db
-    .select({ figmaUrl: projects.figmaUrl })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .get();
-  return Boolean(row?.figmaUrl);
-}
-
-export interface ExtractAllResult {
-  error: string | null;
-  colors: number;
-  typography: number;
-  spacing: number;
-  radii: number;
-}
-
-export async function extractAllTokensAction(): Promise<ExtractAllResult> {
-  const projectId = getActiveProjectId();
-  if (!projectId) {
-    return { error: '활성 프로젝트가 없습니다.', colors: 0, typography: 0, spacing: 0, radii: 0 };
-  }
-
-  const row = db
-    .select({ figmaUrl: projects.figmaUrl })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .get();
-
-  if (!row?.figmaUrl) {
-    return {
-      error: 'Figma URL이 설정되지 않았습니다. 설정 페이지에서 입력해주세요.',
-      colors: 0, typography: 0, spacing: 0, radii: 0,
-    };
-  }
-
-  const result = await extractTokensAction(row.figmaUrl);
-  return {
-    error: result.error,
-    colors: result.colors,
-    typography: result.typography,
-    spacing: result.spacing,
-    radii: result.radii,
-  };
-}
-
-// ===========================
 // 토큰 수정 / 삭제
 // ===========================
 export async function deleteTokenAction(id: string): Promise<{ error: string | null }> {

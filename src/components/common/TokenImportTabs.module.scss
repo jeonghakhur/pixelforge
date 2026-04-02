@@ -32,7 +32,9 @@
   border: 1px solid transparent;
   border-radius: 7px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
     color: var(--text-secondary);
@@ -68,17 +70,18 @@
   border: 1.5px dashed rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    border-color: rgba(59, 130, 246, 0.4);
-    background: rgba(59, 130, 246, 0.03);
+    border-color: rgba(var(--accent-rgb), 0.4);
+    background: rgba(var(--accent-rgb), 0.03);
   }
 }
 
 .dropZoneDragging {
-  border-color: rgba(59, 130, 246, 0.6);
-  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 
 .fileInput {
@@ -112,17 +115,18 @@
   font-size: 12px;
   font-weight: $font-weight-medium;
   color: var(--accent);
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
   border-radius: 7px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 1;
 
   &:hover {
-    background: rgba(59, 130, 246, 0.18);
-    border-color: rgba(59, 130, 246, 0.4);
+    background: rgba(var(--accent-rgb), 0.18);
+    border-color: rgba(var(--accent-rgb), 0.4);
   }
 }
 
@@ -144,7 +148,8 @@
   color: var(--text-primary);
   resize: vertical;
   min-height: 90px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   &::placeholder {
     color: var(--text-muted);
@@ -153,8 +158,8 @@
 
   &:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.4);
-    background: rgba(59, 130, 246, 0.03);
+    border-color: rgba(var(--accent-rgb), 0.4);
+    background: rgba(var(--accent-rgb), 0.03);
   }
 }
 
@@ -185,7 +190,8 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover:not(:disabled) {
     color: var(--text-primary);
@@ -201,7 +207,7 @@
 // ── 공통 피드백 ───────────────────────────────────────
 .error {
   font-size: 12px;
-  color: var(--color-error, #f87171);
+  color: var(--danger);
   margin: 0;
   display: flex;
   align-items: flex-start;
@@ -213,9 +219,9 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #4ade80;
+  color: var(--success);
   padding: 8px 12px;
-  background: rgba(74, 222, 128, 0.08);
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  background: var(--success-subtle);
+  border: 1px solid rgba(var(--success-rgb), 0.2);
   border-radius: 8px;
 }

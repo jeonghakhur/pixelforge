@@ -54,7 +54,7 @@ $gh-red:      #f85149;
   border-radius: 50%;
   background: linear-gradient(135deg, #388bfd, #a371f7);
   color: #fff;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -89,7 +89,7 @@ $gh-red:      #f85149;
   align-items: center;
   gap: 4px;
   font-family: $font-family-mono;
-  font-size: 11px;
+  font-size: 12px;
   color: $gh-blue;
   background: rgba(56, 139, 253, 0.1);
   border: 1px solid rgba(56, 139, 253, 0.2);
@@ -100,13 +100,13 @@ $gh-red:      #f85149;
 }
 
 .date {
-  font-size: 11px;
+  font-size: 12px;
   color: $gh-muted;
   flex-shrink: 0;
 }
 
 .lineCount {
-  font-size: 11px;
+  font-size: 12px;
   color: $gh-muted;
 }
 
@@ -126,7 +126,7 @@ $gh-red:      #f85149;
   background: transparent;
   border: none;
   color: $gh-muted;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 
@@ -150,7 +150,7 @@ $gh-red:      #f85149;
   border: 1px solid $gh-border;
   border-radius: 5px;
   color: $gh-muted;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 
@@ -274,7 +274,7 @@ $gh-red:      #f85149;
     background: rgba(56, 139, 253, 0.1) !important;
     border-color: rgba(56, 139, 253, 0.2) !important;
     color: $gh-blue;
-    font-size: 11px;
+    font-size: 12px;
     font-family: $font-family-mono;
     border-radius: 4px !important;
   }

@@ -72,6 +72,17 @@ npm run test         # Playwright E2E
 - `supanova-design-skill/soft-skill/SKILL.md` — 프리미엄 마이크로 인터랙션
 - `supanova-design-skill/output-skill/SKILL.md` — 전체 출력 규칙
 
+## Impeccable 디자인 스킬 (UI 작업 시 필수)
+UI 컴포넌트 생성 및 수정 시 `~/.claude/skills/` 경량 스킬셋을 활용한다:
+- `/polish` — 출시 전 최종 품질 패스 (간격·정렬·일관성·마이크로디테일)
+- `/audit` — 접근성·명도대비·인터랙션 상태 감사
+- `/animate` — 마이크로 인터랙션·트랜지션 추가
+- `/critique` — 디자인 비평 및 개선 방향 도출
+- `/delight` — 디테일 UX 개선
+- 컨텍스트 파일: `.impeccable.md` (프로젝트 루트, 자동 참조됨)
+
+**규칙**: 새 UI 화면 또는 컴포넌트 구현 후 반드시 `/polish` 또는 `/audit` 실행.
+
 ## 관련 프로젝트
 - **PixelForge Plugin**: `/Users/jeonghakhur/work/person/pixelforge-plugin`
   - 역할: Figma에서 Variables/Styles 추출 → JSON/CSS 내보내기

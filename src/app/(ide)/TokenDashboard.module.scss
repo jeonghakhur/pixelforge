@@ -30,7 +30,7 @@
   height: 48px;
   padding: 0 4px;
   background: var(--bg-surface);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--glass-border);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -47,8 +47,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: $success;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.7);
+  background: var(--success);
+  box-shadow: 0 0 6px rgba(var(--success-rgb), 0.7);
   flex-shrink: 0;
 }
 
@@ -83,16 +83,20 @@
   padding: 6px 14px;
   font-size: 12px;
   font-weight: $font-weight-semibold;
-  color: #fff;
+  color: $white;
   background: var(--accent);
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.3);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.3);
 
-  &:hover { background: $blue-600; }
+  &:hover { background: $accent-light; box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4); }
   &:active { transform: scale(0.97); }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   &:disabled { opacity: 0.5; pointer-events: none; }
 }
 
@@ -112,31 +116,64 @@
   margin-left: 4px;
 }
 
-.errorBanner {
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--danger-subtle);
-  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--danger);
-  margin-bottom: 8px;
+  justify-content: center;
 }
 
-.errorClose {
-  margin-left: auto;
-  background: none;
+.modalBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   border: none;
-  color: var(--danger);
-  cursor: pointer;
-  padding: 2px;
+  cursor: default;
+  padding: 0;
+}
+
+.modalContainer {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  width: 520px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
   display: flex;
   align-items: center;
-  opacity: 0.7;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--glass-border);
+}
 
-  &:hover { opacity: 1; }
+.modalTitle {
+  font-size: 14px;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.modalClose {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: $transition-fast;
+
+  &:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
 }
 
 .iconBtn {
@@ -185,7 +222,7 @@
 
 .subtitle {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: $font-weight-semibold;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -220,14 +257,14 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at top left, rgba(59, 130, 246, 0.06) 0%, transparent 65%);
+    background: radial-gradient(ellipse at top left, rgba(var(--accent-rgb), 0.06) 0%, transparent 65%);
     pointer-events: none;
   }
 }
 
 .totalEyebrow {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: $font-weight-semibold;
   color: var(--accent);
   text-transform: uppercase;
@@ -268,7 +305,9 @@
   padding: 16px 14px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
   &:hover:not(.typeCardEmpty) {
@@ -280,6 +319,11 @@
   &:active:not(.typeCardEmpty) {
     transform: translateY(0);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--tc, var(--accent));
+    outline-offset: 2px;
+  }
 }
 
 .typeCardEmpty {
@@ -290,7 +334,7 @@
 .typeEyebrow {
   display: block;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: $font-weight-semibold;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -326,9 +370,9 @@
 // ──────────────────────────────────────────
 .bottomGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
 }
 
 // 공통 카드
@@ -342,7 +386,7 @@
 
 .cardTitle {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: $font-weight-semibold;
   color: var(--text-primary);
   text-transform: uppercase;
@@ -390,7 +434,7 @@
 
 .donutLabel {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: $font-weight-medium;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -473,7 +517,7 @@
   padding: 12px 22px;
   text-align: left;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: $font-weight-semibold;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -506,8 +550,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.5);
-  border: 1px solid rgba(59, 130, 246, 0.6);
+  background: rgba(var(--accent-rgb), 0.5);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
   flex-shrink: 0;
 }
 
@@ -543,4 +587,14 @@
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+// ──────────────────────────────────────────
+// 접근성 — 모션 감소 모드
+// ──────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .canvas { animation: none; }
+  .typeCard { transition: none; }
+  .typeBarFill { transition: none; }
+  .syncBtn { transition: none; }
 }

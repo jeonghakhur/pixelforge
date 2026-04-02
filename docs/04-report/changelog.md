@@ -1,5 +1,69 @@
 # PixelForge Changelog
 
+## [2026-04-02] - token-history Feature Complete (Snapshot-Based Token History)
+
+### Added
+- `SnapshotHistory.tsx` (254줄) — 토큰 변경 이력 UI 컴포넌트
+  - sync 타임라인 (버전, 날짜, 소스, 토큰 수 요약)
+  - 추가/삭제/변경된 토큰 목록 표시 (+/-/~ 칩)
+  - 상세 패널 (클릭 시 토큰 이름, 타입, oldRaw → newRaw)
+  - 빈 상태 UI + 로딩 상태
+- `snapshot-history.module.scss` (249줄) — 스타일 (모든 CSS 변수 기반)
+  - WCAG AA 명도대비 준수 (--success, --danger, --warning)
+  - 반응형 flexbox 레이아웃
+- `getSnapshotDetailAction()` — 스냅샷 상세 데이터 조회
+  - 신규 형식(토큰 목록) vs 구형식(숫자) 자동 감지
+  - 구형식 스냅샷은 tokensData 비교로 on-demand 계산
+- `getActiveSnapshotListAction()` — 활성 프로젝트 스냅샷 목록 (prop drilling 제거)
+- `SnapshotInfo.diffCounts` 필드 — 변경 수 요약
+
+### Changed
+- `pipeline.ts` — `diffSummary` 구조 확장
+  - 기존: `{added: N, removed: N, changed: N}` (숫자만)
+  - 변경: `{added: [{name, type}, ...], removed: [...], changed: [{name, type, oldRaw, newRaw}, ...]}` (토큰 목록)
+  - 역호환성: 구형식 자동 감지 및 처리
+- `TokenDashboard.tsx` — `SnapshotHistory` 컴포넌트 통합 (diff/page → TokenDashboard)
+- `actions/tokens.ts` — `SnapshotInfo`, `SnapshotDetail`, `SnapshotDiffEntry` 인터페이스 추가
+
+### Removed
+- `TokenCommitHistory.tsx` (50줄) — git 기반 히스토리 컴포넌트 (대체됨)
+- `token-commit-history.module.scss` (80줄) — git 컴포넌트 스타일
+- `src/lib/git/token-commits.ts` (120줄) — git auto-commit 로직
+- `src/lib/actions/token-history.ts` (200줄) — git 기반 server actions
+- 약 450줄의 레거시 git 로직 제거
+
+### Fixed
+- SCSS 컨벤션 위반: 하드코딩된 hex 색상(`#4ade80`, `#f87171`, `#fb923c`) → CSS 변수 변경
+  - `--success`, `--danger`, `--warning` + `-subtle` 변형 활용
+
+### Deployment Notes
+- **Breaking Changes**: None (diffSummary 형식 확장만 — 이전 스냅샷도 호환)
+- **Database Migration**: None (tokenSnapshots 테이블 스키마 변경 없음, diffSummary 컬럼 TEXT)
+- **Build Status**: ✅ Clean (`npm run build`, `npm run lint`)
+- **Design Match**: 91% (Check phase 통과, 모든 컨벤션 준수)
+
+### Technical Summary
+- **Files Added**: 2 (SnapshotHistory.tsx, snapshot-history.module.scss)
+- **Files Modified**: 3 (pipeline.ts, actions/tokens.ts, TokenDashboard.tsx)
+- **Files Removed**: 5 (git 기반 레거시 컴포넌트)
+- **Type Safety**: 100% TypeScript strict (zero `any` types)
+- **Performance**: 스냅샷 목록은 캐시됨, 상세는 온디맨드 로드
+- **Race Condition**: DetailPanel에서 `cancelled` 플래그로 보호
+- **Accessibility**: 버튼 aria-labels, 의미있는 HTML
+
+### Feature Highlights
+- **역호환성**: 구형식 스냅샷(숫자만)도 tokensData 비교로 상세 정보 제공 — 즉시 이력 조회 가능
+- **무마이그레이션**: 스키마 변경 없음, 기존 데이터 그대로 활용
+- **컴포넌트 추출**: DetailPanel 분리로 관심사 분리 및 재사용성 향상
+- **CSS 변수 규칙**: CLAUDE.md 컨벤션 100% 준수
+
+### References
+- **Completion Report**: [docs/04-report/token-history.report.md](./token-history.report.md)
+- **Design Document**: [docs/02-design/features/token-history.design.md](../02-design/features/token-history.design.md)
+- **Analysis**: [docs/03-analysis/token-history.analysis.md](../03-analysis/token-history.analysis.md)
+
+---
+
 ## [2026-04-02] - db Feature Complete (Plugin Token Pipeline)
 
 ### Added
