@@ -59,6 +59,26 @@ interface PluginTextStyle {
   usageCount?: number;
 }
 
+interface PluginEffectItem {
+  type: string;          // 'DROP_SHADOW' | 'INNER_SHADOW' | 'LAYER_BLUR' | 'BACKGROUND_BLUR'
+  visible: boolean;
+  radius: number;
+  color?: FigmaColor;
+  offset?: { x: number; y: number };
+  spread?: number;
+  blendMode?: string;
+  showShadowBehindNode?: boolean;
+  boundVariables?: Record<string, unknown>;
+}
+
+interface PluginEffectStyle {
+  id: string;
+  name: string;
+  description?: string;
+  effects: PluginEffectItem[];
+  usageCount?: number;
+}
+
 export interface PluginTokenPayload {
   variables?: {
     // 플러그인은 variableCollections 또는 collections 키를 사용
@@ -69,6 +89,8 @@ export interface PluginTokenPayload {
   // 플러그인이 타입별로 분류해서 보내는 Float 변수 배열
   spacing?: FigmaVariable[];
   radius?: FigmaVariable[];
+  // 이펙트 스타일
+  effects?: PluginEffectStyle[];
   // 플러그인 스타일 포맷 (Variables 없을 때 colors 폴백)
   styles?: {
     colors?: PluginStyleColor[];
@@ -76,6 +98,7 @@ export interface PluginTokenPayload {
     headings?: PluginTextStyle[];
     texts?: PluginTextStyle[];
     fonts?: PluginTextStyle[];
+    effects?: PluginEffectStyle[];
   };
 }
 
@@ -265,6 +288,52 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         fontWeight: ts.fontWeight,
         lineHeight,
         letterSpacing,
+      }),
+      raw,
+      mode: null,
+      collectionName: null,
+      alias: null,
+    });
+  }
+
+  // effects / styles.effects → elevation
+  const effectStyles: PluginEffectStyle[] = [
+    ...(payload.effects ?? []),
+    ...(payload.styles?.effects ?? []),
+  ];
+  const seenEffectIds = new Set<string>();
+  for (const es of effectStyles) {
+    if (seenEffectIds.has(es.id)) continue;
+    seenEffectIds.add(es.id);
+
+    const visibleEffects = es.effects.filter((e) => e.visible !== false);
+    const shadows = visibleEffects
+      .filter((e) => e.type === 'DROP_SHADOW' || e.type === 'INNER_SHADOW')
+      .map((e) => {
+        const color = e.color
+          ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
+          : 'transparent';
+        const x = e.offset?.x ?? 0;
+        const y = e.offset?.y ?? 0;
+        const inset = e.type === 'INNER_SHADOW' ? 'inset ' : '';
+        return `${inset}${x}px ${y}px ${e.radius}px ${e.spread ?? 0}px ${color}`;
+      });
+
+    const raw = shadows.length > 0 ? shadows.join(', ') : 'none';
+
+    result.push({
+      type: 'elevation',
+      name: es.name,
+      value: JSON.stringify({
+        effects: visibleEffects.map((e) => ({
+          type: e.type,
+          radius: e.radius,
+          spread: e.spread ?? 0,
+          color: e.color ?? null,
+          offset: e.offset ?? { x: 0, y: 0 },
+          blendMode: e.blendMode ?? 'NORMAL',
+        })),
+        cssBoxShadow: raw,
       }),
       raw,
       mode: null,
