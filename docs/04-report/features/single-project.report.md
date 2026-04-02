@@ -34,7 +34,7 @@ version: 1.0
 | **Design Match Rate** | 100% (all gaps resolved) |
 | **Code Coverage** | 8 implicit queries → 8 explicit `getActiveProject()` calls (100% replacement) |
 | **Schema Changes** | 1 new table (`app_settings`), 1 new Drizzle schema (`appSettings`) |
-| **Files Modified** | 4 (`schema.ts`, `db/index.ts`, `tokens.ts`, `sync/tokens/route.ts`) |
+| **Files Modified** | 4 core + 6 post-impl improvements |
 | **Build Status** | ✅ Pass (`npm run build` clean) |
 | **Lint Status** | ✅ Pass (`npm run lint` clean) |
 | **Breaking Changes** | None (backward compatible with fallback) |
@@ -160,6 +160,21 @@ version: 1.0
 **Issues Found**: 0
 
 **Resolution**: Feature completed without gaps.
+
+### Post-Implementation Improvements (v1.1)
+
+이번 세션에서 single-project 원칙을 기반으로 추가 버그 수정 및 기능 개선이 진행됨.
+
+| 커밋 | 내용 | 유형 |
+|------|------|------|
+| `ad9837d` | 스냅샷 롤백 기능 — 잘못된 sync 데이터 되돌리기 | feat |
+| `fc11c98` | ConfirmDialog/Toast 공통 컴포넌트 교체 | refactor |
+| `b9230ad` | 토큰 타입 메뉴 DB 관리 (`token_type_configs`) | feat |
+| `7143d0e` | 토큰 페이지 `force-dynamic` + 롤백 후 `invalidateTokens` | fix |
+| `58341b7` | `getTokensByType/Summary/deleteAll` projectId 필터 누락 수정 | **bugfix** |
+| `2bd8d68` | `deleteAllTokensAction/deleteTokensByTypeAction` projectId 필터 추가 | **bugfix** |
+
+**핵심 버그 수정**: `getTokensByType`, `getAllTokensAction`, `getTokenSummary`, `deleteAllTokensAction`, `deleteTokensByTypeAction` — 모두 projectId 없이 전체 프로젝트 데이터를 조회/삭제하던 문제. single-project 원칙이 DB 쿼리 레벨까지 일관되게 적용됨.
 
 ### Act
 
@@ -338,6 +353,7 @@ version: 1.0
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.1 | 2026-04-02 | Post-impl bugfixes: projectId filter, snapshot rollback, token-menu, force-dynamic | Jeonghak Hur |
 | 1.0 | 2026-04-02 | Initial completion report | Jeonghak Hur |
 
 ---

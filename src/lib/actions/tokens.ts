@@ -134,6 +134,36 @@ export async function getTokenSummary(): Promise<TokenSummary> {
   return { counts: countMap, lastExtracted };
 }
 
+export interface HistoryEntry {
+  id: string;
+  action: string;
+  summary: string;
+  createdAt: string;
+}
+
+export async function getRecentHistoriesAction(limit = 8): Promise<HistoryEntry[]> {
+  const rows = db
+    .select({
+      id: histories.id,
+      action: histories.action,
+      summary: histories.summary,
+      createdAt: histories.createdAt,
+    })
+    .from(histories)
+    .orderBy(desc(histories.createdAt))
+    .limit(limit)
+    .all();
+
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    summary: r.summary,
+    createdAt: r.createdAt instanceof Date
+      ? r.createdAt.toISOString()
+      : new Date((r.createdAt as number) * 1000).toISOString(),
+  }));
+}
+
 // ===========================
 // 토큰 수정 / 삭제
 // ===========================
