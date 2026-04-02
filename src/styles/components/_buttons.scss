@@ -81,18 +81,18 @@
 // 다크 테마: 살짝 밝은 표면 + 명확한 텍스트
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #e0e0e0;
   border-color: transparent;
-  color: var(--text-primary);
+  color: #3d3d3d;
 
   &:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.16);
-    color: var(--text-primary);
+    background-color: #d0d0d0;
+    color: #1a1a1a;
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba($zinc-500, 0.25);
+    box-shadow: 0 0 0 3px rgba(#e0e0e0, 0.4);
   }
 }
 
