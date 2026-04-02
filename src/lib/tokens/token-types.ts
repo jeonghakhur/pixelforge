@@ -52,6 +52,22 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
     cssPrefix: 'radius',
   },
   {
+    id: 'size',
+    label: 'Size',
+    description: '크기 관련 디자인 변수를 관리합니다.',
+    icon: 'solar:maximize-square-3-linear',
+    sectionPattern: /^(size|크기)/i,
+    cssPrefix: 'size',
+  },
+  {
+    id: 'resolution',
+    label: 'Resolution',
+    description: '해상도 관련 디자인 변수를 관리합니다.',
+    icon: 'solar:monitor-linear',
+    sectionPattern: /^(resolution|해상도)/i,
+    cssPrefix: 'resolution',
+  },
+  {
     id: 'float',
     label: 'Numbers',
     description: '숫자형 디자인 변수(크기, 비율 등)를 관리합니다.',

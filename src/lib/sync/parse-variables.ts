@@ -113,6 +113,8 @@ function inferFloatType(name: string, scopes: string[] = []): string {
   if (/radius|corner|rounded/.test(lower)) return 'radius';
   if (/spacing|gap|padding|margin|width|height/.test(lower)) return 'spacing';
   if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
+  if (/resolution/.test(lower)) return 'resolution';
+  if (/size/.test(lower)) return 'size';
 
   return 'float';
 }
