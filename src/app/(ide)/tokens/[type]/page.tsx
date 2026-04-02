@@ -83,13 +83,6 @@ export default async function TokenPage({ params }: TokenPageProps) {
           {tokenRows.length > 0 && (
             <p className={styles.count}>{tokenRows.length}개 추출됨</p>
           )}
-          {tokenSource && (
-            <p className={styles.sourceMeta}>
-              마지막 추출: {formatDate(tokenSource.lastExtractedAt)}
-              {' · '}
-              <CopyUrlInline url={tokenSource.figmaUrl} />
-            </p>
-          )}
         </div>
         <div className={styles.headerActions}>
           <TokenPageActions type={type} count={tokenRows.length} />
