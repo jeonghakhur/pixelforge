@@ -321,8 +321,10 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
 
     const raw = shadows.length > 0 ? shadows.join(', ') : 'none';
 
+    const effectType = /shadow/i.test(es.name) ? 'shadow' : 'elevation';
+
     result.push({
-      type: 'elevation',
+      type: effectType,
       name: es.name,
       value: JSON.stringify({
         effects: visibleEffects.map((e) => ({

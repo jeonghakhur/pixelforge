@@ -86,10 +86,18 @@ export const TOKEN_TYPES: TokenTypeConfig[] = [
   {
     id: 'elevation',
     label: 'Elevation',
-    description: '그림자·이펙트 스타일 토큰을 관리합니다.',
+    description: 'Elevation 이펙트 스타일 토큰을 관리합니다.',
     icon: 'solar:layers-minimalistic-linear',
-    sectionPattern: /^(elevation|shadow|effect|그림자|이펙트)/i,
+    sectionPattern: /^(elevation|이펙트)/i,
     cssPrefix: 'elevation',
+  },
+  {
+    id: 'shadow',
+    label: 'Shadow',
+    description: '그림자 스타일 토큰을 관리합니다.',
+    icon: 'solar:square-top-down-linear',
+    sectionPattern: /^(shadow|그림자)/i,
+    cssPrefix: 'shadow',
   },
   {
     id: 'boolean',
