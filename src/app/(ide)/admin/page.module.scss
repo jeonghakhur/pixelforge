@@ -333,6 +333,274 @@
   }
 }
 
+// ===========================
+// Plugin Sync Status
+// ===========================
+.settingsDesc {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin: 0 0 map-get($spacers, 3);
+}
+
+.syncProjectList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+}
+
+.syncProject {
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  overflow: hidden;
+}
+
+.syncProjectHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  width: 100%;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-elevated);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--bg-surface);
+  }
+}
+
+.syncProjectLeft {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-shrink: 0;
+}
+
+.syncFigmaIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.syncProjectName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.syncProjectMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.syncMetaText {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  &:not(:first-child)::before {
+    content: '·';
+    margin-right: map-get($spacers, 2);
+    color: var(--border-color);
+  }
+}
+
+.syncChevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.syncVersionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.syncVersionRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.syncVersionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 2px 8px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
+}
+
+.syncVersionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.syncVersionTime {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.syncVersionBreakdown {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.syncDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 5px 10px;
+  font-size: $font-size-sm;
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ===========================
+// Token Type List (TokenTypeManager)
+// ===========================
+.tokenTypeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tokenTypeItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  border-radius: $border-radius-sm;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.dimmed {
+  opacity: 0.4;
+}
+
+.tokenTypeIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tokenTypeLabelBtn {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: var(--accent);
+  }
+}
+
+.tokenTypeId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.tokenTypeBadge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-pill;
+  margin-left: auto;
+}
+
+.tokenTypeActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tokenTypeDeleteBtn {
+  @include flex-center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: var(--accent);
+    background: var(--bg-elevated);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.tokenTypeEditRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex: 1;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

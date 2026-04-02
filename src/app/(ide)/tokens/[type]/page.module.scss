@@ -653,32 +653,6 @@
 // ===========================
 // 추가하기 버튼 — btn-primary (solid accent)
 // ===========================
-.addBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: map-get($spacers, 2);
-  padding: map-get($spacers, 2) map-get($spacers, 3);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: $border-radius;
-  color: $white;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  cursor: pointer;
-  transition: $transition-fast;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &:hover {
-    box-shadow: $box-shadow-glow;
-    opacity: 0.92;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--border-focus);
-    outline-offset: 2px;
-  }
-}
 
 // ===========================
 // 모달 폼 스타일

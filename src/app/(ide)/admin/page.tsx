@@ -12,6 +12,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { addUser, deleteUser, getUsers } from '@/lib/actions/auth';
 import { addUserSchema, type AddUserForm } from '@/lib/auth/schema';
 import TokenTypeManager from './TokenTypeManager';
+import PluginSyncStatus from './PluginSyncStatus';
 import styles from './page.module.scss';
 
 interface UserRow {
@@ -257,6 +258,9 @@ export default function AdminPage() {
           </div>
         )}
       </Card>
+      {/* Figma 플러그인 연동 현황 */}
+      <PluginSyncStatus />
+
       {/* 토큰 타입 메뉴 관리 */}
       <TokenTypeManager />
 
