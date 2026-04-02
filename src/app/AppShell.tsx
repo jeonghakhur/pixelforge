@@ -8,6 +8,7 @@ import TabBar from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
 import { getTokenMenuAction, type TokenMenuEntry } from '@/lib/actions/token-menu';
+import { getSyncStatus } from '@/lib/actions/sync-status';
 
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
@@ -44,7 +45,9 @@ export default function AppShell({ children, userRole }: { children: React.React
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
   const tokenRevision = useUIStore((s) => s.tokenRevision);
+  const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokenTabs, setTokenTabs] = useState<TokenMenuEntry[]>([]);
+  const [lastSyncVersion, setLastSyncVersion] = useState(0);
 
   useEffect(() => {
     initTheme();
@@ -53,6 +56,29 @@ export default function AppShell({ children, userRole }: { children: React.React
   useEffect(() => {
     getTokenMenuAction().then(setTokenTabs);
   }, []);
+
+  // 플러그인 sync 감지: 5초마다 polling → 버전 바뀌면 자동 갱신
+  useEffect(() => {
+    let mounted = true;
+    const poll = async () => {
+      try {
+        const status = await getSyncStatus();
+        const latest = status.flatMap((p) => p.syncs.filter((s) => s.type === 'tokens'))
+          .reduce((max, s) => Math.max(max, s.version), 0);
+        if (mounted && latest > 0) {
+          setLastSyncVersion((prev) => {
+            if (prev > 0 && latest > prev) {
+              invalidateTokens();
+            }
+            return latest;
+          });
+        }
+      } catch {}
+    };
+    poll();
+    const timer = setInterval(poll, 5000);
+    return () => { mounted = false; clearInterval(timer); };
+  }, [invalidateTokens, setLastSyncVersion]);
 
   // tokenRevision 변경 시 토큰 페이지 서버 컴포넌트 갱신
   useEffect(() => {
