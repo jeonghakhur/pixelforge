@@ -13,29 +13,35 @@
   line-height: $line-height-base;
   text-decoration: none;
   border: 1px solid transparent;
-  border-radius: $border-radius-pill;
+  border-radius: $border-radius;
   cursor: pointer;
-  transition: $transition-spring;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease,
+              border-color 0.15s ease, color 0.15s ease;
   user-select: none;
-
-  &:hover {
-    transform: scale(1.02);
-  }
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
-  &:disabled {
-    opacity: 0.5;
+  &:disabled,
+  &[disabled] {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: transparent;
+    color: var(--text-muted);
+    cursor: not-allowed;
     pointer-events: none;
-    transform: none;
+    box-shadow: none;
   }
 }
+
+// ── 사이즈 ───────────────────────────────────────────────
 
 .btn-sm {
   padding: map-get($spacers, 1) map-get($spacers, 3);
   font-size: $font-size-sm;
+  gap: map-get($spacers, 1);
 }
 
 .btn-lg {
@@ -43,81 +49,143 @@
   font-size: $font-size-lg;
 }
 
+// ── 아이콘 전용 (정사각형) ────────────────────────────────
+
+.btn-icon {
+  padding: map-get($spacers, 2);
+  border-radius: $border-radius;
+  aspect-ratio: 1;
+}
+
+// ── Primary ──────────────────────────────────────────────
+
 .btn-primary {
   background-color: var(--accent);
   border-color: var(--accent);
   color: $white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 
-  &:hover {
-    box-shadow: $box-shadow-glow;
+  &:hover:not(:disabled) {
+    box-shadow: $box-shadow-glow, 0 2px 8px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.08);
   }
 
   &:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px var(--accent-subtle);
   }
 }
 
-.btn-secondary {
-  background-color: var(--bg-elevated);
-  border-color: var(--glass-border);
-  color: var(--text-primary);
+// ── Secondary ────────────────────────────────────────────
 
-  &:hover {
-    background-color: var(--glass-highlight);
-    border-color: var(--border-color);
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: var(--text-primary);
   }
 
   &:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px rgba($zinc-500, 0.2);
   }
 }
+
+// ── Ghost ────────────────────────────────────────────────
+
+.btn-ghost {
+  background-color: transparent;
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
+
+  &:hover:not(:disabled) {
+    background-color: var(--glass-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($zinc-500, 0.15);
+  }
+}
+
+// ── Success ──────────────────────────────────────────────
 
 .btn-success {
   background-color: $success;
   border-color: $success;
   color: $zinc-950;
+  box-shadow: 0 1px 4px rgba($success, 0.3);
 
-  &:hover {
-    box-shadow: 0 0 20px rgba($success, 0.2);
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba($success, 0.25), 0 2px 8px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.06);
   }
 
   &:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px rgba($success, 0.3);
   }
 }
+
+// ── Danger (토스트·경고 용도 유지) ────────────────────────
 
 .btn-danger {
   background-color: $danger;
   border-color: $danger;
   color: $white;
+  box-shadow: 0 1px 4px rgba($danger, 0.3);
 
-  &:hover {
-    box-shadow: 0 0 20px rgba($danger, 0.2);
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba($danger, 0.25), 0 2px 8px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.06);
   }
 
   &:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px rgba($danger, 0.3);
   }
 }
+
+// ── Destructive (삭제 액션 전용 — 코랄 레드) ─────────────
+
+.btn-destructive {
+  background-color: #ef6b5e;
+  border-color: #ef6b5e;
+  color: $white;
+  box-shadow: 0 1px 4px rgba(#ef6b5e, 0.35);
+
+  &:hover:not(:disabled) {
+    background-color: #e85c4e;
+    border-color: #e85c4e;
+    box-shadow: 0 0 20px rgba(#ef6b5e, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(#ef6b5e, 0.3);
+  }
+}
+
+// ── Outline Primary ──────────────────────────────────────
 
 .btn-outline-primary {
   background-color: transparent;
   border-color: var(--glass-border);
   color: var(--accent);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--accent-subtle);
     border-color: var(--accent);
   }
-}
 
-.btn-ghost {
-  background-color: transparent;
-  border-color: transparent;
-  color: var(--text-secondary);
-
-  &:hover {
-    background-color: var(--glass-bg);
-    color: var(--text-primary);
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-subtle);
   }
 }

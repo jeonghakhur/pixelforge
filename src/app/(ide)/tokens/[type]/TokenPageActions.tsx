@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@iconify/react';
 import { deleteTokensByTypeAction } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
+import Button from '@/components/common/Button';
 import { useUIStore } from '@/stores/useUIStore';
 import CssPreviewModal from './CssPreviewModal';
-import styles from './page.module.scss';
-
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 
 interface TokenPageActionsProps {
@@ -40,27 +38,26 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
 
   return (
     <>
-      {/* CSS 보기 */}
-      <button
-        type="button"
-        className={styles.cssViewBtn}
+      <Button
+        variant="secondary"
+        size="sm"
+        leftIcon="solar:code-linear"
         onClick={() => setCssPreviewOpen(true)}
         aria-label="CSS 변수 코드 미리보기"
       >
-        <Icon icon="solar:code-linear" width={14} height={14} />
         CSS 보기
-      </button>
+      </Button>
 
-      {/* 전체 삭제 */}
-      <button
-        type="button"
-        className={styles.deleteAllBtn}
+      <Button
+        variant="destructive"
+        size="sm"
+        leftIcon="solar:trash-bin-2-linear"
         onClick={() => setDialogOpen(true)}
+        disabled={loading}
         aria-label={`${typeConfig?.label ?? type} 토큰 전체 삭제`}
       >
-        <Icon icon="solar:trash-bin-2-linear" width={14} height={14} />
         전체 삭제
-      </button>
+      </Button>
 
       <CssPreviewModal
         isOpen={cssPreviewOpen}

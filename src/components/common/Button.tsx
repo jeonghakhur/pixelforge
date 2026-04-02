@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon } from '@iconify/react';
 import Spinner from './Spinner';
 
-type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'outline-primary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'destructive' | 'outline-primary' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
