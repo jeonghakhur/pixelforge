@@ -110,8 +110,9 @@ export default function RadiusList({ tokens: initial }: { tokens: TokenRow[] }) 
           return (
             <div key={token.id} className={styles.radiusCard2}>
               <div className={styles.radiusPreview}>
-                <div className={styles.radiusRect} style={{ borderRadius }} />
-                <span className={styles.radiusPreviewVal}>{rad.value}px</span>
+                <div className={styles.radiusRect} style={{ borderRadius }}>
+                  <span className={styles.radiusPreviewVal}>{rad.value}px</span>
+                </div>
               </div>
               <div className={styles.radiusCardBody}>
                 <span className={styles.radiusTokenName}>{displayName(token.name)}</span>

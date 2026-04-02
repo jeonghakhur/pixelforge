@@ -84,15 +84,17 @@ export default async function TokenPage({ params }: TokenPageProps) {
             <p className={styles.count}>{tokenRows.length}개 추출됨</p>
           )}
         </div>
-        <div className={styles.headerActions}>
-          <TokenPageActions type={type} count={tokenRows.length} />
-        </div>
-        {sourceBadge && (
-          <div className={`${styles.sourceBanner} ${sourceBadge.className}`}>
-            <span className={styles.sourceDot} />
-            {sourceBadge.label}
+        <div className={styles.sourceBannerRow}>
+          {sourceBadge && (
+            <div className={`${styles.sourceBanner} ${sourceBadge.className}`}>
+              <span className={styles.sourceDot} />
+              {sourceBadge.label}
+            </div>
+          )}
+          <div className={styles.headerActions}>
+            <TokenPageActions type={type} count={tokenRows.length} />
           </div>
-        )}
+        </div>
       </div>
 
       {tokenRows.length === 0 ? (

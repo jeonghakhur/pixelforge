@@ -7,7 +7,6 @@ import { deleteTokensByTypeAction } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import { useUIStore } from '@/stores/useUIStore';
-import TokenVerifyModal from './TokenVerifyModal';
 import CssPreviewModal from './CssPreviewModal';
 import styles from './page.module.scss';
 
@@ -22,7 +21,6 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
   const router = useRouter();
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [verifyOpen, setVerifyOpen] = useState(false);
   const [cssPreviewOpen, setCssPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -53,17 +51,6 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
         CSS 보기
       </button>
 
-      {/* 검증 */}
-      <button
-        type="button"
-        className={styles.verifyBtn}
-        onClick={() => setVerifyOpen(true)}
-        aria-label={`${typeConfig?.label ?? type} 토큰 검증`}
-      >
-        <Icon icon="solar:shield-check-linear" width={14} height={14} />
-        검증
-      </button>
-
       {/* 전체 삭제 */}
       <button
         type="button"
@@ -74,13 +61,6 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
         <Icon icon="solar:trash-bin-2-linear" width={14} height={14} />
         전체 삭제
       </button>
-
-      <TokenVerifyModal
-        type={type}
-        typeLabel={typeConfig?.label ?? type}
-        isOpen={verifyOpen}
-        onClose={() => setVerifyOpen(false)}
-      />
 
       <CssPreviewModal
         isOpen={cssPreviewOpen}
