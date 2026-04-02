@@ -390,3 +390,51 @@
   color: var(--text-muted);
   font-weight: $font-weight-normal;
 }
+
+// ===========================
+// Danger Zone
+// ===========================
+.dangerZone {
+  border: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.3);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.dangerZoneHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: rgba(var(--danger-rgb, 220, 38, 38), 0.06);
+  border-bottom: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--danger);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dangerZoneRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 4);
+  padding: map-get($spacers, 4);
+
+  @include media-down(sm) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.dangerZoneTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.dangerZoneDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}

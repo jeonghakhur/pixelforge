@@ -14,7 +14,7 @@ import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl } from '@/lib/actions/settings';
 import { createApiKey, getApiKeys, deleteApiKey } from '@/lib/actions/api-keys';
 import { getSyncStatus, type SyncProjectStatus, type SyncItem } from '@/lib/actions/sync-status';
-import { getSnapshotListAction, rollbackSnapshotAction, type SnapshotInfo } from '@/lib/actions/tokens';
+import { getSnapshotListAction, rollbackSnapshotAction, deleteAllTokensAction, type SnapshotInfo } from '@/lib/actions/tokens';
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
 import { useUIStore } from '@/stores/useUIStore';
@@ -104,6 +104,8 @@ export default function SettingsPage() {
   const [snapshotList, setSnapshotList] = useState<SnapshotInfo[]>([]);
   const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
   const [confirmSnapshot, setConfirmSnapshot] = useState<{ id: string; projectId: string } | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const addToast = (message: string, variant: ToastItem['variant'] = 'danger') => {
@@ -210,6 +212,19 @@ export default function SettingsPage() {
       );
     }
     setRollbackLoading(null);
+  };
+
+  const onDeleteAllConfirm = async () => {
+    setConfirmDeleteAll(false);
+    setDeleteAllLoading(true);
+    const result = await deleteAllTokensAction();
+    if (result.error) {
+      addToast(result.error, 'danger');
+    } else {
+      invalidateTokens();
+      addToast(`토큰 ${result.deleted}개가 삭제되었습니다.`, 'success');
+    }
+    setDeleteAllLoading(false);
   };
 
   const onChangePassword = async (data: ChangePasswordForm) => {
@@ -822,6 +837,31 @@ export default function SettingsPage() {
               세부 관리(라벨·아이콘·순서·표시여부)는 관리자 페이지에서 할 수 있습니다.
             </p>
           </Card>
+
+          {/* Danger Zone */}
+          <div className={styles.dangerZone}>
+            <div className={styles.dangerZoneHeader}>
+              <Icon icon="solar:danger-triangle-linear" width={16} height={16} />
+              <span>Danger Zone</span>
+            </div>
+            <div className={styles.dangerZoneRow}>
+              <div>
+                <p className={styles.dangerZoneTitle}>모든 토큰 삭제</p>
+                <p className={styles.dangerZoneDesc}>
+                  현재 프로젝트의 토큰 데이터를 모두 삭제합니다. 복구할 수 없습니다.
+                </p>
+              </div>
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon="solar:trash-bin-trash-linear"
+                onClick={() => setConfirmDeleteAll(true)}
+                disabled={deleteAllLoading}
+              >
+                {deleteAllLoading ? '삭제 중...' : '모두 삭제'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
       <ConfirmDialog
@@ -833,6 +873,16 @@ export default function SettingsPage() {
         confirmLabel="삭제"
         variant="danger"
         loading={!!rollbackLoading}
+      />
+      <ConfirmDialog
+        isOpen={confirmDeleteAll}
+        onClose={() => setConfirmDeleteAll(false)}
+        onConfirm={onDeleteAllConfirm}
+        title="모든 토큰 삭제"
+        message="현재 프로젝트의 토큰 데이터를 전부 삭제합니다. 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="모두 삭제"
+        variant="danger"
+        loading={deleteAllLoading}
       />
 
       <ToastContainer
