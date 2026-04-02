@@ -77,40 +77,43 @@
 }
 
 // ── Secondary ────────────────────────────────────────────
+// 이미지 기준: 라이트 그레이 fill (#E8E8EA), 다크 텍스트
+// 다크 테마: 살짝 밝은 표면 + 명확한 텍스트
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: transparent;
+  color: var(--text-primary);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.16);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($zinc-500, 0.25);
+  }
+}
+
+// ── Ghost ────────────────────────────────────────────────
+// 이미지 기준: 흰 배경 + 라이트 그레이 보더 (#E0E0E0)
+// 다크 테마: 투명 배경 + 명확한 보더
+
+.btn-ghost {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
 
   &:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.32);
     color: var(--text-primary);
   }
 
   &:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgba($zinc-500, 0.2);
-  }
-}
-
-// ── Ghost ────────────────────────────────────────────────
-
-.btn-ghost {
-  background-color: transparent;
-  border-color: var(--glass-border);
-  color: var(--text-secondary);
-
-  &:hover:not(:disabled) {
-    background-color: var(--glass-bg);
-    border-color: var(--border-color);
-    color: var(--text-primary);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba($zinc-500, 0.15);
   }
 }
 

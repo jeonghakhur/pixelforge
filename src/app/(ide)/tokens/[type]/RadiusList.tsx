@@ -54,7 +54,13 @@ function getRadiusDesc(px: number): RadiusDesc {
 
 export default function RadiusList({ tokens: initial }: { tokens: TokenRow[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
-  const [tokens, setTokens] = useState<TokenRow[]>(initial);
+  const [tokens, setTokens] = useState<TokenRow[]>(() =>
+    [...initial].sort((a, b) => {
+      const aVal = parseRadius(a.value)?.value ?? 0;
+      const bVal = parseRadius(b.value)?.value ?? 0;
+      return aVal - bVal;
+    })
+  );
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editingToken, setEditingToken] = useState<TokenRow | null>(null);

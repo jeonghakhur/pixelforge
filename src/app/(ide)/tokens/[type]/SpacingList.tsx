@@ -52,7 +52,9 @@ interface EditState {
 
 export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
-  const [tokens, setTokens] = useState<TokenRow[]>(initial);
+  const [tokens, setTokens] = useState<TokenRow[]>(() =>
+    [...initial].sort((a, b) => extractPxValue(a) - extractPxValue(b))
+  );
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editingToken, setEditingToken] = useState<TokenRow | null>(null);

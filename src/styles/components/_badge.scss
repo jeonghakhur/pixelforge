@@ -1,53 +1,101 @@
 @use '../variables' as *;
 
 // ===========================
-// 배지 — Bootstrap _badge.scss 참조
+// Badge — 컬러 시스템
+// 밝기 1(가장 밝음/파스텔) → 6(가장 진함/solid)
 // ===========================
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: map-get($spacers, 1);
-  padding: 0.125rem map-get($spacers, 2);
-  font-size: $font-size-sm;
+  padding: 2px map-get($spacers, 2);
+  font-size: $font-size-xs;
   font-weight: $font-weight-medium;
   line-height: $line-height-base;
   white-space: nowrap;
   border-radius: $border-radius-pill;
+  border: 1px solid transparent;
   transition: $transition-fast;
 }
 
-.badge-primary {
-  background-color: var(--accent-subtle);
-  color: var(--accent);
-}
+// ── 기존 시맨틱 (호환 유지) ──────────────────────────────
+.badge-primary   { background: var(--accent-subtle);   color: var(--accent);      border-color: transparent; }
+.badge-secondary { background: var(--bg-elevated);     color: var(--text-secondary); }
+.badge-success   { background: var(--success-subtle);  color: var(--success);     }
+.badge-danger    { background: var(--danger-subtle);   color: var(--danger);      }
+.badge-warning   { background: var(--warning-subtle);  color: var(--warning);     }
+.badge-info      { background: var(--info-subtle);     color: var(--info);        }
+.badge-gray      { background: var(--bg-elevated);     color: var(--text-muted);  }
 
-.badge-secondary {
-  background-color: var(--bg-elevated);
-  color: var(--text-secondary);
-}
+// ── Neutral ─────────────────────────────────────────────
+.badge-neutral-1 { background: #f4f4f5; color: #71717a; border-color: #e4e4e7; }
+.badge-neutral-2 { background: #e4e4e7; color: #52525b; }
+.badge-neutral-3 { background: #d4d4d8; color: #3f3f46; }
+.badge-neutral-4 { background: #a1a1aa; color: #fff; }
+.badge-neutral-5 { background: #71717a; color: #fff; }
+.badge-neutral-6 { background: #27272a; color: #fff; }
 
-.badge-success {
-  background-color: var(--success-subtle);
-  color: var(--success);
-}
+// ── Blue ────────────────────────────────────────────────
+.badge-blue-1 { background: #eff6ff; color: #3b82f6; border-color: #bfdbfe; }
+.badge-blue-2 { background: #dbeafe; color: #2563eb; }
+.badge-blue-3 { background: #bfdbfe; color: #1d4ed8; }
+.badge-blue-4 { background: #60a5fa; color: #fff; }
+.badge-blue-5 { background: #3b82f6; color: #fff; }
+.badge-blue-6 { background: #1d4ed8; color: #fff; }
 
-.badge-danger {
-  background-color: var(--danger-subtle);
-  color: var(--danger);
-}
+// ── Green ───────────────────────────────────────────────
+.badge-green-1 { background: #f0fdf4; color: #22c55e; border-color: #bbf7d0; }
+.badge-green-2 { background: #dcfce7; color: #16a34a; }
+.badge-green-3 { background: #bbf7d0; color: #15803d; }
+.badge-green-4 { background: #4ade80; color: #fff; }
+.badge-green-5 { background: #22c55e; color: #fff; }
+.badge-green-6 { background: #15803d; color: #fff; }
 
-.badge-warning {
-  background-color: var(--warning-subtle);
-  color: var(--warning);
-}
+// ── Yellow ──────────────────────────────────────────────
+.badge-yellow-1 { background: #fefce8; color: #ca8a04; border-color: #fef08a; }
+.badge-yellow-2 { background: #fef9c3; color: #a16207; }
+.badge-yellow-3 { background: #fef08a; color: #854d0e; }
+.badge-yellow-4 { background: #facc15; color: #713f12; }
+.badge-yellow-5 { background: #eab308; color: #fff; }
+.badge-yellow-6 { background: #a16207; color: #fff; }
 
-.badge-info {
-  background-color: var(--info-subtle);
-  color: var(--info);
-}
+// ── Orange ──────────────────────────────────────────────
+.badge-orange-1 { background: #fff7ed; color: #f97316; border-color: #fed7aa; }
+.badge-orange-2 { background: #ffedd5; color: #ea580c; }
+.badge-orange-3 { background: #fed7aa; color: #c2410c; }
+.badge-orange-4 { background: #fb923c; color: #fff; }
+.badge-orange-5 { background: #f97316; color: #fff; }
+.badge-orange-6 { background: #c2410c; color: #fff; }
 
-.badge-gray {
-  background-color: var(--bg-elevated);
-  color: var(--text-muted);
-}
+// ── Red ─────────────────────────────────────────────────
+.badge-red-1 { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+.badge-red-2 { background: #fee2e2; color: #dc2626; }
+.badge-red-3 { background: #fecaca; color: #b91c1c; }
+.badge-red-4 { background: #f87171; color: #fff; }
+.badge-red-5 { background: #ef4444; color: #fff; }
+.badge-red-6 { background: #b91c1c; color: #fff; }
+
+// ── Pink ────────────────────────────────────────────────
+.badge-pink-1 { background: #fdf2f8; color: #ec4899; border-color: #fbcfe8; }
+.badge-pink-2 { background: #fce7f3; color: #db2777; }
+.badge-pink-3 { background: #fbcfe8; color: #be185d; }
+.badge-pink-4 { background: #f472b6; color: #fff; }
+.badge-pink-5 { background: #ec4899; color: #fff; }
+.badge-pink-6 { background: #be185d; color: #fff; }
+
+// ── Purple ──────────────────────────────────────────────
+.badge-purple-1 { background: #faf5ff; color: #a855f7; border-color: #e9d5ff; }
+.badge-purple-2 { background: #f3e8ff; color: #9333ea; }
+.badge-purple-3 { background: #e9d5ff; color: #7e22ce; }
+.badge-purple-4 { background: #c084fc; color: #fff; }
+.badge-purple-5 { background: #a855f7; color: #fff; }
+.badge-purple-6 { background: #7e22ce; color: #fff; }
+
+// ── Teal ────────────────────────────────────────────────
+.badge-teal-1 { background: #f0fdfa; color: #14b8a6; border-color: #99f6e4; }
+.badge-teal-2 { background: #ccfbf1; color: #0d9488; }
+.badge-teal-3 { background: #99f6e4; color: #0f766e; }
+.badge-teal-4 { background: #2dd4bf; color: #fff; }
+.badge-teal-5 { background: #14b8a6; color: #fff; }
+.badge-teal-6 { background: #0f766e; color: #fff; }
