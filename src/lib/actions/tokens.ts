@@ -205,6 +205,7 @@ export async function deleteAllTokensAction(): Promise<{ error: string | null; d
     const project = getActiveProject();
     if (!project) return { error: null, deleted: 0 };
     const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.projectId, project.id)).all();
+    db.delete(tokenSnapshots).where(eq(tokenSnapshots.projectId, project.id)).run();
     db.delete(tokens).where(eq(tokens.projectId, project.id)).run();
     db.delete(tokenSources).where(eq(tokenSources.projectId, project.id)).run();
     deleteTokensCss();

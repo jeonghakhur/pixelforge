@@ -43,6 +43,7 @@ export default function AppShell({ children, userRole }: { children: React.React
   const activeTab = useUIStore((s) => s.activeTab);
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
+  const tokenRevision = useUIStore((s) => s.tokenRevision);
   const [tokenTabs, setTokenTabs] = useState<TokenMenuEntry[]>([]);
 
   useEffect(() => {
@@ -52,6 +53,13 @@ export default function AppShell({ children, userRole }: { children: React.React
   useEffect(() => {
     getTokenMenuAction().then(setTokenTabs);
   }, []);
+
+  // tokenRevision 변경 시 토큰 페이지 서버 컴포넌트 갱신
+  useEffect(() => {
+    if (tokenRevision > 0 && pathname.startsWith('/tokens/')) {
+      router.refresh();
+    }
+  }, [tokenRevision, pathname, router]);
 
   // Sync store from URL on pathname change
   useEffect(() => {
