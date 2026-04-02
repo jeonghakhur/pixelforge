@@ -210,5 +210,13 @@ function migrateTokenTypeConstraint(): void {
 }
 migrateTokenTypeConstraint();
 
+// ── app_settings 테이블 마이그레이션 ──────────
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
 export const db = drizzle(sqlite, { schema });
 export { schema };

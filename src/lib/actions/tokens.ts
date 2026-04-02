@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { tokens, projects, histories, tokenSources } from '@/lib/db/schema';
+import { tokens, projects, histories, tokenSources, appSettings } from '@/lib/db/schema';
 import { eq, desc, sql, and } from 'drizzle-orm';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
 import { extractTokensAction } from '@/lib/actions/project';
@@ -11,6 +11,45 @@ import path from 'path';
 import fs from 'fs';
 import { generateTokensCss } from '@/lib/tokens/css-exporter';
 import { commitTokensCss, deleteTokensCss, buildCommitMessage } from '@/lib/git/token-commits';
+
+// ─────────────────────────────────────────────────────────
+// 활성 프로젝트 관리 (단일 프로젝트 원칙)
+// ─────────────────────────────────────────────────────────
+
+/** app_settings에서 active_project_id를 읽어 해당 프로젝트를 반환.
+ *  설정이 없으면 updated_at 기준 가장 최근 프로젝트로 fallback. */
+function getActiveProject() {
+  const setting = db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, 'active_project_id'))
+    .get();
+
+  if (setting?.value) {
+    const project = db.select().from(projects).where(eq(projects.id, setting.value)).get();
+    if (project) return project;
+  }
+
+  return db.select().from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+}
+
+/** 플러그인 sync 또는 JSON 임포트 후 활성 프로젝트를 명시적으로 설정. */
+export async function setActiveProject(projectId: string): Promise<void> {
+  const existing = db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, 'active_project_id'))
+    .get();
+
+  if (existing) {
+    db.update(appSettings)
+      .set({ value: projectId })
+      .where(eq(appSettings.key, 'active_project_id'))
+      .run();
+  } else {
+    db.insert(appSettings).values({ key: 'active_project_id', value: projectId }).run();
+  }
+}
 
 export interface TokenRow {
   id: string;
@@ -107,7 +146,7 @@ export async function deleteTokenAction(id: string): Promise<{ error: string | n
     if (remaining.length === 0) {
       deleteTokensCss();
     } else {
-      const project = db.select({ name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+      const project = getActiveProject();
       const counts = remaining.reduce((acc, t) => {
         acc[t.type] = (acc[t.type] ?? 0) + 1;
         return acc;
@@ -150,7 +189,7 @@ export async function deleteTokensByTypeAction(
     const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.type, type)).all();
 
     // token_sources 삭제
-    const project = db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+    const project = getActiveProject();
     if (project) {
       db.delete(tokenSources).where(
         and(eq(tokenSources.projectId, project.id), eq(tokenSources.type, type)),
@@ -221,7 +260,7 @@ export async function exportTokensCssAction(): Promise<CssExportResult> {
     return { error: '내보낼 토큰이 없습니다.', css: null, tokenCount: 0 };
   }
 
-  const project = db.select({ name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const project = getActiveProject();
   const css = generateTokensCss(allTokens as TokenRow[], {
     fileName: project?.name ?? 'Design Tokens',
     extractedAt: new Date().toISOString(),
@@ -231,14 +270,7 @@ export async function exportTokensCssAction(): Promise<CssExportResult> {
 }
 
 export async function getProjectInfo(): Promise<{ name: string; figmaUrl: string } | null> {
-  const project = db.select({
-    name: projects.name,
-    figmaUrl: projects.figmaUrl,
-  })
-    .from(projects)
-    .limit(1)
-    .get();
-
+  const project = getActiveProject();
   if (!project || !project.figmaUrl) return null;
   return { name: project.name, figmaUrl: project.figmaUrl };
 }
@@ -258,7 +290,7 @@ export interface TokenSource {
 }
 
 export async function getTokenSourceAction(type: string): Promise<TokenSource | null> {
-  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const project = getActiveProject();
   if (!project) return null;
 
   const row = db.select()
@@ -323,7 +355,7 @@ export async function extractTokensByTypeAction(
   }
 
   // 추출 전 기존 토큰 스냅샷 (diff 계산용)
-  const beforeProject = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const beforeProject = getActiveProject();
   const beforeTokens = beforeProject
     ? db.select({ name: tokens.name, value: tokens.value, raw: tokens.raw })
         .from(tokens)
@@ -450,7 +482,7 @@ export async function extractTokensByTypeAction(
 export async function deleteTokenScreenshotsAction(
   type: string,
 ): Promise<{ error: string | null }> {
-  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const project = getActiveProject();
   if (!project) return { error: '프로젝트를 찾을 수 없습니다.' };
 
   const source = db.select({
@@ -558,7 +590,7 @@ export async function verifyTokensAction(type: string): Promise<VerifyTokensResu
   };
 
   // token_sources에서 figmaKey 조회
-  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const project = getActiveProject();
   if (!project) return { ...blank, error: '프로젝트를 찾을 수 없습니다.' };
 
   const source = db.select({ figmaKey: tokenSources.figmaKey })

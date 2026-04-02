@@ -9,14 +9,15 @@
  *   2. computeSnapshotDiff  (이전 스냅샷과 비교)
  *   3. tokenSnapshots INSERT (tokenCounts, diffSummary)
  *   4. CSS 재생성 → design-tokens/tokens.css 저장
- *   5. 변경된 타입에 대해 백그라운드 스크린샷 트리거
+ *   5. token_sources upsert (lastExtractedAt, tokenCount, figmaKey)
+ *   6. 변경된 타입에 대해 백그라운드 스크린샷 트리거
  */
 
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/db';
-import { tokens, tokenSnapshots } from '@/lib/db/schema';
+import { tokens, tokenSnapshots, tokenSources } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import type { NormalizedToken } from '@/lib/sync/parse-variables';
 import {
@@ -37,6 +38,8 @@ export interface PipelineOptions {
   source: TokenSource;
   figmaKey?: string;
   figmaVersion?: string;
+  /** token_sources 행을 upsert할 때 사용할 Figma URL (플러그인 sync 시 선택적) */
+  figmaUrl?: string;
 }
 
 export interface PipelineResult {
@@ -197,7 +200,48 @@ export async function runTokenPipeline(
     // CSS 재생성 실패는 파이프라인을 중단하지 않음
   }
 
-  // ── Step 5: 스크린샷 백그라운드 트리거 ─────────
+  // ── Step 5: token_sources upsert ─────────────
+  // 플러그인 sync 후 "마지막 추출" 시간, token 수, figmaKey 업데이트
+  try {
+    const effectiveUrl = options.figmaUrl ?? (figmaKey ? `https://www.figma.com/design/${figmaKey}` : null);
+    if (effectiveUrl && figmaKey) {
+      for (const [type, count] of Object.entries(tokenCounts)) {
+        const existing = db
+          .select({ id: tokenSources.id })
+          .from(tokenSources)
+          .where(and(eq(tokenSources.projectId, projectId), eq(tokenSources.type, type)))
+          .get();
+
+        if (existing) {
+          await db
+            .update(tokenSources)
+            .set({
+              figmaKey,
+              lastExtractedAt: new Date(),
+              tokenCount: count,
+              ...(figmaVersion ? { figmaVersion } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(tokenSources.id, existing.id));
+        } else {
+          await db.insert(tokenSources).values({
+            id: crypto.randomUUID(),
+            projectId,
+            type,
+            figmaUrl: effectiveUrl,
+            figmaKey,
+            figmaVersion: figmaVersion ?? null,
+            lastExtractedAt: new Date(),
+            tokenCount: count,
+          });
+        }
+      }
+    }
+  } catch {
+    // token_sources 업데이트 실패는 파이프라인을 중단하지 않음
+  }
+
+  // ── Step 6: 스크린샷 백그라운드 트리거 ─────────
   let screenshotQueued = false;
   if (changedTypes.length > 0) {
     screenshotQueued = true;

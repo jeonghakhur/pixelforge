@@ -185,3 +185,11 @@ export const tokenSnapshots = sqliteTable('token_snapshots', {
   diffSummary: text('diff_summary'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+// ===========================
+// 앱 전역 설정
+// ===========================
+export const appSettings = sqliteTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});

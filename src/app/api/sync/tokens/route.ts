@@ -7,6 +7,7 @@ import { CORS_HEADERS } from '@/lib/sync/cors';
 import { eq, desc } from 'drizzle-orm';
 import { parseVariablesPayload } from '@/lib/sync/parse-variables';
 import { runTokenPipeline } from '@/lib/tokens/pipeline';
+import { setActiveProject } from '@/lib/actions/tokens';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { figmaFileKey, figmaFileName, figmaVersion, tokens: tokenData } = body;
+  const { figmaFileKey, figmaFileName, figmaVersion, figmaUrl, tokens: tokenData } = body;
 
   if (!figmaFileKey || !tokenData) {
     return NextResponse.json(
@@ -38,12 +39,19 @@ export async function POST(req: Request) {
       figmaKey: figmaFileKey,
     });
     project = await db.select().from(projects).where(eq(projects.id, id)).get();
+  } else {
+    // sync 시마다 updated_at 갱신 — UI 액션이 이 프로젝트를 "현재 프로젝트"로 인식하게 함
+    await db.update(projects)
+      .set({ updatedAt: new Date() })
+      .where(eq(projects.id, project.id));
   }
 
   const projectId = project!.id;
 
-  // 해시 비교 — 동일하면 저장 안 함
-  const newHash = crypto.createHash('sha256').update(JSON.stringify(tokenData)).digest('hex');
+  // 파싱 먼저 → 정규화된 토큰 기준으로 해시 비교
+  const normalizedTokens = parseVariablesPayload(tokenData);
+  const newHash = crypto.createHash('sha256').update(JSON.stringify(normalizedTokens)).digest('hex');
+
   const latestSnapshot = await db
     .select()
     .from(tokenSnapshots)
@@ -65,14 +73,15 @@ export async function POST(req: Request) {
     }
   }
 
-  // 파싱 → 파이프라인 실행
-  const normalizedTokens = parseVariablesPayload(tokenData);
-
   const result = await runTokenPipeline(projectId, normalizedTokens, {
     source: 'variables',
     figmaKey: figmaFileKey,
     figmaVersion: figmaVersion ?? undefined,
+    figmaUrl: figmaUrl ?? undefined,
   });
+
+  // 활성 프로젝트 명시적 설정
+  await setActiveProject(projectId);
 
   return NextResponse.json(
     {
