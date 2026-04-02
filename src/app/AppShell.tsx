@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
 import Sidebar from '@/components/layout/Sidebar';
-import TabBar from '@/components/layout/TabBar';
+import TabBar, { type TokenTab } from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
 import { useUIStore } from '@/stores/useUIStore';
 import { getSyncStatus } from '@/lib/actions/sync-status';
+import { getTokenSummary } from '@/lib/actions/tokens';
+import { TOKEN_TYPE_MAP, TOKEN_TYPES } from '@/lib/tokens/token-types';
 
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
@@ -46,10 +48,32 @@ export default function AppShell({ children, userRole }: { children: React.React
   const tokenRevision = useUIStore((s) => s.tokenRevision);
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const lastSyncVersionRef = useRef(0);
+  const [tokenTabs, setTokenTabs] = useState<TokenTab[]>([]);
 
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // 토큰 타입 탭 로딩 (revision 변경 시 갱신)
+  useEffect(() => {
+    getTokenSummary().then((summary) => {
+      const knownOrder = TOKEN_TYPES.map((t) => t.id);
+      const allTypes = [
+        ...knownOrder.filter((id) => (summary.counts[id] ?? 0) > 0),
+        ...Object.keys(summary.counts).filter(
+          (id) => !knownOrder.includes(id) && (summary.counts[id] ?? 0) > 0,
+        ),
+      ];
+      setTokenTabs(
+        allTypes.map((id) => ({
+          id,
+          label: TOKEN_TYPE_MAP[id]?.label ?? id,
+          icon: TOKEN_TYPE_MAP[id]?.icon ?? 'solar:box-linear',
+          count: summary.counts[id] ?? 0,
+        })),
+      );
+    });
+  }, [tokenRevision]);
 
   // 플러그인 sync 감지: 5초마다 polling → 버전 바뀌면 자동 갱신
   useEffect(() => {
@@ -93,9 +117,11 @@ export default function AppShell({ children, userRole }: { children: React.React
       case 'home':
         router.push('/');
         break;
-      case 'tokens':
-        router.push('/tokens/color');
+      case 'tokens': {
+        const firstTab = tokenTabs[0]?.id ?? 'color';
+        router.push(`/tokens/${firstTab}`);
         break;
+      }
       case 'components':
         router.push('/components/new');
         break;
@@ -116,7 +142,9 @@ export default function AppShell({ children, userRole }: { children: React.React
 
   const handleTabChange = useCallback((tabId: string) => {
     setTab(tabId);
-    if (activeSection === 'components') {
+    if (activeSection === 'tokens') {
+      router.push(`/tokens/${tabId}`);
+    } else if (activeSection === 'components') {
       if (tabId === 'new') {
         router.push('/components/new');
       } else {
@@ -139,6 +167,7 @@ export default function AppShell({ children, userRole }: { children: React.React
             section={activeSection}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            tokenTabs={tokenTabs}
           />
           <main className="ide-main">
             {children}

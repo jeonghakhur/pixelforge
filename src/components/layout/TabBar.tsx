@@ -10,6 +10,13 @@ export interface TabItem {
   icon: string;
 }
 
+export interface TokenTab {
+  id: string;
+  label: string;
+  icon: string;
+  count: number;
+}
+
 const STATIC_SECTION_TABS: Partial<Record<Section, TabItem[]>> = {
   components: [
     { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
@@ -27,9 +34,38 @@ interface TabBarProps {
   section: Section;
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  tokenTabs?: TokenTab[];
 }
 
-export default function TabBar({ section, activeTab, onTabChange }: TabBarProps) {
+export default function TabBar({ section, activeTab, onTabChange, tokenTabs = [] }: TabBarProps) {
+  if (section === 'tokens') {
+    if (tokenTabs.length === 0) {
+      return (
+        <div className={styles.tabBar}>
+          <span className={styles.empty}>Tokens</span>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.tabBar} role="tablist">
+        {tokenTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
+            aria-selected={activeTab === tab.id}
+            onClick={() => onTabChange(tab.id)}
+          >
+            <Icon icon={tab.icon} width={14} height={14} />
+            {tab.label}
+            <span className={styles.tabCount}>{tab.count}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   const tabs: TabItem[] = STATIC_SECTION_TABS[section] ?? [];
 
   if (tabs.length === 0) {
@@ -39,6 +75,7 @@ export default function TabBar({ section, activeTab, onTabChange }: TabBarProps)
           {section === 'home' && 'Welcome'}
           {section === 'diff' && 'Change Detection'}
           {section === 'admin' && 'Admin'}
+          {section === 'screens' && 'Screens'}
         </span>
       </div>
     );
