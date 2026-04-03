@@ -183,9 +183,11 @@ interface Props {
   error: string | null;
   onImport: () => void;
   onReset: () => void;
+  /** true면 푸터(생성 버튼 영역)를 숨김 — 부모가 확인 단계를 직접 제어할 때 사용 */
+  hideFooter?: boolean;
 }
 
-export default function JsonAnalysisPanel({ data, importing, error, onImport, onReset }: Props) {
+export default function JsonAnalysisPanel({ data, importing, error, onImport, onReset, hideFooter = false }: Props) {
   const collections = analyzeVariables(data);
 
   const colorStyles = data.styles?.colors ?? [];
@@ -365,7 +367,7 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
       </div>
 
       {/* ── 푸터 */}
-      <div className={styles.panelFooter}>
+      {!hideFooter && <div className={styles.panelFooter}>
         {error && <p className={styles.panelError} role="alert">{error}</p>}
         <div className={styles.panelFooterRow}>
           <div className={styles.importSummary}>
@@ -404,7 +406,7 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
             {importing ? '임포트 중...' : '모든 토큰 가져오기'}
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

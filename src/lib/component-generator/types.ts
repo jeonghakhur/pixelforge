@@ -37,6 +37,20 @@ export interface PluginComponentPayload {
   childStyles: Record<string, Record<string, string>>
   /** Radix 기반 props 제안 */
   radixProps: Record<string, string>
+  /**
+   * COMPONENT_SET의 실제 variant 옵션
+   * { size: ['xsmall','small','medium','large','xlarge'], variant: ['Primary','Default',...] }
+   */
+  variantOptions?: Record<string, string[]>
+  /**
+   * COMPONENT_SET 자식 각각의 스타일
+   * [{ properties: { size:'xlarge', variant:'Primary', state:'rest' }, styles: {...}, childStyles: {...} }]
+   */
+  variants?: Array<{
+    properties: Record<string, string>
+    styles: Record<string, string>
+    childStyles: Record<string, Record<string, string>>
+  }>
 }
 
 // ── 생성 결과 ────────────────────────────────────────────────────────

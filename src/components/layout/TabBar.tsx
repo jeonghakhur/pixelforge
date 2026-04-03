@@ -18,10 +18,6 @@ export interface TokenTab {
 }
 
 const STATIC_SECTION_TABS: Partial<Record<Section, TabItem[]>> = {
-  components: [
-    { id: 'list', label: '목록', icon: 'solar:widget-2-linear' },
-    { id: 'new', label: '+ 추가', icon: 'solar:add-circle-linear' },
-  ],
   settings: [
     { id: 'general', label: '일반', icon: 'solar:settings-linear' },
     { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },

@@ -16,20 +16,59 @@ interface Props {
   css: string | null;
   radixProps: string | null;
   version: number;
+  tokensCss: string | null;
 }
 
 type CodeTab = 'tsx' | 'css';
 
 interface PropDef { name: string; type: string; default: string; description: string }
 
-const PROPS_BY_TYPE: Record<string, PropDef[]> = {
-  button: [
-    { name: 'variant', type: "'Primary'|'Secondary'|'Default'|'Outline'|'Invisible'", default: "'Primary'", description: '버튼의 시각적 스타일 (Figma variant 이름 기준)' },
-    { name: 'size',    type: "'xsmall'|'small'|'medium'|'large'|'xlarge'", default: "'medium'", description: '패딩과 폰트 크기 스케일' },
-    { name: 'disabled', type: 'boolean', default: 'false', description: '비활성화 — aria-disabled + data-disabled 동시 적용' },
-    { name: 'children', type: 'ReactNode', default: '—', description: '버튼 내부 콘텐츠' },
-  ],
-};
+// ── TSX 파싱 헬퍼 — 생성된 코드에서 실제 타입 추출 ──────────────────────────
+
+function parseUnionType(tsx: string, keyword: 'Variant' | 'Size'): string[] {
+  const re = new RegExp(`export type \\w+${keyword} = ([^;]+);`);
+  const match = tsx.match(re);
+  if (!match) return [];
+  return match[1].split('|').map((s) => s.trim().replace(/'/g, '').replace(/"/g, ''));
+}
+
+function parseDefaultProp(tsx: string, prop: string): string {
+  const re = new RegExp(`${prop}\\s*=\\s*'([^']+)'`);
+  const match = tsx.match(re);
+  return match ? `'${match[1]}'` : '—';
+}
+
+function parseHasBlockProp(tsx: string): boolean {
+  return /block\?\s*:\s*boolean/.test(tsx);
+}
+
+function buildPropsFromTsx(tsx: string, detectedType: string): PropDef[] {
+  if (detectedType !== 'button' || !tsx) return [];
+
+  const variants = parseUnionType(tsx, 'Variant');
+  const sizes    = parseUnionType(tsx, 'Size');
+  const hasBlock = parseHasBlockProp(tsx);
+
+  const variantType = variants.length > 0
+    ? variants.map((v) => `'${v}'`).join(' | ')
+    : "'Primary'|'Secondary'|'Default'|'Outline'|'Invisible'";
+  const sizeType = sizes.length > 0
+    ? sizes.map((s) => `'${s}'`).join(' | ')
+    : "'xsmall'|'small'|'medium'|'large'|'xlarge'";
+
+  const props: PropDef[] = [
+    { name: 'variant',  type: variantType, default: parseDefaultProp(tsx, 'variant'), description: '버튼의 시각적 스타일 (Figma variant 이름 기준)' },
+    { name: 'size',     type: sizeType,    default: parseDefaultProp(tsx, 'size'),    description: '패딩과 폰트 크기 스케일' },
+  ];
+  if (hasBlock) {
+    props.push({ name: 'block', type: 'boolean', default: 'false', description: '전체 너비 (width: 100%) 레이아웃' });
+  }
+  props.push(
+    { name: 'disabled',  type: 'boolean',   default: 'false', description: '비활성화 — aria-disabled + data-disabled 동시 적용' },
+    { name: 'children',  type: 'ReactNode', default: '—',     description: '버튼 내부 콘텐츠' },
+  );
+  return props;
+}
 
 const USAGE_BY_TYPE: Record<string, { dos: string[]; donts: string[] }> = {
   button: {
@@ -74,48 +113,130 @@ function useHighlightedCode(code: string, lang: 'tsx' | 'css') {
 }
 
 // ── Sandbox ──────────────────────────────────────────────────────────────────
-function ButtonSandbox({ radixProps }: { radixProps: string | null }) {
-  let defaultVariant = 'Primary';
-  let defaultSize = 'medium';
+
+function ButtonSandbox({ name, css, tokensCss, radixProps, tsx }: {
+  name: string;
+  css: string | null;
+  tokensCss: string | null;
+  radixProps: string | null;
+  tsx: string | null;
+}) {
+  // TSX에서 실제 variant/size 목록 추출
+  const variants = tsx ? parseUnionType(tsx, 'Variant') : [];
+  const sizes    = tsx ? parseUnionType(tsx, 'Size')    : [];
+  const hasBlock = tsx ? parseHasBlockProp(tsx) : false;
+
+  // 초기 선택값 — radixProps 기준
+  let initVariant = variants[0] ?? '';
+  let initSize    = sizes[0]    ?? '';
   try {
     const p = JSON.parse(radixProps ?? '{}');
-    if (p.variant) defaultVariant = p.variant;
-    if (p.size) defaultSize = p.size;
+    if (p.variant && variants.includes(p.variant)) initVariant = p.variant;
+    if (p.size    && sizes.includes(p.size))       initSize    = p.size;
   } catch {}
 
-  const variants = [
-    { id: 'Primary',   label: 'Primary' },
-    { id: 'Secondary', label: 'Secondary' },
-    { id: 'Outline',   label: 'Outline' },
-    { id: 'Invisible', label: 'Invisible' },
-  ];
+  const [selVariant,  setVariant]  = useState(initVariant);
+  const [selSize,     setSize]     = useState(initSize);
+  const [selDisabled, setDisabled] = useState(false);
+  const [selBlock,    setBlock]    = useState(false);
+
+  // sandbox 스코프 격리
+  const scope = `sb-${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+  const scopedTokens = tokensCss ? tokensCss.replace(/:root\s*\{/g, `.${scope} {`) : '';
+  const scopedCss    = css       ? css.replace(/\.root/g, `.${scope} .root`)        : '';
+  const injectedCss  = scopedTokens + scopedCss;
 
   return (
     <div className={styles.sandboxBg}>
-      <div className={styles.sandboxCanvas}>
-        <div className={styles.variantGrid}>
-          {variants.map((v) => (
-            <div key={v.id} className={styles.variantItem}>
-              <button
-                type="button"
-                data-variant={v.id}
-                data-size={defaultSize}
-                className={`${styles.sandboxBtn} ${styles[`sandboxBtn_${v.id}`]} ${v.id === defaultVariant ? styles.sandboxBtnActive : ''}`}
-              >
-                {v.id.charAt(0).toUpperCase() + v.id.slice(1)}
-              </button>
-              <span className={styles.variantLabel}>{v.label}</span>
+      {injectedCss && (
+        // eslint-disable-next-line react/no-danger
+        <style dangerouslySetInnerHTML={{ __html: injectedCss }} />
+      )}
+
+      <div className={styles.sandboxLayout}>
+        {/* ── 컨트롤 패널 ── */}
+        <div className={styles.sandboxControls}>
+          {variants.length > 0 && (
+            <div className={styles.controlGroup}>
+              <span className={styles.controlLabel}>variant</span>
+              <div className={styles.controlPills}>
+                {variants.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`${styles.pill} ${selVariant === v ? styles.pillActive : ''}`}
+                    onClick={() => setVariant(v)}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
+          )}
+
+          {sizes.length > 0 && (
+            <div className={styles.controlGroup}>
+              <span className={styles.controlLabel}>size</span>
+              <div className={styles.controlPills}>
+                {sizes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`${styles.pill} ${selSize === s ? styles.pillActive : ''}`}
+                    onClick={() => setSize(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.controlGroup}>
+            <span className={styles.controlLabel}>state</span>
+            <div className={styles.controlToggles}>
+              <label className={styles.toggle}>
+                <input
+                  type="checkbox"
+                  checked={selDisabled}
+                  onChange={(e) => setDisabled(e.target.checked)}
+                />
+                <span>disabled</span>
+              </label>
+              {hasBlock && (
+                <label className={styles.toggle}>
+                  <input
+                    type="checkbox"
+                    checked={selBlock}
+                    onChange={(e) => setBlock(e.target.checked)}
+                  />
+                  <span>block</span>
+                </label>
+              )}
+            </div>
+          </div>
         </div>
-        <div className={styles.statesRow}>
-          <button type="button" className={styles.sandboxBtnDisabled} disabled aria-disabled>
-            Disabled
-          </button>
-          <button type="button" className={styles.sandboxBtnDestructive}>
-            <Icon icon="solar:danger-triangle-linear" width={13} height={13} />
-            Destructive
-          </button>
+
+        {/* ── 프리뷰 ── */}
+        <div className={`${styles.sandboxCanvas} ${scope}`}>
+          {!css ? (
+            <p className={styles.sandboxPlaceholder}>
+              CSS가 없습니다 — 플러그인 데이터를 전송하면 실제 스타일이 표시됩니다.
+            </p>
+          ) : (
+            <button
+              type="button"
+              data-variant={selVariant}
+              data-size={selSize}
+              data-block={selBlock ? '' : undefined}
+              data-disabled={selDisabled ? '' : undefined}
+              aria-disabled={selDisabled || undefined}
+              className={`${scope} root`}
+              style={selBlock ? { width: '100%' } : undefined}
+            >
+              {name}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -123,7 +244,7 @@ function ButtonSandbox({ radixProps }: { radixProps: string | null }) {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version }: Props) {
+export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version, tokensCss }: Props) {
   const router = useRouter();
   const [codeTab, setCodeTab] = useState<CodeTab>('tsx');
   const [codeOpen, setCodeOpen] = useState(true);
@@ -145,7 +266,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
 
   const currentCode = codeTab === 'tsx' ? (tsx ?? '') : (css ?? '');
   const highlightedHtml = useHighlightedCode(currentCode, codeTab === 'css' ? 'css' : 'tsx');
-  const props = PROPS_BY_TYPE[detectedType ?? ''] ?? [];
+  const props = buildPropsFromTsx(tsx ?? '', detectedType ?? '');
   const usage = USAGE_BY_TYPE[detectedType ?? ''];
 
   const handleCopy = async () => {
@@ -189,7 +310,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Interactive Sandbox</h2>
         {detectedType === 'button' ? (
-          <ButtonSandbox radixProps={radixProps} />
+          <ButtonSandbox name={name} css={css} tokensCss={tokensCss} radixProps={radixProps} tsx={tsx} />
         ) : (
           <div className={styles.sandboxBg}>
             <div className={styles.sandboxCanvas}>

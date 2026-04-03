@@ -8,6 +8,7 @@ import { ensureProject } from '@/lib/sync/upsert-payload';
 import { eq, and } from 'drizzle-orm';
 import { runComponentEngine } from '@/lib/component-generator';
 import type { PluginComponentPayload } from '@/lib/component-generator';
+import { normalizePluginPayload } from '@/lib/component-generator/normalize-payload';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -51,7 +52,8 @@ export async function POST(req: Request) {
     data: PluginComponentPayload;
   };
 
-  const { figmaFileKey, figmaFileName, data } = body;
+  const { figmaFileKey, figmaFileName } = body;
+  const data = normalizePluginPayload(body.data as unknown as Record<string, unknown>);
 
   if (!data?.name || !data?.meta?.nodeId) {
     return NextResponse.json({ error: 'data.name and data.meta.nodeId are required' }, { status: 400, headers: CORS_HEADERS });

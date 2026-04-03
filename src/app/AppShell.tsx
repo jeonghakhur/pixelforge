@@ -28,8 +28,7 @@ function tabFromPath(pathname: string, section: Section): string {
     return match ? match[1] : 'color';
   }
   if (section === 'components') {
-    if (pathname === '/components/new') return 'new';
-    return 'list';
+    return '';
   }
   if (section === 'settings') {
     const match = pathname.match(/^\/settings\/?(\w*)/);
@@ -132,7 +131,7 @@ export default function AppShell({ children, userRole }: { children: React.React
         break;
       }
       case 'components':
-        router.push('/components/new');
+        router.push('/components');
         break;
       case 'screens':
         router.push('/screens');
@@ -154,11 +153,7 @@ export default function AppShell({ children, userRole }: { children: React.React
     if (activeSection === 'tokens') {
       router.push(`/tokens/${tabId}`);
     } else if (activeSection === 'components') {
-      if (tabId === 'new') {
-        router.push('/components/new');
-      } else {
-        router.push('/components/new');
-      }
+      router.push('/components');
     }
   }, [router, activeSection, setTab]);
 

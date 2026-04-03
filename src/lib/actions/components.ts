@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 import { components, componentFiles, componentNodeSnapshots, tokens, projects, histories } from '@/lib/db/schema';
 import { generateComponents, buildTokenContext } from '@/lib/generators/react';
+import { getActiveProjectId } from '@/lib/db/active-project';
 import { eq, asc, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
@@ -148,6 +149,27 @@ export async function getComponentsByProject(): Promise<ComponentRow[]> {
     .all();
 }
 
+// ===========================
+// Sandbox용 토큰 CSS
+// ===========================
+export async function getSandboxTokensCss(): Promise<string> {
+  const projectId = getActiveProjectId();
+  if (!projectId) return '';
+
+  const rows = db.select({ type: tokens.type, name: tokens.name, value: tokens.value, raw: tokens.raw })
+    .from(tokens)
+    .where(eq(tokens.projectId, projectId))
+    .all();
+
+  if (rows.length === 0) return '';
+
+  const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
+  return generateAllCssCode(rows as Parameters<typeof generateAllCssCode>[0]);
+}
+
+// ===========================
+// 삭제
+// ===========================
 export async function deleteComponent(id: string): Promise<void> {
   await db.delete(componentNodeSnapshots).where(eq(componentNodeSnapshots.componentId, id));
   await db.delete(componentFiles).where(eq(componentFiles.componentId, id));
@@ -183,12 +205,17 @@ export async function importComponentFromJson(
   const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return { error: 'Figma 토큰을 먼저 추출해주세요. 프로젝트 정보가 없습니다.', component: null };
 
+  // 플러그인 페이로드 정규화 (이름 추출, radixProps 변환)
+  const { normalizePluginPayload } = await import('@/lib/component-generator/normalize-payload');
+  const normalized = normalizePluginPayload(d);
+  const componentName = normalized.name;
+
   // 이름 중복 확인 — 있으면 버전 업
   const existing = db.select({ id: components.id, version: components.version })
-    .from(components).where(eq(components.name, d.name.trim())).get();
+    .from(components).where(eq(components.name, componentName)).get();
 
   const { runComponentEngine } = await import('@/lib/component-generator');
-  const result = runComponentEngine(d as unknown as Parameters<typeof runComponentEngine>[0]);
+  const result = runComponentEngine(normalized);
 
   const rawPayload = JSON.stringify(d);
   const contentHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
@@ -203,8 +230,8 @@ export async function importComponentFromJson(
     db.update(components).set({
       tsx: result.output?.tsx ?? null,
       scss: result.output?.css ?? null,
-      detectedType: typeof d.detectedType === 'string' ? d.detectedType : null,
-      radixProps: JSON.stringify(d.radixProps ?? {}),
+      detectedType: typeof normalized.detectedType === 'string' ? normalized.detectedType : null,
+      radixProps: JSON.stringify(normalized.radixProps ?? {}),
       contentHash,
       version,
       updatedAt: now,
@@ -220,13 +247,13 @@ export async function importComponentFromJson(
     db.insert(components).values({
       id: componentId,
       projectId: project.id,
-      name: d.name.trim(),
+      name: componentName,
       category,
       tsx: result.output?.tsx ?? null,
       scss: result.output?.css ?? null,
       nodePayload: rawPayload,
-      detectedType: typeof d.detectedType === 'string' ? d.detectedType : null,
-      radixProps: JSON.stringify(d.radixProps ?? {}),
+      detectedType: typeof normalized.detectedType === 'string' ? normalized.detectedType : null,
+      radixProps: JSON.stringify(normalized.radixProps ?? {}),
       contentHash,
       version,
       menuOrder: nextOrder,
