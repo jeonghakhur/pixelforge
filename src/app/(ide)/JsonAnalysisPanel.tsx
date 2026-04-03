@@ -190,6 +190,8 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
 
   const colorStyles = data.styles?.colors ?? [];
   const textStyles = data.styles?.texts ?? [];
+  const radiusItems = data.radius ?? [];
+  const spacingItems = data.spacing ?? [];
 
   // 임포트될 토큰 총 수 계산
   let totalColors = 0;
@@ -200,6 +202,8 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
     totalColors = colorStyles.length;
   }
   const totalTypo = textStyles.length;
+  const totalRadius = radiusItems.length;
+  const totalSpacing = spacingItems.length;
 
   return (
     <div className={styles.panel}>
@@ -246,6 +250,62 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
                 <CollectionBlock key={col.id} col={col} />
               ))}
             </div>
+          </section>
+        )}
+
+        {/* ── 최상위 배열 토큰 섹션 (radius, spacing) */}
+        {(radiusItems.length > 0 || spacingItems.length > 0) && (
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTitle}>Tokens</span>
+              <span className={styles.sectionCount}>{radiusItems.length + spacingItems.length}</span>
+            </div>
+
+            {radiusItems.length > 0 && (
+              <div className={styles.styleGroup}>
+                <span className={styles.styleGroupLabel}>
+                  <Icon icon="solar:crop-minimalistic-linear" width={11} height={11} />
+                  Radius {radiusItems.length}
+                </span>
+                <div className={styles.varList}>
+                  {radiusItems.map((r) => {
+                    const val = Object.values(r.valuesByMode)[0];
+                    return (
+                      <div key={r.id} className={styles.varRow}>
+                        <span className={styles.varNumIcon}>
+                          <Icon icon="solar:hashtag-linear" width={10} height={10} />
+                        </span>
+                        <span className={styles.varName}>{r.name}</span>
+                        <span className={styles.varValue}>{val}px</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {spacingItems.length > 0 && (
+              <div className={styles.styleGroup}>
+                <span className={styles.styleGroupLabel}>
+                  <Icon icon="solar:ruler-linear" width={11} height={11} />
+                  Spacing {spacingItems.length}
+                </span>
+                <div className={styles.varList}>
+                  {spacingItems.map((s) => {
+                    const val = Object.values(s.valuesByMode)[0];
+                    return (
+                      <div key={s.id} className={styles.varRow}>
+                        <span className={styles.varNumIcon}>
+                          <Icon icon="solar:hashtag-linear" width={10} height={10} />
+                        </span>
+                        <span className={styles.varName}>{s.name}</span>
+                        <span className={styles.varValue}>{val}px</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -319,6 +379,18 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
               <span className={styles.importChip}>
                 <Icon icon="solar:text-field-linear" width={11} height={11} />
                 Typography {totalTypo}
+              </span>
+            )}
+            {totalRadius > 0 && (
+              <span className={styles.importChip}>
+                <Icon icon="solar:crop-minimalistic-linear" width={11} height={11} />
+                Radius {totalRadius}
+              </span>
+            )}
+            {totalSpacing > 0 && (
+              <span className={styles.importChip}>
+                <Icon icon="solar:ruler-linear" width={11} height={11} />
+                Spacing {totalSpacing}
               </span>
             )}
           </div>

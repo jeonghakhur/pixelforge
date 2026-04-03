@@ -13,6 +13,16 @@ import { runTokenPipeline } from '@/lib/tokens/pipeline';
 interface JsonColor { r: number; g: number; b: number; a?: number }
 interface JsonVariableAlias { type: string; id: string }
 
+// 최상위 배열 토큰 항목 (radius, spacing 등 플러그인 직접 출력)
+interface TopLevelTokenItem {
+  id: string;
+  name: string;
+  resolvedType: string;
+  valuesByMode: Record<string, number>;
+  collectionId: string;
+  usageCount?: number;
+}
+
 export interface PixelForgeJson {
   variables?: {
     collections: Array<{
@@ -30,6 +40,9 @@ export interface PixelForgeJson {
       scopes?: string[];
     }>;
   };
+  // 플러그인이 최상위에 직접 배출하는 타입별 배열
+  radius?: TopLevelTokenItem[];
+  spacing?: TopLevelTokenItem[];
   styles?: {
     colors: Array<{
       id: string;
@@ -195,6 +208,32 @@ function parseJsonToNormalizedTokens(data: PixelForgeJson): NormalizedToken[] {
         name: text.name,
         value: `${fontFamily} ${fontSize}px`,
         raw: `${fontFamily} ${fontSize}px`,
+        mode: null,
+        collectionName: null,
+        alias: null,
+      });
+    }
+  }
+
+  // ── 최상위 배열 토큰 파싱 (radius, spacing)
+  const TOP_LEVEL_TYPES: Array<{ key: keyof PixelForgeJson; type: string }> = [
+    { key: 'radius', type: 'radius' },
+    { key: 'spacing', type: 'spacing' },
+  ];
+
+  for (const { key, type } of TOP_LEVEL_TYPES) {
+    const arr = data[key] as TopLevelTokenItem[] | undefined;
+    if (!Array.isArray(arr)) continue;
+    for (const item of arr) {
+      const modeId = Object.keys(item.valuesByMode)[0];
+      if (modeId === undefined) continue;
+      const val = item.valuesByMode[modeId];
+      if (typeof val !== 'number') continue;
+      result.push({
+        type,
+        name: item.name,
+        value: String(val),
+        raw: `${val}px`,
         mode: null,
         collectionName: null,
         alias: null,

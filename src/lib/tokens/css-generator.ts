@@ -17,7 +17,16 @@ const TYPE_LABEL: Record<string, string> = {
 const TYPE_ORDER = ['color', 'typography', 'spacing', 'radius'];
 
 function toVarName(tokenName: string, prefix: string): string {
-  return `--${prefix}-${tokenName.replace(/\//g, '-').replace(/\s+/g, '-').toLowerCase()}`;
+  let slug = tokenName
+    .replace(/[()]/g, '')
+    .replace(/\//g, '-')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+  // Remove redundant leading prefix segments (e.g. spacing/spacing-4 → --spacing-4)
+  while (slug.startsWith(`${prefix}-`)) {
+    slug = slug.slice(prefix.length + 1);
+  }
+  return `--${prefix}-${slug}`;
 }
 
 function extractDisplayValue(token: TokenRow, type: string): string {
@@ -41,7 +50,31 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
     const slashIdx = token.name.indexOf('/');
     const group = slashIdx >= 0 ? token.name.slice(0, slashIdx) : '';
     const varName = toVarName(token.name, prefix);
-    const value = extractDisplayValue(token, prefix === 'color' ? 'color' : 'other');
+
+    // Typography: parse JSON value → emit font shorthand + separate -ls variable
+    if (prefix === 'font') {
+      try {
+        const parsed = JSON.parse(token.value) as {
+          fontFamily?: string; fontWeight?: number; fontSize?: number;
+          lineHeight?: string; letterSpacing?: string;
+        };
+        if (parsed.fontFamily) {
+          const fontShorthand = `${parsed.fontWeight} ${parsed.fontSize}px/${parsed.lineHeight} '${parsed.fontFamily}'`;
+          if (!map.has(group)) map.set(group, []);
+          map.get(group)!.push({ varName, value: fontShorthand });
+          if (parsed.letterSpacing && parsed.letterSpacing !== '0') {
+            map.get(group)!.push({ varName: `${varName}-ls`, value: parsed.letterSpacing });
+          }
+          continue;
+        }
+      } catch { /* not JSON typography — fall through */ }
+    }
+
+    // String: wrap in quotes so value is valid for CSS content property
+    const value = token.type === 'string'
+      ? `"${(token.raw ?? token.value).replace(/"/g, '\\"')}"`
+      : extractDisplayValue(token, prefix === 'color' ? 'color' : 'other');
+
     if (!map.has(group)) map.set(group, []);
     map.get(group)!.push({ varName, value });
   }

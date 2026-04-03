@@ -15,6 +15,7 @@ import {
 import { getProjectInfo } from '@/lib/actions/tokens';
 import { extractTokensAction } from '@/lib/actions/project';
 import { useUIStore } from '@/stores/useUIStore';
+import SnapshotHistory from '../SnapshotHistory';
 import styles from './page.module.scss';
 
 // ===========================
@@ -306,6 +307,8 @@ export default function DiffPage() {
         </p>
       </div>
 
+
+      <SnapshotHistory />
 
       <>
         {/* ── Drift Detection ── */}
