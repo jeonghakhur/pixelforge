@@ -65,6 +65,22 @@ export interface GeneratorOutput {
   tsx: string
   /** 생성된 CSS Module 코드 (tokens.css 변수 활용) */
   css: string
+  /** 생성 과정에서 발견된 경고 (토큰 미매핑, 누락 상태 등) */
+  warnings: GeneratorWarning[]
+}
+
+export type WarningCode =
+  | 'UNMAPPED_COLOR'      // hex 값이 디자인 토큰으로 매핑되지 않음
+  | 'MISSING_STATE'       // 필수 state(hover/press/disabled)가 variants에 없음
+  | 'MISSING_SIZE'        // variantOptions에 있는 size가 variants 데이터에 없음
+  | 'NO_VARIANTS_DATA'    // variants 배열이 비어 있어 rootStyles로 폴백
+  | 'MISSING_COLOR'       // rest 상태에 background-color 없음
+
+export interface GeneratorWarning {
+  code: WarningCode
+  message: string
+  /** 관련 값 (예: 매핑 안 된 hex, 누락 state 이름) */
+  value?: string
 }
 
 export interface EngineResult {
