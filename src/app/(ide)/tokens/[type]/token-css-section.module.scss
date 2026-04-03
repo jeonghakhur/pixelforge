@@ -1,0 +1,361 @@
+@use '../../../../styles/variables' as *;
+
+// ── GitHub Dark 팔레트 (기존 css-preview.module.scss와 동일) ──
+$gh-bg:         #0d1117;
+$gh-elevated:   #161b22;
+$gh-border:     #30363d;
+$gh-border-alt: #21262d;
+$gh-text:       #e6edf3;
+$gh-muted:      #8b949e;
+$gh-blue:       #79c0ff;
+$gh-purple:     #d2a8ff;
+$gh-orange:     #ffa657;
+$gh-add-bg:     rgba(46, 160, 67, 0.15);
+$gh-add-fg:     #3fb950;
+$gh-remove-bg:  rgba(248, 81, 73, 0.15);
+$gh-remove-fg:  #f85149;
+
+// ── 섹션 컨테이너 ──────────────────────────────────────────
+.section {
+  margin-top: map-get($spacers, 5);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+// ── 블록 공통 (CSS 뷰어 / 히스토리 공유) ─────────────────────
+.block {
+  border: 1px solid $gh-border;
+  border-radius: 10px;
+  overflow: hidden;
+  background: $gh-bg;
+}
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: $gh-elevated;
+  border-bottom: 1px solid $gh-border;
+  gap: 12px;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: $font-family-mono;
+  font-size: 12px;
+  font-weight: 500;
+  color: $gh-text;
+}
+
+.blockMeta {
+  font-size: 12px;
+  color: $gh-muted;
+  flex-shrink: 0;
+}
+
+// ── CSS 뷰어 ─────────────────────────────────────────────────
+.codeWrap {
+  overflow: hidden;
+  transition: max-height 0.22s ease;
+  background: $gh-bg;
+}
+
+.codeTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-family-mono;
+  font-size: 12px;
+  line-height: 20px;
+  tab-size: 2;
+}
+
+.codeRow {
+  &:hover {
+    .lineNum  { background: rgba(110, 118, 129, 0.07); }
+    .codeLine { background: rgba(110, 118, 129, 0.07); }
+  }
+}
+
+// 현재 타입 섹션 강조
+.focusRow {
+  .lineNum  { opacity: 0.7; }
+
+  &:hover {
+    .lineNum  { background: rgba(56, 139, 253, 0.06); }
+    .codeLine { background: rgba(56, 139, 253, 0.06); }
+  }
+}
+
+// 숨겨진 라인 표시 (fold indicator)
+.foldCell {
+  padding: 4px 16px;
+  font-family: $font-family-mono;
+  font-size: 11px;
+  color: $gh-muted;
+  background: rgba(177, 186, 196, 0.04);
+  border-top: 1px dashed $gh-border-alt;
+  border-bottom: 1px dashed $gh-border-alt;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: default;
+}
+
+.lineNum {
+  width: 1%;
+  min-width: 48px;
+  padding: 0 16px 0 12px;
+  text-align: right;
+  color: $gh-muted;
+  background: $gh-bg;
+  border-right: 1px solid $gh-border-alt;
+  user-select: none;
+  vertical-align: top;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 20px;
+  opacity: 0.5;
+}
+
+.codeLine {
+  padding: 0 16px;
+  white-space: pre;
+  color: $gh-text;
+  background: $gh-bg;
+  width: 100%;
+  font-size: 12px;
+  line-height: 20px;
+
+  :global(.hljs-comment)        { color: $gh-muted; font-style: italic; }
+  :global(.hljs-attr),
+  :global(.hljs-variable),
+  :global(.hljs-property)       { color: $gh-blue; }
+  :global(.hljs-selector-id),
+  :global(.hljs-selector-class) { color: #7ee787; }
+  :global(.hljs-selector-tag),
+  :global(.hljs-keyword)        { color: #ff7b72; }
+  :global(.hljs-number),
+  :global(.hljs-literal)        { color: $gh-blue; }
+  :global(.hljs-string),
+  :global(.hljs-built_in)       { color: #a5d6ff; }
+  :global(.hljs-title)          { color: $gh-purple; }
+  :global(.hljs-meta)           { color: $gh-orange; }
+}
+
+// ── 복사 버튼 ────────────────────────────────────────────
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  background: rgba(177, 186, 196, 0.08);
+  border: 1px solid $gh-border;
+  border-radius: 6px;
+  color: $gh-muted;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba(177, 186, 196, 0.12);
+    color: $gh-text;
+    border-color: rgba(177, 186, 196, 0.3);
+  }
+}
+
+// ── expand/collapse 버튼 ──────────────────────────────────
+.expandBtns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.expandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(177, 186, 196, 0.1);
+  border: 1px solid rgba(177, 186, 196, 0.25);
+  border-radius: 5px;
+  color: $gh-text;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s, opacity 0.13s;
+
+  &:hover:not(:disabled) {
+    background: rgba(177, 186, 196, 0.2);
+    border-color: rgba(177, 186, 196, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    color: $gh-muted;
+    cursor: not-allowed;
+  }
+}
+
+// ── 히스토리 섹션 ──────────────────────────────────────────
+.historyEmpty {
+  padding: 20px 16px;
+  font-size: 12px;
+  color: $gh-muted;
+  text-align: center;
+}
+
+.historyLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 16px;
+  font-size: 12px;
+  color: $gh-muted;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 1s linear infinite; }
+
+// ── 히스토리 엔트리 ───────────────────────────────────────
+.entryList {
+  display: flex;
+  flex-direction: column;
+}
+
+.entry {
+  border-bottom: 1px solid $gh-border-alt;
+
+  &:last-child { border-bottom: none; }
+}
+
+.entryHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.13s;
+
+  &:hover { background: rgba(177, 186, 196, 0.05); }
+}
+
+.entryVersion {
+  font-family: $font-family-mono;
+  font-size: 11px;
+  font-weight: 600;
+  color: $gh-blue;
+  background: rgba(56, 139, 253, 0.1);
+  border: 1px solid rgba(56, 139, 253, 0.2);
+  padding: 1px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.entryDate {
+  font-size: 12px;
+  color: $gh-muted;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: $font-family-mono;
+}
+
+.chipAdd    { color: $gh-add-fg;    background: rgba(46, 160, 67, 0.15); }
+.chipRemove { color: $gh-remove-fg; background: rgba(248, 81, 73, 0.15); }
+.chipChange { color: $gh-orange;    background: rgba(255, 166, 87, 0.12); }
+
+.entryToggle {
+  color: $gh-muted;
+  flex-shrink: 0;
+  transition: transform 0.18s;
+
+  &.open { transform: rotate(180deg); }
+}
+
+// ── diff 라인 테이블 (GitHub 스타일) ─────────────────────────
+.diffTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-family-mono;
+  font-size: 12px;
+  line-height: 20px;
+  border-top: 1px solid $gh-border-alt;
+}
+
+.diffRow {
+  &.add    { background: $gh-add-bg; }
+  &.remove { background: $gh-remove-bg; }
+
+  &:hover {
+    &.add    { background: rgba(46, 160, 67, 0.22); }
+    &.remove { background: rgba(248, 81, 73, 0.22); }
+  }
+}
+
+.diffSign {
+  width: 20px;
+  min-width: 20px;
+  padding: 0 0 0 10px;
+  text-align: center;
+  font-weight: 700;
+  user-select: none;
+  vertical-align: top;
+  line-height: 20px;
+
+  .add &    { color: $gh-add-fg; }
+  .remove & { color: $gh-remove-fg; }
+}
+
+.diffLineNum {
+  width: 1%;
+  min-width: 40px;
+  padding: 0 12px 0 4px;
+  text-align: right;
+  user-select: none;
+  opacity: 0.5;
+  vertical-align: top;
+  white-space: nowrap;
+  line-height: 20px;
+  border-right: 1px solid $gh-border-alt;
+
+  .add &    { color: $gh-add-fg; }
+  .remove & { color: $gh-remove-fg; }
+}
+
+.diffCode {
+  padding: 0 16px;
+  white-space: pre;
+  width: 100%;
+  line-height: 20px;
+
+  .add &    { color: $gh-add-fg; }
+  .remove & { color: $gh-remove-fg; }
+}

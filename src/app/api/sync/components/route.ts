@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { validateApiKey } from '@/lib/auth/api-key';
-import { db } from '@/lib/db';
-import { components, componentFiles, componentNodeSnapshots, projects } from '@/lib/db/schema';
+import { db, sqlite } from '@/lib/db';
+import { components, componentFiles, componentNodeSnapshots, projects, histories } from '@/lib/db/schema';
 import { CORS_HEADERS } from '@/lib/sync/cors';
 import { ensureProject } from '@/lib/sync/upsert-payload';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
+import { runComponentEngine } from '@/lib/component-generator';
+import type { PluginComponentPayload } from '@/lib/component-generator';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -43,19 +45,156 @@ export async function GET(req: Request) {
 }
 
 // POST /api/sync/components
-// 컴포넌트 코드 생성 후 DB 저장/갱신
+// 컴포넌트 수신 + 코드 생성 + DB 저장
+//
+// Format A (플러그인 신규): component 객체에 meta 필드가 있는 경우
+//   { figmaFileKey, figmaFileName, component: PluginComponentPayload }
+// Format B (레거시): component 객체에 category 필드가 있는 경우
+//   { figmaFileKey, figmaFileName, component: { name, category, files, ... } }
 export async function POST(req: Request) {
   const apiKey = await validateApiKey(req);
   if (!apiKey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS_HEADERS });
 
-  const body = await req.json();
-  const { figmaFileKey, figmaFileName, component } = body;
+  const body = await req.json() as Record<string, unknown>;
+  const { figmaFileKey, figmaFileName, component } = body as {
+    figmaFileKey?: string;
+    figmaFileName?: string;
+    component?: Record<string, unknown>;
+  };
 
   if (!component) {
     return NextResponse.json({ error: 'component is required' }, { status: 400, headers: CORS_HEADERS });
   }
 
-  const { name, category, description, figmaNodeId, defaultStyleMode, files, nodeSnapshot } = component;
+  // ── Format A: 플러그인 신규 payload (meta 필드 존재) ──────────────
+  if (component['meta'] && typeof component['meta'] === 'object') {
+    const payload = component as unknown as PluginComponentPayload;
+    const resolvedFileKey = figmaFileKey ?? 'local-plugin';
+    const project = await ensureProject(resolvedFileKey, figmaFileName ?? resolvedFileKey);
+    const projectId = project.id;
+
+    // 변경 감지 (content_hash)
+    const rawPayload = JSON.stringify(payload);
+    const contentHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
+
+    const existing = await db
+      .select({ id: components.id, contentHash: components.contentHash, version: components.version })
+      .from(components)
+      .where(and(eq(components.projectId, projectId), eq(components.figmaNodeId, payload.meta.nodeId)))
+      .get();
+
+    if (existing?.contentHash === contentHash) {
+      return NextResponse.json(
+        { success: true, changed: false, componentId: existing.id, version: existing.version },
+        { headers: CORS_HEADERS },
+      );
+    }
+
+    // 코드 생성
+    const result = runComponentEngine(payload);
+
+    const now = new Date();
+    let componentId: string;
+    let version: number;
+
+    if (existing) {
+      componentId = existing.id;
+      version = (existing.version ?? 0) + 1;
+      sqlite.prepare(`
+        UPDATE components
+        SET tsx=?, scss=?, node_payload=?, detected_type=?, radix_props=?,
+            content_hash=?, version=?, updated_at=?
+        WHERE id=?
+      `).run(
+        result.output?.tsx ?? null,
+        result.output?.scss ?? null,
+        rawPayload,
+        payload.detectedType,
+        JSON.stringify(payload.radixProps),
+        contentHash,
+        version,
+        now.getTime(),
+        componentId,
+      );
+    } else {
+      componentId = crypto.randomUUID();
+      version = 1;
+      const allOrders = await db
+        .select({ menuOrder: components.menuOrder })
+        .from(components)
+        .where(eq(components.projectId, projectId))
+        .all();
+      const nextOrder = allOrders.length > 0
+        ? Math.max(...allOrders.map((r) => r.menuOrder)) + 1
+        : 0;
+
+      sqlite.prepare(`
+        INSERT INTO components
+          (id, project_id, figma_node_id, figma_file_key, name, category,
+           tsx, scss, node_payload, detected_type, radix_props,
+           content_hash, version, menu_order, is_visible)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+      `).run(
+        componentId,
+        projectId,
+        payload.meta.nodeId,
+        resolvedFileKey,
+        payload.name,
+        result.output?.category ?? 'action',
+        result.output?.tsx ?? null,
+        result.output?.scss ?? null,
+        rawPayload,
+        payload.detectedType,
+        JSON.stringify(payload.radixProps),
+        contentHash,
+        version,
+        nextOrder,
+      );
+    }
+
+    // node snapshot 저장 (이력)
+    await db.insert(componentNodeSnapshots).values({
+      id: crypto.randomUUID(),
+      componentId,
+      figmaNodeData: rawPayload,
+      trigger: existing ? 'update' : 'generate',
+    });
+
+    // 활동 이력
+    if (result.output) {
+      await db.insert(histories).values({
+        id: crypto.randomUUID(),
+        projectId,
+        action: 'generate_component',
+        summary: `${payload.name} 컴포넌트 생성 (${payload.detectedType}, v${version})`,
+        metadata: JSON.stringify({ name: payload.name, detectedType: payload.detectedType, version }),
+      });
+    }
+
+    return NextResponse.json(
+      {
+        success: result.success,
+        changed: true,
+        componentId,
+        version,
+        generated: result.success,
+        warnings: result.warnings,
+        error: result.error,
+      },
+      { headers: CORS_HEADERS },
+    );
+  }
+
+  // ── Format B: 레거시 payload ──────────────────────────────────────
+  const { name, category, description, figmaNodeId, defaultStyleMode, files, nodeSnapshot } = component as {
+    name?: string;
+    category?: 'action' | 'form' | 'navigation' | 'feedback';
+    description?: string;
+    figmaNodeId?: string;
+    defaultStyleMode?: 'css-modules' | 'styled' | 'html';
+    files?: Array<{ styleMode: 'css-modules' | 'styled' | 'html'; fileType: 'tsx' | 'css' | 'html'; fileName: string; content: string }>;
+    nodeSnapshot?: { figmaNodeData?: unknown; figmaVersion?: string; trigger?: 'generate' | 'update' };
+  };
 
   if (!name || !category) {
     return NextResponse.json({ error: 'component.name and component.category are required' }, { status: 400, headers: CORS_HEADERS });
@@ -165,6 +304,38 @@ export async function POST(req: Request) {
       figmaVersion: nodeSnapshot.figmaVersion ?? null,
       trigger: nodeSnapshot.trigger ?? 'generate',
     });
+
+    // nodeSnapshot 안에 PluginComponentPayload가 있으면 코드 생성
+    try {
+      const rawNodeData = typeof nodeSnapshot.figmaNodeData === 'string'
+        ? nodeSnapshot.figmaNodeData
+        : JSON.stringify(nodeSnapshot.figmaNodeData);
+      const nodeData = JSON.parse(rawNodeData) as Record<string, unknown>;
+
+      if (nodeData['detectedType'] && typeof nodeData['detectedType'] === 'string') {
+        const payload = nodeData as unknown as PluginComponentPayload;
+        const contentHash = crypto.createHash('sha256').update(rawNodeData).digest('hex');
+        const result = runComponentEngine(payload);
+
+        sqlite.prepare(`
+          UPDATE components
+          SET tsx=?, scss=?, node_payload=?, detected_type=?, radix_props=?,
+              content_hash=?, updated_at=?
+          WHERE id=?
+        `).run(
+          result.output?.tsx ?? null,
+          result.output?.scss ?? null,
+          rawNodeData,
+          payload.detectedType,
+          JSON.stringify(payload.radixProps ?? {}),
+          contentHash,
+          Date.now(),
+          componentId,
+        );
+      }
+    } catch (e) {
+      console.error('[Format B engine error]', e);
+    }
   }
 
   return NextResponse.json({ success: true, componentId, changed }, { headers: CORS_HEADERS });

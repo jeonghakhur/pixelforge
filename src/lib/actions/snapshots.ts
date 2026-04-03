@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db';
 import { tokens, projects, tokenSnapshots } from '@/lib/db/schema';
+import { getActiveProjectId } from '@/lib/db/active-project';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 import type { TokenRow } from '@/lib/actions/tokens';
@@ -209,6 +210,103 @@ export async function compareSnapshotsAction(
     : computeSnapshotDiff(newItems, oldItems);
 
   return { error: null, diff };
+}
+
+// ===========================
+// CSS 히스토리 (타입별 diff)
+// ===========================
+
+export interface CssDiffLine {
+  kind: 'add' | 'remove';
+  text: string;
+}
+
+export interface CssHistoryEntry {
+  id: string;
+  version: number;
+  createdAt: string;
+  added: number;
+  removed: number;
+  changed: number;
+  lines: CssDiffLine[];
+}
+
+/** TokenDiffItem → CSS 변수 선언 문자열 변환 */
+function toCssVarLine(name: string, type: string, rawValue: string | null | undefined): string {
+  const prefixMap: Record<string, string> = {
+    color: 'color', typography: 'font', spacing: 'spacing', radius: 'radius',
+  };
+  const prefix = prefixMap[type] ?? type;
+  let slug = name
+    .replace(/[()]/g, '')
+    .replace(/\//g, '-')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
+  while (slug.startsWith(`${prefix}-`)) {
+    slug = slug.slice(prefix.length + 1);
+  }
+  return `  --${prefix}-${slug}: ${rawValue ?? '?'};`;
+}
+
+export async function getCssHistoryForTypeAction(type: string): Promise<CssHistoryEntry[]> {
+  const projectId = getActiveProjectId();
+  if (!projectId) return [];
+
+  const rows = db.select({
+    id: tokenSnapshots.id,
+    version: tokenSnapshots.version,
+    diffSummary: tokenSnapshots.diffSummary,
+    createdAt: tokenSnapshots.createdAt,
+  })
+    .from(tokenSnapshots)
+    .where(eq(tokenSnapshots.projectId, projectId))
+    .orderBy(desc(tokenSnapshots.version))
+    .limit(10)
+    .all();
+
+  return rows
+    .filter((row) => row.diffSummary !== null)
+    .map((row) => {
+      const summary = JSON.parse(row.diffSummary!) as SnapshotDiffSummary;
+      const lines: CssDiffLine[] = [];
+
+      const filteredRemoved = (summary.removed ?? []).filter((i) => i.type === type);
+      const filteredChanged = (summary.changed ?? []).filter((i) => i.type === type);
+      const filteredAdded   = (summary.added   ?? []).filter((i) => i.type === type);
+
+      for (const item of filteredRemoved) {
+        lines.push({ kind: 'remove', text: toCssVarLine(item.name, item.type, item.oldRaw) });
+      }
+      for (const item of filteredChanged) {
+        lines.push({ kind: 'remove', text: toCssVarLine(item.name, item.type, item.oldRaw) });
+        lines.push({ kind: 'add',    text: toCssVarLine(item.name, item.type, item.newRaw) });
+      }
+      for (const item of filteredAdded) {
+        lines.push({ kind: 'add', text: toCssVarLine(item.name, item.type, item.newRaw) });
+      }
+
+      // countsByType는 구버전 스냅샷에 없을 수 있으므로 직접 집계
+      const counts = summary.countsByType?.[type] ?? {
+        added:   filteredAdded.length,
+        removed: filteredRemoved.length,
+        changed: filteredChanged.length,
+      };
+
+      const createdAt = row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : new Date((row.createdAt as unknown as number) * 1000).toISOString();
+
+      return {
+        id: row.id,
+        version: row.version,
+        createdAt,
+        added: counts.added,
+        removed: counts.removed,
+        changed: counts.changed,
+        lines,
+      };
+    })
+    .filter((e) => e.lines.length > 0);
 }
 
 // ===========================

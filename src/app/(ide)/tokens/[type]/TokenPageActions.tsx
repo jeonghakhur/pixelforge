@@ -62,6 +62,7 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
       <CssPreviewModal
         isOpen={cssPreviewOpen}
         onClose={() => setCssPreviewOpen(false)}
+        filterType={type}
       />
 
       <ConfirmDialog

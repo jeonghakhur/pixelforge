@@ -1,6 +1,6 @@
 import type { TokenRow } from '@/lib/actions/tokens';
 
-const TYPE_PREFIX: Record<string, string> = {
+export const TYPE_PREFIX: Record<string, string> = {
   color:      'color',
   typography: 'font',
   spacing:    'spacing',

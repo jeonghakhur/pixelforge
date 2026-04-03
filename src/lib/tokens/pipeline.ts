@@ -191,8 +191,8 @@ export async function runTokenPipeline(
     tokenCounts: JSON.stringify(tokenCounts),
     tokensData: JSON.stringify(allItems),
     diffSummary: JSON.stringify({
-      added:   diff.added.map((t)   => ({ name: t.name, type: t.type })),
-      removed: diff.removed.map((t) => ({ name: t.name, type: t.type })),
+      added:   diff.added.map((t)   => ({ name: t.name, type: t.type, newRaw: t.newRaw ?? null })),
+      removed: diff.removed.map((t) => ({ name: t.name, type: t.type, oldRaw: t.oldRaw ?? null })),
       changed: diff.changed.map((t) => ({ name: t.name, type: t.type, oldRaw: t.oldRaw ?? null, newRaw: t.newRaw ?? null })),
     }),
   });

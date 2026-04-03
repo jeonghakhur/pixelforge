@@ -67,6 +67,16 @@ export const components = sqliteTable('components', {
   defaultStyleMode: text('default_style_mode').notNull().default('css-modules'),
   menuOrder: integer('menu_order').notNull().default(0),
   isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(true),
+  /** 플러그인이 전송한 원본 payload JSON */
+  nodePayload: text('node_payload'),
+  /** 플러그인이 감지한 컴포넌트 타입 (button, table, tabs, dialog, ...) */
+  detectedType: text('detected_type'),
+  /** Radix 기반 props 제안 JSON (예: { variant: "ghost", size: "2" }) */
+  radixProps: text('radix_props'),
+  /** payload 변경 감지용 SHA-256 hash */
+  contentHash: text('content_hash'),
+  /** sync 버전 (동일 노드 재전송 시 증가) */
+  version: integer('version').notNull().default(1),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });

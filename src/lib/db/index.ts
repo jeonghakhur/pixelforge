@@ -155,6 +155,14 @@ function migrateColumns(): void {
     `ALTER TABLE screens ADD COLUMN display_order INTEGER;`,
     `ALTER TABLE screens ADD COLUMN display_order_key TEXT;`,
     `ALTER TABLE token_sources ADD COLUMN content_hash TEXT;`,
+    // component-generator 컬럼 추가
+    `ALTER TABLE components ADD COLUMN node_payload TEXT;`,
+    `ALTER TABLE components ADD COLUMN detected_type TEXT;`,
+    `ALTER TABLE components ADD COLUMN radix_props TEXT;`,
+    `ALTER TABLE components ADD COLUMN content_hash TEXT;`,
+    `ALTER TABLE components ADD COLUMN version INTEGER NOT NULL DEFAULT 1;`,
+    `ALTER TABLE components ADD COLUMN figma_node_id TEXT;`,
+    `ALTER TABLE components ADD COLUMN figma_file_key TEXT;`,
   ];
   for (const sql of alters) {
     try { sqlite.exec(sql); } catch { /* already exists — skip */ }
@@ -267,4 +275,4 @@ function migrateSyncPayloadsType(): void {
 migrateSyncPayloadsType();
 
 export const db = drizzle(sqlite, { schema });
-export { schema };
+export { schema, sqlite };

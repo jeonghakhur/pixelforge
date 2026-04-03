@@ -6,8 +6,8 @@ import hljs from 'highlight.js/lib/core';
 import cssLang from 'highlight.js/lib/languages/css';
 import 'highlight.js/styles/github-dark.css';
 import { Icon } from '@iconify/react';
-import { getAllTokensAction, type TokenRow } from '@/lib/actions/tokens';
-import { generateAllCssCode } from '@/lib/tokens/css-generator';
+import { getAllTokensAction, getTokensByType, type TokenRow } from '@/lib/actions/tokens';
+import { generateAllCssCode, generateCssCode } from '@/lib/tokens/css-generator';
 import styles from './css-preview.module.scss';
 
 hljs.registerLanguage('css', cssLang);
@@ -15,9 +15,11 @@ hljs.registerLanguage('css', cssLang);
 interface CssPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 특정 타입만 표시할 경우 지정 (예: 'color'). 미지정 시 전체 출력. */
+  filterType?: string;
 }
 
-export default function CssPreviewModal({ isOpen, onClose }: CssPreviewModalProps) {
+export default function CssPreviewModal({ isOpen, onClose, filterType }: CssPreviewModalProps) {
   const [allTokens, setAllTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -26,10 +28,9 @@ export default function CssPreviewModal({ isOpen, onClose }: CssPreviewModalProp
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    getAllTokensAction()
-      .then(setAllTokens)
-      .finally(() => setLoading(false));
-  }, [isOpen]);
+    const fetch = filterType ? getTokensByType(filterType) : getAllTokensAction();
+    fetch.then(setAllTokens).finally(() => setLoading(false));
+  }, [isOpen, filterType]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,7 +45,10 @@ export default function CssPreviewModal({ isOpen, onClose }: CssPreviewModalProp
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  const cssCode = useMemo(() => generateAllCssCode(allTokens), [allTokens]);
+  const cssCode = useMemo(
+    () => filterType ? generateCssCode(allTokens, filterType) : generateAllCssCode(allTokens),
+    [allTokens, filterType],
+  );
 
   const lines = useMemo(
     () => cssCode.split('\n').map((line) => hljs.highlight(line, { language: 'css' }).value),
@@ -62,7 +66,7 @@ export default function CssPreviewModal({ isOpen, onClose }: CssPreviewModalProp
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tokens.css';
+    a.download = filterType ? `tokens-${filterType}.css` : 'tokens.css';
     a.click();
     URL.revokeObjectURL(url);
   };

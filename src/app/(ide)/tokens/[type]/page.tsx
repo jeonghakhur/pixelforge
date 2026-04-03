@@ -1,13 +1,17 @@
 export const dynamic = 'force-dynamic';
 
+import fs from 'fs';
+import path from 'path';
 import { getTokensByType } from '@/lib/actions/tokens';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
+import { generateCssCode } from '@/lib/tokens/css-generator';
 import ColorGrid from './ColorGrid';
 import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
 import RadiusList from './RadiusList';
 import GenericTokenList from './GenericTokenList';
 import TokenPageActions from './TokenPageActions';
+import TokenCssSection from './TokenCssSection';
 import { Icon } from '@iconify/react';
 import styles from './page.module.scss';
 
@@ -27,6 +31,13 @@ export default async function TokenPage({ params }: TokenPageProps) {
   };
 
   const tokenRows = await getTokensByType(type);
+  const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
+
+  let fullCss = '';
+  try {
+    const cssPath = path.join(process.cwd(), 'design-tokens', 'tokens.css');
+    if (fs.existsSync(cssPath)) fullCss = fs.readFileSync(cssPath, 'utf-8');
+  } catch { /* ignore */ }
 
   return (
     <div className={styles.page}>
@@ -52,15 +63,18 @@ export default async function TokenPage({ params }: TokenPageProps) {
           </div>
         </div>
       ) : (
-        <div data-token-grid>
-          {type === 'color'      && <ColorGrid tokens={tokenRows} />}
-          {type === 'typography' && <TypographyList tokens={tokenRows} />}
-          {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
-          {type === 'radius'     && <RadiusList tokens={tokenRows} />}
-          {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
-            <GenericTokenList tokens={tokenRows} />
-          )}
-        </div>
+        <>
+          <div data-token-grid>
+            {type === 'color'      && <ColorGrid tokens={tokenRows} />}
+            {type === 'typography' && <TypographyList tokens={tokenRows} />}
+            {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
+            {type === 'radius'     && <RadiusList tokens={tokenRows} />}
+            {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
+              <GenericTokenList tokens={tokenRows} />
+            )}
+          </div>
+          <TokenCssSection type={type} initialCss={initialCss} fullCss={fullCss} />
+        </>
       )}
     </div>
   );
