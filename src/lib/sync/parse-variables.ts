@@ -295,12 +295,12 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
     }
   }
 
-  // styles.textStyles / styles.headings / styles.texts / styles.fonts → typography
+  // styles.textStyles / styles.headings / styles.texts → typography
+  // (styles.fonts는 FontData[] 포맷으로 fontName/fontSize 없음 — 별도 처리 필요 시 확장)
   const textStyleArrays = [
     ...(payload.styles?.textStyles ?? []),
     ...(payload.styles?.headings ?? []),
     ...(payload.styles?.texts ?? []),
-    ...(payload.styles?.fonts ?? []),
   ];
   const seenTextIds = new Set<string>();
   for (const ts of textStyleArrays) {

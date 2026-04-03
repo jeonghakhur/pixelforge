@@ -64,6 +64,24 @@ export default function TokenDashboard({
   const setTab = useUIStore((s) => s.setTab);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
+  // 플러그인 sync 완료 시 자동 갱신 (5초 폴링)
+  useEffect(() => {
+    let current = tokenVersion;
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/sync/version');
+        if (!res.ok) return;
+        const { version } = await res.json() as { version: number | null };
+        if (version !== null && version !== current) {
+          current = version;
+          router.refresh();
+        }
+      } catch { /* 네트워크 오류 무시 */ }
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [router, tokenVersion]);
+
   useEffect(() => {
     if (!isImportOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -274,7 +292,7 @@ export default function TokenDashboard({
       </div>
 
       {/* ── JSON 임포트 모달 ── */}
-      {isImportOpen && (
+      {isImportOpen && createPortal(
         <div className={styles.modalOverlay} aria-hidden="true">
           <button
             type="button"
@@ -306,7 +324,8 @@ export default function TokenDashboard({
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
