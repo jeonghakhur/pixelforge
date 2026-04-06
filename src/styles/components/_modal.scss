@@ -16,7 +16,6 @@
   justify-content: center;
   padding: map-get($spacers, 5);
   background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
   animation: modalOverlayIn 0.2s ease-out;
 }
 
