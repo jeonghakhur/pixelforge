@@ -331,10 +331,10 @@ function classifyColorGroup(token: TokenRow): string {
   // Colors/Effects → Primitives 뒤 별도 그룹
   if (subGroup === 'Effects') return '1-primitives-effects';
 
-  // Semantic: alias 참조 + 시맨틱 경로
-  if (isAlias) {
-    const orderIdx = SEMANTIC_ORDER.indexOf(subGroup);
-    const sortKey = orderIdx >= 0 ? String(orderIdx).padStart(2, '0') : '99';
+  // Semantic: alias 참조이거나 시맨틱 경로(Background/Text/Foreground/Border)
+  const semanticIdx = SEMANTIC_ORDER.indexOf(subGroup);
+  if (isAlias || semanticIdx >= 0) {
+    const sortKey = semanticIdx >= 0 ? String(semanticIdx).padStart(2, '0') : '99';
     return `2-semantic-${sortKey}-${subGroup}`;
   }
 
