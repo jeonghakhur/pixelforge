@@ -1,13 +1,5 @@
 {
-  "meta": {
-    "nodeId": "3287:428579",
-    "nodeName": "Size=xl, Hierarchy=Primary, State=Default, Icon only=False",
-    "nodeType": "COMPONENT",
-    "masterId": null,
-    "masterName": null,
-    "figmaFileId": "0:0",
-    "figmaFileKey": "91AZ5QzLIwI0ztH4VzCR4B"
-  },
+  "meta": null,
   "data": {
     "name": "Buttons/Button",
     "meta": {
@@ -128,7 +120,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -150,7 +142,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -247,7 +239,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -270,7 +262,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -370,7 +362,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -395,7 +387,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -458,7 +450,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -486,7 +478,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -520,7 +512,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-hover)",
+            "color": "var(--text-brand-secondary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -542,7 +534,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -564,7 +556,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-hover)",
+            "color": "var(--text-tertiary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -586,7 +578,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -602,7 +594,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -624,7 +616,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -646,7 +638,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -670,7 +662,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -873,7 +865,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px",
@@ -896,7 +888,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px",
@@ -919,7 +911,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px"
@@ -936,7 +928,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px"
@@ -953,7 +945,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px",
@@ -972,7 +964,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "10px 10px 10px 10px",
@@ -1025,7 +1017,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1047,7 +1039,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1144,7 +1136,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1167,7 +1159,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1267,7 +1259,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1292,7 +1284,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1355,7 +1347,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1383,7 +1375,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1417,7 +1409,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-hover)",
+            "color": "var(--text-brand-secondary_hover)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1439,7 +1431,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1461,7 +1453,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-hover)",
+            "color": "var(--text-tertiary_hover)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1483,7 +1475,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1499,7 +1491,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1521,7 +1513,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1543,7 +1535,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1567,7 +1559,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -1770,7 +1762,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px",
@@ -1793,7 +1785,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px",
@@ -1816,7 +1808,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px"
@@ -1833,7 +1825,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px"
@@ -1850,7 +1842,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px",
@@ -1869,7 +1861,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "12px 12px 12px 12px",
@@ -1922,7 +1914,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -1944,7 +1936,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2041,7 +2033,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2064,7 +2056,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2164,7 +2156,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2189,7 +2181,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2252,7 +2244,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2280,7 +2272,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2314,7 +2306,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-hover)",
+            "color": "var(--text-brand-secondary_hover)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2336,7 +2328,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2358,7 +2350,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-hover)",
+            "color": "var(--text-tertiary_hover)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2380,7 +2372,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "16px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2396,7 +2388,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2418,7 +2410,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2440,7 +2432,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2464,7 +2456,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "6px",
@@ -2667,7 +2659,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px",
@@ -2690,7 +2682,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px",
@@ -2713,7 +2705,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px"
@@ -2730,7 +2722,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px"
@@ -2747,7 +2739,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px",
@@ -2766,7 +2758,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "14px 14px 14px 14px",
@@ -2847,7 +2839,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2869,7 +2861,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2891,7 +2883,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -2913,7 +2905,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3084,7 +3076,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3107,7 +3099,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3130,7 +3122,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3153,7 +3145,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3328,7 +3320,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3353,7 +3345,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3378,7 +3370,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3403,7 +3395,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3513,7 +3505,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3541,7 +3533,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3569,7 +3561,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3597,7 +3589,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3631,7 +3623,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-hover)",
+            "color": "var(--text-brand-secondary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3653,7 +3645,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-brand-secondary-hover)",
+            "color": "var(--text-brand-secondary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3675,7 +3667,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3697,7 +3689,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-brand-secondary-700)",
+            "color": "var(--text-brand-secondary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3719,7 +3711,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-hover)",
+            "color": "var(--text-tertiary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3741,7 +3733,7 @@
         "childStyles": {
           "placeholder": {},
           "Text": {
-            "color": "var(--text-tertiary-hover)",
+            "color": "var(--text-tertiary_hover)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3763,7 +3755,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3785,7 +3777,7 @@
         "childStyles": {
           "Buttons/Button loading icon": {},
           "Text": {
-            "color": "var(--text-tertiary-600)",
+            "color": "var(--text-tertiary)",
             "font-size": "14px",
             "font-family": "Inter",
             "font-weight": "Semi Bold",
@@ -3801,7 +3793,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3823,7 +3815,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3845,7 +3837,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3867,7 +3859,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3889,7 +3881,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3913,7 +3905,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3937,7 +3929,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -3961,7 +3953,7 @@
           "icon only": "False"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "gap": "4px",
@@ -4343,7 +4335,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4366,7 +4358,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4389,7 +4381,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4412,7 +4404,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-brand-solid-hover)",
+          "background-color": "var(--bg-brand-solid_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4435,7 +4427,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px"
@@ -4452,7 +4444,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px"
@@ -4469,7 +4461,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px"
@@ -4486,7 +4478,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px"
@@ -4503,7 +4495,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4522,7 +4514,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4541,7 +4533,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
@@ -4560,7 +4552,7 @@
           "icon only": "True"
         },
         "styles": {
-          "background-color": "var(--bg-primary-hover)",
+          "background-color": "var(--bg-primary_hover)",
           "border-radius": "8px",
           "display": "flex",
           "padding": "8px 8px 8px 8px",
