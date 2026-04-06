@@ -10,6 +10,22 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   const response = NextResponse.next();
+
+  response.headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.figma.com https://s3-alpha.figma.com",
+    "connect-src 'self' https://api.figma.com",
+    "font-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; '));
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
   const session = await getIronSession<SessionData>(request, response, SESSION_OPTIONS);
 
   if (isPublic && session.isLoggedIn) {

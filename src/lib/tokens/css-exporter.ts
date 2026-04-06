@@ -1,3 +1,6 @@
+/**
+ * @deprecated css-generator.ts 사용. 이 파일은 레거시 Bootstrap 5-Variable 패턴용으로, 향후 삭제 예정.
+ */
 import type { TokenRow } from '@/lib/actions/tokens';
 import { TOKEN_TYPE_MAP } from './token-types';
 

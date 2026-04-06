@@ -16,6 +16,18 @@ const TYPE_LABEL: Record<string, string> = {
 
 const TYPE_ORDER = ['color', 'typography', 'spacing', 'radius'];
 
+/** CSS 인젝션 방지: 세미콜론, 중괄호 등 구조 파괴 문자 제거 */
+function sanitizeCssValue(value: string): string {
+  return value.replace(/[;{}\\]/g, '').replace(/\/\*/g, '').replace(/\*\//g, '');
+}
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
+const RGBA_RE = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/;
+
+function isValidCssColor(value: string): boolean {
+  return HEX_COLOR_RE.test(value) || RGBA_RE.test(value) || value.startsWith('var(--');
+}
+
 function toVarName(tokenName: string, prefix: string): string {
   return `--${prefix}-${tokenName.replace(/\//g, '-').replace(/\s+/g, '-').toLowerCase()}`;
 }
@@ -24,12 +36,15 @@ function extractDisplayValue(token: TokenRow, type: string): string {
   if (type === 'color') {
     try {
       const parsed = JSON.parse(token.value) as { hex?: string };
-      return parsed.hex ?? token.raw ?? token.value;
+      const hex = parsed.hex ?? token.raw ?? token.value;
+      if (!isValidCssColor(hex)) return '#000000';
+      return sanitizeCssValue(hex);
     } catch {
-      return token.raw ?? token.value;
+      const raw = token.raw ?? token.value;
+      return isValidCssColor(raw) ? sanitizeCssValue(raw) : '#000000';
     }
   }
-  return token.raw ?? token.value;
+  return sanitizeCssValue(token.raw ?? token.value);
 }
 
 interface VarLine { varName: string; value: string }
@@ -65,7 +80,7 @@ export function generateCssCode(tokens: TokenRow[], type: string): string {
   for (let gi = 0; gi < groups.length; gi++) {
     const { groupName, items } = groups[gi];
     if (gi > 0) lines.push('');
-    if (groupName) lines.push(`  /* ${groupName} */`);
+    if (groupName) lines.push(`  /* ${sanitizeCssComment(groupName)} */`);
     for (const { varName, value } of items) {
       lines.push(`  ${varName}: ${value};`);
     }
@@ -73,6 +88,11 @@ export function generateCssCode(tokens: TokenRow[], type: string): string {
 
   lines.push('}');
   return lines.join('\n');
+}
+
+/** CSS 코멘트 인젝션 방지 */
+function sanitizeCssComment(text: string): string {
+  return text.replace(/\*\//g, '').replace(/\/\*/g, '');
 }
 
 function formatDate(): string {
@@ -119,7 +139,7 @@ export function generateAllCssCode(allTokens: TokenRow[]): string {
     for (let gi = 0; gi < groups.length; gi++) {
       const { groupName, items } = groups[gi];
       if (gi > 0) lines.push('');
-      if (groupName) lines.push(`  /* ${groupName} */`);
+      if (groupName) lines.push(`  /* ${sanitizeCssComment(groupName)} */`);
       for (const { varName, value } of items) {
         lines.push(`  ${varName}: ${value};`);
       }

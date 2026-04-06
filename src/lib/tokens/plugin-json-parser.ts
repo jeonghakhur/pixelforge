@@ -188,7 +188,19 @@ export interface PluginImportResult {
   tokenCount: number;
 }
 
+const MAX_JSON_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_TOKEN_COUNT = 10_000;
+
 export function parsePluginJson(jsonString: string): PluginImportResult {
+  if (jsonString.length > MAX_JSON_SIZE) {
+    return {
+      error: `JSON 파일이 너무 큽니다. (최대 ${MAX_JSON_SIZE / 1024 / 1024}MB)`,
+      format: 'unknown',
+      tokens: [],
+      tokenCount: 0,
+    };
+  }
+
   try {
     const parsed = JSON.parse(jsonString);
     const format = detectFormat(parsed);
@@ -216,6 +228,15 @@ export function parsePluginJson(jsonString: string): PluginImportResult {
         format,
         tokens: [],
         tokenCount: 0,
+      };
+    }
+
+    if (tokens.length > MAX_TOKEN_COUNT) {
+      return {
+        error: `토큰 수가 너무 많습니다. (${tokens.length}개, 최대 ${MAX_TOKEN_COUNT.toLocaleString()}개)`,
+        format,
+        tokens: [],
+        tokenCount: tokens.length,
       };
     }
 

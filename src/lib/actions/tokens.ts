@@ -9,7 +9,7 @@ import { getFigmaToken } from '@/lib/config';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import { generateTokensCss } from '@/lib/tokens/css-exporter';
+import { generateAllCssCode } from '@/lib/tokens/css-generator';
 
 export interface TokenRow {
   id: string;
@@ -171,10 +171,7 @@ export async function exportTokensCssAction(): Promise<CssExportResult> {
   }
 
   const project = db.select({ name: projects.name }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
-  const css = generateTokensCss(allTokens as TokenRow[], {
-    fileName: project?.name ?? 'Design Tokens',
-    extractedAt: new Date().toISOString(),
-  });
+  const css = generateAllCssCode(allTokens as TokenRow[]);
 
   return { error: null, css, tokenCount: allTokens.length };
 }

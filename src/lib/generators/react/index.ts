@@ -48,6 +48,13 @@ export function generateComponents(ids: string[], ctx: TokenContext): GeneratedC
   });
 }
 
+/** fontFamily 값 새니타이징: 싱글쿼트 이스케이프 + 구조 파괴 방지 */
+function sanitizeFontFamily(raw: string): string {
+  return raw.replace(/'/g, '').replace(/[;{}\\]/g, '').replace(/\/\*/g, '');
+}
+
+const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
+
 export function buildTokenContext(
   tokens: Array<{ type: string; value: string; name: string }>,
 ): TokenContext {
@@ -58,12 +65,14 @@ export function buildTokenContext(
       if (token.type === 'color') {
         const parsed = JSON.parse(token.value) as { hex?: string; rgba?: { r: number; g: number; b: number } };
         const name = token.name.toLowerCase();
-        // primary 색상 우선 탐색
         if (name.includes('primary') || name.includes('accent') || name.includes('brand')) {
-          if (parsed.hex) {
+          if (parsed.hex && HEX_RE.test(parsed.hex)) {
             ctx.primaryColor = parsed.hex;
             if (parsed.rgba) {
-              ctx.primaryColorRgb = `${parsed.rgba.r}, ${parsed.rgba.g}, ${parsed.rgba.b}`;
+              const { r, g, b } = parsed.rgba;
+              if ([r, g, b].every((v) => Number.isFinite(v) && v >= 0 && v <= 255)) {
+                ctx.primaryColorRgb = `${r}, ${g}, ${b}`;
+              }
             }
           }
         }
@@ -71,14 +80,15 @@ export function buildTokenContext(
 
       if (token.type === 'radius') {
         const parsed = JSON.parse(token.value) as { value?: number };
-        if (parsed.value !== undefined) {
+        if (typeof parsed.value === 'number' && Number.isFinite(parsed.value) && parsed.value >= 0) {
           const name = token.name.toLowerCase();
+          const px = `${parsed.value}px`;
           if (name.includes('sm') || name.includes('small')) {
-            ctx.borderRadiusSm = `${parsed.value}px`;
+            ctx.borderRadiusSm = px;
           } else if (name.includes('lg') || name.includes('large')) {
-            ctx.borderRadiusLg = `${parsed.value}px`;
+            ctx.borderRadiusLg = px;
           } else {
-            ctx.borderRadius = `${parsed.value}px`;
+            ctx.borderRadius = px;
           }
         }
       }
@@ -87,8 +97,13 @@ export function buildTokenContext(
         const parsed = JSON.parse(token.value) as { fontFamily?: string; fontSize?: number };
         const name = token.name.toLowerCase();
         if (name.includes('base') || name.includes('body')) {
-          if (parsed.fontFamily) ctx.fontFamily = `'${parsed.fontFamily}', -apple-system, system-ui, sans-serif`;
-          if (parsed.fontSize) ctx.baseFontSize = `${parsed.fontSize}px`;
+          if (parsed.fontFamily) {
+            const safe = sanitizeFontFamily(parsed.fontFamily);
+            ctx.fontFamily = `'${safe}', -apple-system, system-ui, sans-serif`;
+          }
+          if (typeof parsed.fontSize === 'number' && Number.isFinite(parsed.fontSize) && parsed.fontSize > 0) {
+            ctx.baseFontSize = `${parsed.fontSize}px`;
+          }
         }
       }
 
@@ -97,7 +112,9 @@ export function buildTokenContext(
         const name = token.name.toLowerCase();
         if (name.includes('base') || name.includes('spacer')) {
           const val = parsed.gap ?? parsed.paddingTop;
-          if (val) ctx.spacer = `${val}px`;
+          if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+            ctx.spacer = `${val}px`;
+          }
         }
       }
     } catch {

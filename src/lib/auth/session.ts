@@ -8,7 +8,16 @@ export interface SessionData {
   isLoggedIn: boolean;
 }
 
-const secret = process.env.SESSION_SECRET ?? 'pixelforge-dev-secret-key-32chars!!';
+function getSecret(): string {
+  const env = process.env.SESSION_SECRET;
+  if (env && env.length >= 32) return env;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET 환경변수를 설정하세요. (최소 32자)');
+  }
+  return 'pf-dev-only-do-not-use-in-prod!!';
+}
+
+const secret = getSecret();
 
 export const SESSION_OPTIONS: SessionOptions = {
   password: secret,
