@@ -70,11 +70,12 @@ export interface GeneratorOutput {
 }
 
 export type WarningCode =
-  | 'UNMAPPED_COLOR'      // hex 값이 디자인 토큰으로 매핑되지 않음
-  | 'MISSING_STATE'       // 필수 state(hover/press/disabled)가 variants에 없음
-  | 'MISSING_SIZE'        // variantOptions에 있는 size가 variants 데이터에 없음
-  | 'NO_VARIANTS_DATA'    // variants 배열이 비어 있어 rootStyles로 폴백
-  | 'MISSING_COLOR'       // rest 상태에 background-color 없음
+  | 'UNMAPPED_COLOR'        // hex 값이 디자인 토큰으로 매핑되지 않음
+  | 'MISSING_STATE'         // 필수 state(hover/press/disabled)가 variants에 없음
+  | 'MISSING_SIZE'          // variantOptions에 있는 size가 variants 데이터에 없음
+  | 'NO_VARIANTS_DATA'      // variants 배열이 비어 있어 rootStyles로 폴백
+  | 'MISSING_COLOR'         // rest 상태에 background-color 없음
+  | 'BLOCK_STYLE_MISMATCH'  // block=true/false 변형 간 스타일 불일치
 
 export interface GeneratorWarning {
   code: WarningCode

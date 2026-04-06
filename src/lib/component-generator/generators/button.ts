@@ -1,5 +1,5 @@
 import type { PluginComponentPayload, GeneratorOutput, GeneratorWarning } from '../types';
-import { mapCssValue } from '../css-var-mapper';
+import { mapCssValue, mapRadiusValue } from '../css-var-mapper';
 
 type VariantEntry = NonNullable<PluginComponentPayload['variants']>[number];
 
@@ -48,12 +48,22 @@ function isRawHex(value: string): boolean {
 
 const ICON_CHILD_NAMES = new Set(['search', 'icon', 'arrow', 'chevron', 'arrow-right'])
 
+/**
+ * 자식 텍스트 노드의 색상을 추출한다.
+ *
+ * [플러그인 quirk] Figma 플러그인이 TEXT 노드의 fill(글자색)을
+ * CSS `color` 대신 `background-color` 키로 전달하는 경우가 있다.
+ * 따라서 `color`를 먼저 시도하고, 없으면 `background-color`를 텍스트 색으로 사용한다.
+ * 아이콘 자식(search, arrow-right 등)은 제외한다.
+ */
 function extractChildTextColor(
   childStyles: Record<string, Record<string, string>>,
 ): string | null {
   for (const [key, cs] of Object.entries(childStyles)) {
     if (ICON_CHILD_NAMES.has(key.toLowerCase())) continue
-    if (cs.color)             return mapValue(cs.color)
+    // 표준 CSS color 키 우선
+    if (cs.color) return mapValue(cs.color)
+    // 플러그인이 텍스트 fill을 background-color로 전달하는 경우 (버그 1 대응)
     if (cs['background-color']) return mapValue(cs['background-color'])
   }
   return null
@@ -68,15 +78,77 @@ interface StateStyle {
   opacity: string | null
 }
 
+/**
+ * disabled 상태의 opacity를 결정론적으로 추출한다. (버그 5 대응)
+ * 3순위: 텍스트 자식 → 아이콘 자식 → rootStyles
+ */
+function extractDisabledOpacity(
+  childStyles: Record<string, Record<string, string>>,
+  rootStyles: Record<string, string>,
+): string | null {
+  // 1순위: 텍스트 자식의 opacity
+  for (const [key, cs] of Object.entries(childStyles)) {
+    if (!ICON_CHILD_NAMES.has(key.toLowerCase()) && cs.opacity) return cs.opacity
+  }
+  // 2순위: 아이콘 자식의 opacity
+  for (const [key, cs] of Object.entries(childStyles)) {
+    if (ICON_CHILD_NAMES.has(key.toLowerCase()) && cs.opacity) return cs.opacity
+  }
+  // 3순위: root styles의 opacity
+  return rootStyles.opacity ?? null
+}
+
+/** non-disabled state: opacity 불필요 */
 function toStateStyle(v: VariantEntry): StateStyle {
   const s = v.styles
-  const childOpacity =
-    Object.values(v.childStyles).find(cs => cs.opacity)?.opacity ?? null
   return {
     bg:      s['background-color'] ? mapValue(s['background-color']) : null,
     color:   extractChildTextColor(v.childStyles),
     border:  s['border'] ?? s['border-color'] ?? null,
-    opacity: childOpacity ?? s.opacity ?? null,
+    opacity: null,
+  }
+}
+
+/** disabled state 전용: opacity 3-tier 추출 */
+function toDisabledStateStyle(v: VariantEntry): StateStyle {
+  const s = v.styles
+  return {
+    bg:      s['background-color'] ? mapValue(s['background-color']) : null,
+    color:   extractChildTextColor(v.childStyles),
+    border:  s['border'] ?? s['border-color'] ?? null,
+    opacity: extractDisabledOpacity(v.childStyles, s),
+  }
+}
+
+/**
+ * block=true / block=false 변형 쌍의 스타일이 일치하는지 검증한다.
+ * 불일치 시 BLOCK_STYLE_MISMATCH 경고를 발행한다.
+ */
+function deduplicateByBlock(
+  variants: VariantEntry[],
+  blockKey: string,
+  warnings: GeneratorWarning[],
+): void {
+  const withBlock    = variants.filter(v => v.properties[blockKey]?.toLowerCase() === 'true')
+  const withoutBlock = variants.filter(v => v.properties[blockKey]?.toLowerCase() !== 'true')
+
+  for (const blockV of withBlock) {
+    const otherProps = { ...blockV.properties }
+    delete otherProps[blockKey]
+
+    const match = withoutBlock.find(v => {
+      const props = { ...v.properties }
+      delete props[blockKey]
+      return JSON.stringify(props) === JSON.stringify(otherProps)
+    })
+
+    if (match && JSON.stringify(blockV.styles) !== JSON.stringify(match.styles)) {
+      warnings.push({
+        code: 'BLOCK_STYLE_MISMATCH',
+        message: `block=true/false 변형 간 스타일 불일치: ${JSON.stringify(otherProps)}`,
+        value: blockKey,
+      })
+    }
   }
 }
 
@@ -113,6 +185,7 @@ function warnMissingState(
 function extractStateColorsByState(
   variants: VariantEntry[],
   stateKey: string,
+  warnings: GeneratorWarning[],
   blockKey?: string,
 ): Map<string, StateStyle> {
   const map = new Map<string, StateStyle>()
@@ -123,7 +196,7 @@ function extractStateColorsByState(
   for (const v of base) {
     const state = v.properties[stateKey]?.toLowerCase()
     if (!state || map.has(state)) continue
-    map.set(state, toStateStyle(v))
+    map.set(state, state === 'disabled' ? toDisabledStateStyle(v) : toStateStyle(v))
   }
   return map
 }
@@ -207,6 +280,7 @@ function extractAppearanceSchemes(
   variants: VariantEntry[],
   appearanceKey: string,
   stateKey: string,
+  warnings: GeneratorWarning[],
   blockKey?: string,
 ): AppearanceScheme[] {
   const base = blockKey
@@ -223,7 +297,8 @@ function extractAppearanceSchemes(
         e => e.properties[appearanceKey] === appearanceValue
           && e.properties[stateKey]?.toLowerCase() === state,
       )
-      return v ? toStateStyle(v) : null
+      if (!v) return null
+      return state === 'disabled' ? toDisabledStateStyle(v) : toStateStyle(v)
     }
 
     const rest = getState('rest')
@@ -305,15 +380,19 @@ function buildSizeCSSRules(
   for (const v of variants) {
     const size = v.properties[sizeKey]
     if (!size || sizeMap.has(size)) continue
+    // rest 상태 기준 (색상 제외한 레이아웃 값만 추출)
     if (stateKey && v.properties[stateKey]?.toLowerCase() !== 'rest') continue
+    // block=true/false는 레이아웃(width)만 다르고 padding·radius·gap은 동일 (이슈 3 참고)
+    // block=false를 대표값으로 사용
     if (blockKey && v.properties[blockKey]?.toLowerCase() === 'true') continue
 
     const s = v.styles
     const lines: string[] = []
-    if (s.padding)          lines.push(`  padding: ${mapValue(s.padding)};`)
-    if (s['border-radius']) lines.push(`  border-radius: ${mapValue(s['border-radius'])};`)
-    if (s.gap)              lines.push(`  gap: ${mapValue(s.gap)};`)
-    if (s.height)           lines.push(`  min-height: ${mapValue(s.height)};`)
+    if (s.padding) lines.push(`  padding: ${mapValue(s.padding)};`)
+    // border-radius: raw px → 토큰 변수 매핑 (개선 6)
+    if (s['border-radius']) lines.push(`  border-radius: ${mapRadiusValue(s['border-radius'])};`)
+    if (s.gap) lines.push(`  gap: ${mapValue(s.gap)};`)
+    // height는 variant styles가 아닌 root styles에만 존재 → 여기서 추출 불필요 (버그 2 수정)
 
     if (lines.length) sizeMap.set(size, `.root[data-size='${size}'] {\n${lines.join('\n')}\n}`)
   }
@@ -375,6 +454,11 @@ export function generateButton(payload: PluginComponentPayload): GeneratorOutput
 
   const hasBlock = dims.blockKey !== undefined
 
+  // block=true/false 스타일 일관성 검증
+  if (dims.blockKey) {
+    deduplicateByBlock(variants, dims.blockKey, warnings)
+  }
+
   // ── 색상 스킴 CSS ─────────────────────────────────────────────────────
   let colorSchemeCSS = ''
 
@@ -390,11 +474,11 @@ export function generateButton(payload: PluginComponentPayload): GeneratorOutput
     }
   } else if (dims.stateKey && appearanceValues.length === 0) {
     // state만 있음 → 단일 색상 스킴
-    const stateMap = extractStateColorsByState(variants, dims.stateKey, dims.blockKey)
+    const stateMap = extractStateColorsByState(variants, dims.stateKey, warnings, dims.blockKey)
     colorSchemeCSS  = buildSingleSchemeCSS(stateMap, warnings, name)
   } else if (dims.stateKey && appearanceKey) {
     // appearance + state 매트릭스
-    const schemes  = extractAppearanceSchemes(variants, appearanceKey, dims.stateKey, dims.blockKey)
+    const schemes  = extractAppearanceSchemes(variants, appearanceKey, dims.stateKey, warnings, dims.blockKey)
     colorSchemeCSS = buildMultiSchemeCSS(appearanceKey, schemes, warnings, name)
   }
 
