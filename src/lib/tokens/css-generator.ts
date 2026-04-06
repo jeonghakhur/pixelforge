@@ -79,6 +79,12 @@ export function toVarName(tokenName: string, prefix: string): string {
     while (slug.startsWith(`${prefix}-`)) {
       slug = slug.slice(prefix.length + 1);
     }
+    // font prefix 특수 처리: "family-font-family-display" → "family-display"
+    // Figma path "Font family/font-family-display" → slug "font-family-font-family-display"
+    // prefix "font" strip 후 "family-font-family-display" → 내부 "font-family-" 반복 제거
+    if (prefix === 'font' && slug.startsWith('family-font-family-')) {
+      slug = slug.replace('family-font-family-', 'family-');
+    }
     // 복수형 제거: shadows- → shadow prefix와 중복, backdrop-blurs- → blur
     slug = deduplicateSlugSegments(slug, prefix);
     return `--${prefix}-${slug}`;
@@ -218,7 +224,15 @@ function resolveAliasRef(rawVar: string): string {
       return `var(--${colorSlugToVarName(slug)})`;
     }
 
-    // 3. 나머지 (spacing, radius 등)는 그대로
+    // 3. spacing alias → layout-spacing 리매핑 (spacing 0~64만 존재, 80+ → layout-spacing)
+    if (slug.startsWith('spacing-')) {
+      const numMatch = slug.match(/^spacing-(\d+)$/);
+      if (numMatch && parseInt(numMatch[1]) >= 80) {
+        return `var(--layout-${slug})`;
+      }
+    }
+
+    // 4. 나머지 그대로
     return `var(--${slug})`;
   });
 }
