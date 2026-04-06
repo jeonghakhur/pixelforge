@@ -30,6 +30,15 @@ function applyTheme(resolved: ResolvedTheme): void {
   document.documentElement.dataset.theme = resolved;
 }
 
+// Sync notification
+interface SyncAlert {
+  type: 'tokens' | 'component';
+  name?: string;
+  count?: number;
+  version?: number;
+  action?: 'create' | 'update';
+}
+
 type DriftSeverity = 'none' | 'warning' | 'critical';
 
 interface DriftCounts {
@@ -45,7 +54,10 @@ interface UIState {
   activeSection: Section;
   activeTab: string;
   tokenRevision: number;
+  componentRevision: number;
   preloadUrl: string | null;
+  // Sync alert
+  syncAlert: SyncAlert | null;
   // Drift detection
   driftSeverity: DriftSeverity;
   driftCounts: DriftCounts;
@@ -55,6 +67,8 @@ interface UIState {
   setSection: (section: Section) => void;
   setTab: (tab: string) => void;
   invalidateTokens: () => void;
+  invalidateComponents: () => void;
+  setSyncAlert: (alert: SyncAlert | null) => void;
   setPreloadUrl: (url: string | null) => void;
   setDrift: (counts: DriftCounts, checkedAt: string) => void;
   clearDrift: () => void;
@@ -66,7 +80,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   activeSection: 'home',
   activeTab: '',
   tokenRevision: 0,
+  componentRevision: 0,
   preloadUrl: null,
+  syncAlert: null,
   driftSeverity: 'none',
   driftCounts: { newInFigma: 0, removedFromFigma: 0, valueChanged: 0, total: 0 },
   lastDriftCheck: null,
@@ -123,6 +139,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   setTab: (tab) => set({ activeTab: tab }),
 
   invalidateTokens: () => set((s) => ({ tokenRevision: s.tokenRevision + 1 })),
+  invalidateComponents: () => set((s) => ({ componentRevision: s.componentRevision + 1 })),
+  setSyncAlert: (alert) => set({ syncAlert: alert }),
   setPreloadUrl: (url) => set({ preloadUrl: url }),
 
   setDrift: (counts, checkedAt) => {

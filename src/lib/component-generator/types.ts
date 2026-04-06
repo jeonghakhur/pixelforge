@@ -14,6 +14,7 @@ export interface PluginComponentPayload {
     masterId: string | null
     masterName: string | null
     figmaFileId: string
+    figmaFileKey?: string
   }
   /** 루트 노드 CSS 속성 */
   styles: Record<string, string>
@@ -76,6 +77,7 @@ export type WarningCode =
   | 'NO_VARIANTS_DATA'      // variants 배열이 비어 있어 rootStyles로 폴백
   | 'MISSING_COLOR'         // rest 상태에 background-color 없음
   | 'BLOCK_STYLE_MISMATCH'  // block=true/false 변형 간 스타일 불일치
+  | 'UNKNOWN_STATE'         // STATE_CSS_MAP에 정의되지 않은 state → 폴백 셀렉터 사용
 
 export interface GeneratorWarning {
   code: WarningCode
@@ -89,4 +91,6 @@ export interface EngineResult {
   output: GeneratorOutput | null
   warnings: string[]
   error?: string
+  /** 보정된 detectedType (layout→button 등). DB 저장 시 이 값 사용 */
+  resolvedType: string
 }

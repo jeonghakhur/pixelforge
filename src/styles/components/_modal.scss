@@ -2,8 +2,10 @@
 @use '../mixins' as *;
 
 // ===========================
-// 모달 — Bootstrap _modal.scss 참조
+// Modal — Untitled UI 패턴 기반 variant 시스템
 // ===========================
+
+// ── Overlay ──────────────────────────────────────────────────────────
 
 .modal-overlay {
   position: fixed;
@@ -12,21 +14,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: map-get($spacers, 4);
-  background-color: rgba(0, 0, 0, 0.6);
+  padding: map-get($spacers, 5);
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
   animation: modalOverlayIn 0.2s ease-out;
 }
+
+// ── Content container ────────────────────────────────────────────────
 
 .modal-content {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 400px;
   max-height: calc(100dvh - #{map-get($spacers, 8)});
   overflow-y: auto;
   background-color: var(--bg-surface);
   border: 1px solid var(--glass-border);
   border-radius: $border-radius-xl;
-  box-shadow: $box-shadow-lg;
+  box-shadow:
+    0 20px 24px -4px rgba(0, 0, 0, 0.08),
+    0 8px 8px -4px rgba(0, 0, 0, 0.03);
   animation: modalContentIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:focus {
@@ -34,7 +41,8 @@
   }
 }
 
-.modal-sm   { max-width: 360px; }
+// Size variants
+.modal-sm   { max-width: 400px; }
 .modal-lg   { max-width: 640px; }
 .modal-xl   { max-width: 800px; }
 .modal-wide {
@@ -43,24 +51,47 @@
 
   .modal-header {
     padding: map-get($spacers, 2) map-get($spacers, 4);
-    border-bottom: none;
   }
 }
 
+// ── Header ───────────────────────────────────────────────────────────
+
 .modal-header {
-  @include flex-between;
-  padding: map-get($spacers, 4) map-get($spacers, 5);
-  border-bottom: 1px solid var(--border-color);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 4) map-get($spacers, 4) 0;
+}
+
+.modal-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: map-get($spacers, 5); // 닫기 버튼 공간 확보
 }
 
 .modal-title {
-  font-size: $font-size-lg;
+  font-size: 1rem;
   font-weight: $font-weight-semibold;
   color: var(--text-primary);
+  line-height: 1.5;
 }
 
+.modal-description {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+// Close — 우상단 절대 위치, 얇은 X
 .modal-close {
-  @include flex-center;
+  position: absolute;
+  top: map-get($spacers, 3);
+  right: map-get($spacers, 3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
   padding: 0;
@@ -70,7 +101,6 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: $transition-fast;
-  flex-shrink: 0;
 
   &:hover {
     background-color: var(--glass-highlight);
@@ -83,18 +113,204 @@
   }
 }
 
-.modal-body {
-  padding: map-get($spacers, 5);
-}
+// ── Featured icon — 정사각 border 박스 (Untitled UI 스큐어모픽) ─────
 
-.modal-footer {
+.modal-icon {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: map-get($spacers, 2);
-  padding: map-get($spacers, 3) map-get($spacers, 5);
-  border-top: 1px solid var(--border-color);
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: $border-radius;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
 }
+
+// ── Variant colors ───────────────────────────────────────────────────
+
+.modal-content[data-variant='success'] .modal-icon {
+  color: $success;
+  border-color: rgba($success, 0.3);
+}
+
+.modal-content[data-variant='warning'] .modal-icon {
+  color: $warning;
+  border-color: rgba($warning, 0.3);
+}
+
+.modal-content[data-variant='destructive'] .modal-icon {
+  color: $danger;
+  border-color: rgba($danger, 0.3);
+}
+
+.modal-content[data-variant='default'] .modal-icon {
+  color: $info;
+  border-color: rgba($info, 0.3);
+}
+
+// ── Body ─────────────────────────────────────────────────────────────
+
+.modal-body {
+  padding: map-get($spacers, 4);
+}
+
+// ── Actions (footer) ─────────────────────────────────────────────────
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 5) map-get($spacers, 4) map-get($spacers, 4);
+}
+
+// Layout variants
+.modal-actions[data-layout='horizontal'] {
+  justify-content: flex-end;
+}
+
+.modal-actions[data-layout='horizontal-fill'] {
+  .modal-btn {
+    flex: 1;
+  }
+}
+
+.modal-actions[data-layout='vertical'] {
+  flex-direction: column;
+
+  .modal-btn {
+    width: 100%;
+  }
+}
+
+.modal-actions[data-layout='checkbox'] {
+  justify-content: space-between;
+
+  .modal-actions-extra {
+    display: flex;
+    align-items: center;
+    gap: map-get($spacers, 2);
+    font-size: $font-size-sm;
+    color: var(--text-secondary);
+  }
+
+  .modal-actions-buttons {
+    display: flex;
+    gap: map-get($spacers, 2);
+  }
+}
+
+// ── Button styles — Untitled UI 스큐어모픽 ───────────────────────────
+
+.modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  line-height: 1.25;
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  font-family: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// Cancel
+.modal-btn-cancel {
+  background: var(--glass-highlight);
+  border: 1px solid var(--text-muted);
+  color: var(--text-primary);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--text-secondary);
+  }
+}
+
+// Confirm
+.modal-btn-confirm {
+  background: $accent-dim;
+  border: none;
+  color: $white;
+
+  &:hover {
+    background: $accent;
+  }
+}
+
+// Destructive confirm
+.modal-content[data-variant='destructive'] .modal-btn-confirm {
+  background: darken(#f87171, 8%);
+
+  &:hover {
+    background: $danger;
+  }
+}
+
+// ── Responsive ───────────────────────────────────────────────────────
+
+@media (max-width: map-get($breakpoints, sm)) {
+  .modal-overlay {
+    padding: map-get($spacers, 2);
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    border-radius: $border-radius-xl $border-radius-xl 0 0;
+    max-height: 90dvh;
+    animation: modalContentSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-sm,
+  .modal-lg,
+  .modal-xl {
+    max-width: 100%;
+  }
+
+  .modal-actions[data-layout='horizontal-fill'] {
+    flex-direction: column-reverse;
+
+    .modal-btn {
+      width: 100%;
+    }
+  }
+
+  .modal-actions[data-layout='checkbox'] {
+    flex-direction: column;
+    align-items: stretch;
+
+    .modal-actions-extra {
+      order: 1;
+      justify-content: center;
+      padding-top: map-get($spacers, 2);
+    }
+
+    .modal-actions-buttons {
+      flex-direction: column-reverse;
+
+      .modal-btn {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// ── Animations ───────────────────────────────────────────────────────
 
 @keyframes modalOverlayIn {
   from { opacity: 0; }
@@ -109,5 +325,16 @@
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalContentSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

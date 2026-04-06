@@ -6,33 +6,62 @@ type VariantEntry = NonNullable<PluginComponentPayload['variants']>[number];
 // ── 차원 분류 ─────────────────────────────────────────────────────────────
 //
 // variantOptions 키를 역할별로 분류한다.
-//   state:  rest/hover/press/disabled → CSS pseudo-class / data-disabled
-//   size:   xsmall/small/...         → padding·radius·gap 규칙
-//   block:  true/false               → width: 100%
-//   나머지: 색상·스타일 variant       → CSS data-attribute selector
+//   state:    rest/hover/press/disabled 또는 Default/Hover/Focused/Disabled/Loading
+//   size:     xs/sm/md/lg/xl 또는 xsmall/small/...
+//   block:    true/false               → width: 100%
+//   iconOnly: False/True               → 정사각 padding, gap 제거
+//   나머지:   색상·스타일 variant       → CSS data-attribute selector (hierarchy 등)
 
 interface DimensionKeys {
   stateKey:       string | undefined
   sizeKey:        string | undefined
   blockKey:       string | undefined
+  iconOnlyKey:    string | undefined
   appearanceKeys: string[]
 }
 
 function classifyDimensions(variantOptions: Record<string, string[]>): DimensionKeys {
   const keys = Object.keys(variantOptions)
-  const lower = (k: string) => k.toLowerCase()
+  const normalize = (k: string) => k.toLowerCase().replace(/\s+/g, '')
   return {
-    stateKey:       keys.find(k => lower(k) === 'state'),
-    sizeKey:        keys.find(k => lower(k) === 'size'),
-    blockKey:       keys.find(k => lower(k) === 'block'),
-    appearanceKeys: keys.filter(k => !['state', 'size', 'block'].includes(lower(k))),
+    stateKey:       keys.find(k => normalize(k) === 'state'),
+    sizeKey:        keys.find(k => normalize(k) === 'size'),
+    blockKey:       keys.find(k => normalize(k) === 'block'),
+    iconOnlyKey:    keys.find(k => normalize(k) === 'icononly'),
+    appearanceKeys: keys.filter(k =>
+      !['state', 'size', 'block', 'icononly'].includes(normalize(k)),
+    ),
   }
 }
 
-// ── CSS 값 변환 ───────────────────────────────────────────────────────────
+// ── State → CSS 셀렉터 매핑 ──────────────────────────────────────────────
 //
-// Figma Variables가 바인딩된 경우: var(--X) → mapCssValue() 로 시맨틱 변수 치환
-// 바인딩이 없는 경우: raw 값(hex, px 등)을 그대로 사용 + 경고
+// JSON 구조의 state 값을 그대로 사용한다 (정규화 없음).
+// variants에 존재하는 state만 CSS가 생성되고, 매핑에 없는 state는 폴백.
+
+interface StateCssMapping {
+  selector: string      // '' = base rule (.root)
+  extra?: string        // 추가 CSS 속성
+}
+
+const STATE_CSS_MAP: Record<string, StateCssMapping> = {
+  // 기존 구조 호환 (Primary.node.json)
+  'rest':     { selector: '' },
+  'hover':    { selector: ':hover:not([data-disabled])' },
+  'press':    { selector: ':active:not([data-disabled])', extra: 'transform: scale(0.98);' },
+  'disabled': { selector: '[data-disabled]', extra: 'cursor: not-allowed;\n  pointer-events: none;' },
+  // Untitled UI 구조 (Button.node.json)
+  'default':  { selector: '' },
+  'focused':  { selector: ':focus-visible:not([data-disabled])' },
+  'loading':  { selector: '[data-loading]', extra: 'pointer-events: none;' },
+}
+
+/** base rule이 되는 state인지 (셀렉터 '') */
+function isBaseState(state: string): boolean {
+  return STATE_CSS_MAP[state]?.selector === ''
+}
+
+// ── CSS 값 변환 ───────────────────────────────────────────────────────────
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
@@ -46,7 +75,7 @@ function isRawHex(value: string): boolean {
 
 // ── 자식 텍스트 색상 추출 ────────────────────────────────────────────────
 
-const ICON_CHILD_NAMES = new Set(['search', 'icon', 'arrow', 'chevron', 'arrow-right'])
+const ICON_CHILD_NAMES = new Set(['search', 'icon', 'arrow', 'chevron', 'arrow-right', 'placeholder'])
 
 /**
  * 자식 텍스트 노드의 색상을 추출한다.
@@ -54,13 +83,15 @@ const ICON_CHILD_NAMES = new Set(['search', 'icon', 'arrow', 'chevron', 'arrow-r
  * [플러그인 quirk] Figma 플러그인이 TEXT 노드의 fill(글자색)을
  * CSS `color` 대신 `background-color` 키로 전달하는 경우가 있다.
  * 따라서 `color`를 먼저 시도하고, 없으면 `background-color`를 텍스트 색으로 사용한다.
- * 아이콘 자식(search, arrow-right 등)은 제외한다.
+ * 아이콘/placeholder 자식은 제외한다.
  */
 function extractChildTextColor(
   childStyles: Record<string, Record<string, string>>,
 ): string | null {
   for (const [key, cs] of Object.entries(childStyles)) {
     if (ICON_CHILD_NAMES.has(key.toLowerCase())) continue
+    // 로딩 아이콘 제외
+    if (key.toLowerCase().includes('loading')) continue
     // 표준 CSS color 키 우선
     if (cs.color) return mapValue(cs.color)
     // 플러그인이 텍스트 fill을 background-color로 전달하는 경우 (버그 1 대응)
@@ -81,21 +112,23 @@ interface StateStyle {
 /**
  * disabled 상태의 opacity를 결정론적으로 추출한다. (버그 5 대응)
  * 3순위: 텍스트 자식 → 아이콘 자식 → rootStyles
+ * + variant.styles에 직접 있는 경우도 처리 (Untitled UI 패턴)
  */
 function extractDisabledOpacity(
   childStyles: Record<string, Record<string, string>>,
   rootStyles: Record<string, string>,
 ): string | null {
+  // 0순위: variant.styles에 직접 opacity가 있는 경우 (Untitled UI)
+  if (rootStyles.opacity) return rootStyles.opacity
   // 1순위: 텍스트 자식의 opacity
   for (const [key, cs] of Object.entries(childStyles)) {
-    if (!ICON_CHILD_NAMES.has(key.toLowerCase()) && cs.opacity) return cs.opacity
+    if (!ICON_CHILD_NAMES.has(key.toLowerCase()) && !key.toLowerCase().includes('loading') && cs.opacity) return cs.opacity
   }
   // 2순위: 아이콘 자식의 opacity
   for (const [key, cs] of Object.entries(childStyles)) {
     if (ICON_CHILD_NAMES.has(key.toLowerCase()) && cs.opacity) return cs.opacity
   }
-  // 3순위: root styles의 opacity
-  return rootStyles.opacity ?? null
+  return null
 }
 
 /** non-disabled state: opacity 불필요 */
@@ -109,7 +142,7 @@ function toStateStyle(v: VariantEntry): StateStyle {
   }
 }
 
-/** disabled state 전용: opacity 3-tier 추출 */
+/** disabled state 전용: opacity 추출 */
 function toDisabledStateStyle(v: VariantEntry): StateStyle {
   const s = v.styles
   return {
@@ -168,30 +201,23 @@ function warnUnmappedHex(
   }
 }
 
-function warnMissingState(
-  warnings: GeneratorWarning[],
-  state: string,
-  context: string,
-): void {
-  warnings.push({
-    code: 'MISSING_STATE',
-    message: `${context}: '${state}' 상태 데이터가 variants에 없습니다`,
-    value: state,
-  })
-}
+// ── State 스타일 추출 ────────────────────────────────────────────────────
 
-// ── Case A: appearance 차원 없음 (state만으로 색상 구분) ──────────────────
-
-function extractStateColorsByState(
+function extractStateStyles(
   variants: VariantEntry[],
   stateKey: string,
   warnings: GeneratorWarning[],
   blockKey?: string,
+  iconOnlyKey?: string,
 ): Map<string, StateStyle> {
   const map = new Map<string, StateStyle>()
-  const base = blockKey
+  // block=true, iconOnly=true 제외하여 대표 스타일 추출
+  let base = blockKey
     ? variants.filter(v => v.properties[blockKey]?.toLowerCase() !== 'true')
     : variants
+  if (iconOnlyKey) {
+    base = base.filter(v => v.properties[iconOnlyKey]?.toLowerCase() !== 'true')
+  }
 
   for (const v of base) {
     const state = v.properties[stateKey]?.toLowerCase()
@@ -201,79 +227,74 @@ function extractStateColorsByState(
   return map
 }
 
-function buildSingleSchemeCSS(
+// ── CSS 생성: 단일 색상 스킴 (state만으로 구분) ─────────────────────────
+
+function buildStateCSS(
   stateMap: Map<string, StateStyle>,
+  selectorPrefix: string,
   warnings: GeneratorWarning[],
   name: string,
 ): string {
   const rules: string[] = []
 
-  // rest → base
-  const rest = stateMap.get('rest')
-  if (rest) {
+  for (const [state, style] of stateMap) {
+    const mapping = STATE_CSS_MAP[state]
+    if (!mapping) {
+      warnings.push({
+        code: 'UNKNOWN_STATE',
+        message: `'${state}' state의 CSS 셀렉터가 정의되지 않음 → [data-state='${state}'] 폴백`,
+        value: state,
+      })
+      // 폴백 셀렉터
+      const lines: string[] = []
+      if (style.bg) lines.push(`  background: ${style.bg};`)
+      if (style.color) lines.push(`  color: ${style.color};`)
+      if (style.border) lines.push(`  border: ${style.border.startsWith('1px') ? style.border : `1px solid ${style.border}`};`)
+      if (style.opacity) lines.push(`  opacity: ${style.opacity};`)
+      if (lines.length) rules.push(`${selectorPrefix}[data-state='${state}'] {\n${lines.join('\n')}\n}`)
+      continue
+    }
+
+    const sel = mapping.selector === ''
+      ? selectorPrefix
+      : `${selectorPrefix}${mapping.selector}`
+
     const lines: string[] = []
-    if (rest.bg) {
-      lines.push(`  background: ${rest.bg};`)
-      warnUnmappedHex(warnings, rest.bg, `${name} rest.bg`)
-    } else {
-      warnings.push({ code: 'MISSING_COLOR', message: `${name}: rest 상태에 background-color가 없습니다` })
+    if (style.bg) {
+      lines.push(`  background: ${style.bg};`)
+      warnUnmappedHex(warnings, style.bg, `${name} ${state}.bg`)
+    } else if (isBaseState(state)) {
+      // base state에 bg 없는 것은 투명 버튼 (Tertiary, Link 계열) → 정상
     }
-    if (rest.color) {
-      lines.push(`  color: ${rest.color};`)
-      warnUnmappedHex(warnings, rest.color, `${name} rest.color`)
+    if (style.color) {
+      lines.push(`  color: ${style.color};`)
+      warnUnmappedHex(warnings, style.color, `${name} ${state}.color`)
     }
-    if (rest.border) lines.push(`  border: ${rest.border.startsWith('1px') ? rest.border : `1px solid ${rest.border}`};`)
-    if (lines.length) rules.push(`.root {\n${lines.join('\n')}\n}`)
-  } else {
-    warnMissingState(warnings, 'rest', name)
-  }
-
-  // hover
-  const hover = stateMap.get('hover')
-  if (hover?.bg) {
-    const borderLine = hover.border ? `\n  border: ${hover.border};` : ''
-    rules.push(`.root:hover:not([data-disabled]) {\n  background: ${hover.bg};${borderLine}\n}`)
-    warnUnmappedHex(warnings, hover.bg, `${name} hover.bg`)
-  } else {
-    warnMissingState(warnings, 'hover', name)
-  }
-
-  // press → :active
-  const press = stateMap.get('press')
-  if (press?.bg) {
-    rules.push(`.root:active:not([data-disabled]) {\n  background: ${press.bg};\n  transform: scale(0.98);\n}`)
-    warnUnmappedHex(warnings, press.bg, `${name} press.bg`)
-  } else {
-    warnMissingState(warnings, 'press', name)
-  }
-
-  // disabled
-  const disabled = stateMap.get('disabled')
-  if (disabled) {
-    const lines: string[] = []
-    if (disabled.opacity) lines.push(`  opacity: ${disabled.opacity};`)
-    if (disabled.bg) {
-      lines.push(`  background: ${disabled.bg};`)
-      warnUnmappedHex(warnings, disabled.bg, `${name} disabled.bg`)
+    if (style.border) {
+      lines.push(`  border: ${style.border.startsWith('1px') ? style.border : `1px solid ${style.border}`};`)
     }
-    if (disabled.color) lines.push(`  color: ${disabled.color};`)
-    lines.push(`  cursor: not-allowed;`, `  pointer-events: none;`)
-    rules.push(`.root[data-disabled] {\n${lines.join('\n')}\n}`)
-  } else {
-    warnMissingState(warnings, 'disabled', name)
+    if (style.opacity) lines.push(`  opacity: ${style.opacity};`)
+    if (mapping.extra) lines.push(`  ${mapping.extra}`)
+
+    if (lines.length) rules.push(`${sel} {\n${lines.join('\n')}\n}`)
   }
 
   return rules.join('\n\n')
 }
 
-// ── Case B: appearance 차원 있음 ─────────────────────────────────────────
+function buildSingleSchemeCSS(
+  stateMap: Map<string, StateStyle>,
+  warnings: GeneratorWarning[],
+  name: string,
+): string {
+  return buildStateCSS(stateMap, '.root', warnings, name)
+}
+
+// ── CSS 생성: appearance 차원 있음 ──────────────────────────────────────
 
 interface AppearanceScheme {
   appearanceValue: string
-  rest:     StateStyle
-  hover:    StateStyle | null
-  press:    StateStyle | null
-  disabled: StateStyle | null
+  states: Map<string, StateStyle>
 }
 
 function extractAppearanceSchemes(
@@ -282,33 +303,28 @@ function extractAppearanceSchemes(
   stateKey: string,
   warnings: GeneratorWarning[],
   blockKey?: string,
+  iconOnlyKey?: string,
 ): AppearanceScheme[] {
-  const base = blockKey
+  let base = blockKey
     ? variants.filter(v => v.properties[blockKey]?.toLowerCase() !== 'true')
     : variants
+  if (iconOnlyKey) {
+    base = base.filter(v => v.properties[iconOnlyKey]?.toLowerCase() !== 'true')
+  }
 
   const appearanceValues = [
     ...new Set(base.map(v => v.properties[appearanceKey]).filter(Boolean)),
   ]
 
   return appearanceValues.map(appearanceValue => {
-    const getState = (state: string): StateStyle | null => {
-      const v = base.find(
-        e => e.properties[appearanceKey] === appearanceValue
-          && e.properties[stateKey]?.toLowerCase() === state,
-      )
-      if (!v) return null
-      return state === 'disabled' ? toDisabledStateStyle(v) : toStateStyle(v)
+    const states = new Map<string, StateStyle>()
+    for (const v of base) {
+      if (v.properties[appearanceKey] !== appearanceValue) continue
+      const state = v.properties[stateKey]?.toLowerCase()
+      if (!state || states.has(state)) continue
+      states.set(state, state === 'disabled' ? toDisabledStateStyle(v) : toStateStyle(v))
     }
-
-    const rest = getState('rest')
-    return {
-      appearanceValue,
-      rest:     rest ?? { bg: null, color: null, border: null, opacity: null },
-      hover:    getState('hover'),
-      press:    getState('press'),
-      disabled: getState('disabled'),
-    }
+    return { appearanceValue, states }
   })
 }
 
@@ -320,46 +336,12 @@ function buildMultiSchemeCSS(
 ): string {
   const rules: string[] = []
 
-  for (const { appearanceValue, rest, hover, press, disabled } of schemes) {
-    const sel = `.root[data-${appearanceKey.toLowerCase()}='${appearanceValue}']`
+  for (const { appearanceValue, states } of schemes) {
+    const attrVal = appearanceValue.toLowerCase().replace(/\s+/g, '-')
+    const sel = `.root[data-${appearanceKey.toLowerCase().replace(/\s+/g, '-')}='${attrVal}']`
     const ctx = `${name}[${appearanceValue}]`
-
-    if (rest.bg || rest.color || rest.border) {
-      const lines: string[] = []
-      if (rest.bg) {
-        lines.push(`  background: ${rest.bg};`)
-        warnUnmappedHex(warnings, rest.bg, `${ctx} rest.bg`)
-      }
-      if (rest.color) lines.push(`  color: ${rest.color};`)
-      if (rest.border) lines.push(`  border: ${rest.border.startsWith('1px') ? rest.border : `1px solid ${rest.border}`};`)
-      rules.push(`${sel} {\n${lines.join('\n')}\n}`)
-    } else {
-      warnings.push({ code: 'MISSING_COLOR', message: `${ctx}: rest 상태에 색상 데이터가 없습니다` })
-    }
-
-    if (hover?.bg) {
-      rules.push(`${sel}:hover:not([data-disabled]) {\n  background: ${hover.bg};\n}`)
-      warnUnmappedHex(warnings, hover.bg, `${ctx} hover.bg`)
-    } else {
-      warnMissingState(warnings, 'hover', ctx)
-    }
-
-    if (press?.bg) {
-      rules.push(`${sel}:active:not([data-disabled]) {\n  background: ${press.bg};\n  transform: scale(0.98);\n}`)
-    } else {
-      warnMissingState(warnings, 'press', ctx)
-    }
-
-    if (disabled) {
-      const lines: string[] = []
-      if (disabled.opacity) lines.push(`  opacity: ${disabled.opacity};`)
-      if (disabled.bg) lines.push(`  background: ${disabled.bg};`)
-      if (disabled.color) lines.push(`  color: ${disabled.color};`)
-      lines.push(`  cursor: not-allowed;`, `  pointer-events: none;`)
-      rules.push(`${sel}[data-disabled] {\n${lines.join('\n')}\n}`)
-    } else {
-      warnMissingState(warnings, 'disabled', ctx)
-    }
+    const css = buildStateCSS(states, sel, warnings, ctx)
+    if (css) rules.push(css)
   }
 
   return rules.join('\n\n')
@@ -373,6 +355,7 @@ function buildSizeCSSRules(
   allSizes: string[],
   stateKey?: string,
   blockKey?: string,
+  iconOnlyKey?: string,
   warnings?: GeneratorWarning[],
 ): string {
   const sizeMap = new Map<string, string>()
@@ -380,24 +363,23 @@ function buildSizeCSSRules(
   for (const v of variants) {
     const size = v.properties[sizeKey]
     if (!size || sizeMap.has(size)) continue
-    // rest 상태 기준 (색상 제외한 레이아웃 값만 추출)
-    if (stateKey && v.properties[stateKey]?.toLowerCase() !== 'rest') continue
-    // block=true/false는 레이아웃(width)만 다르고 padding·radius·gap은 동일 (이슈 3 참고)
-    // block=false를 대표값으로 사용
+    // base state 기준 (색상 제외한 레이아웃 값만 추출)
+    if (stateKey) {
+      const state = v.properties[stateKey]?.toLowerCase()
+      if (state && !isBaseState(state)) continue
+    }
     if (blockKey && v.properties[blockKey]?.toLowerCase() === 'true') continue
+    if (iconOnlyKey && v.properties[iconOnlyKey]?.toLowerCase() === 'true') continue
 
     const s = v.styles
     const lines: string[] = []
     if (s.padding) lines.push(`  padding: ${mapValue(s.padding)};`)
-    // border-radius: raw px → 토큰 변수 매핑 (개선 6)
     if (s['border-radius']) lines.push(`  border-radius: ${mapRadiusValue(s['border-radius'])};`)
     if (s.gap) lines.push(`  gap: ${mapValue(s.gap)};`)
-    // height는 variant styles가 아닌 root styles에만 존재 → 여기서 추출 불필요 (버그 2 수정)
 
     if (lines.length) sizeMap.set(size, `.root[data-size='${size}'] {\n${lines.join('\n')}\n}`)
   }
 
-  // variantOptions에 있지만 variants 데이터에 없는 size → 경고
   if (warnings) {
     for (const size of allSizes) {
       if (!sizeMap.has(size)) {
@@ -411,6 +393,47 @@ function buildSizeCSSRules(
   }
 
   return Array.from(sizeMap.values()).join('\n\n')
+}
+
+// ── Icon Only CSS ────────────────────────────────────────────────────────
+
+function buildIconOnlyCSSRules(
+  variants: VariantEntry[],
+  iconOnlyKey: string,
+  sizeKey?: string,
+  stateKey?: string,
+): string {
+  const rules: string[] = []
+  const sizeMap = new Map<string, string>()
+
+  const iconOnlyVariants = variants.filter(v =>
+    v.properties[iconOnlyKey]?.toLowerCase() === 'true',
+  )
+
+  for (const v of iconOnlyVariants) {
+    const size = sizeKey ? v.properties[sizeKey] : null
+    if (size && sizeMap.has(size)) continue
+    // base state만
+    if (stateKey) {
+      const state = v.properties[stateKey]?.toLowerCase()
+      if (state && !isBaseState(state)) continue
+    }
+
+    const s = v.styles
+    const padding = s.padding
+    if (!padding) continue
+
+    if (size) {
+      sizeMap.set(size, `.root[data-icon-only][data-size='${size}'] {\n  padding: ${mapValue(padding)};\n  gap: 0;\n}`)
+    }
+  }
+
+  if (sizeMap.size > 0) {
+    rules.push(`.root[data-icon-only] {\n  gap: 0;\n}`)
+    rules.push(...Array.from(sizeMap.values()))
+  }
+
+  return rules.join('\n\n')
 }
 
 // ── 유틸 ──────────────────────────────────────────────────────────────────
@@ -452,7 +475,8 @@ export function generateButton(payload: PluginComponentPayload): GeneratorOutput
     : null
   const defaultAppearance = appearanceValues[0] ?? null
 
-  const hasBlock = dims.blockKey !== undefined
+  const hasBlock    = dims.blockKey !== undefined
+  const hasIconOnly = dims.iconOnlyKey !== undefined
 
   // block=true/false 스타일 일관성 검증
   if (dims.blockKey) {
@@ -463,7 +487,6 @@ export function generateButton(payload: PluginComponentPayload): GeneratorOutput
   let colorSchemeCSS = ''
 
   if (!hasData) {
-    // variants 없음 → rootStyles 폴백
     const bg = rootStyles['background-color']
     if (bg) {
       colorSchemeCSS = `.root {\n  background: ${mapValue(bg)};\n}`
@@ -473,37 +496,64 @@ export function generateButton(payload: PluginComponentPayload): GeneratorOutput
       warnings.push({ code: 'MISSING_COLOR', message: `${name}: rootStyles에 background-color가 없습니다` })
     }
   } else if (dims.stateKey && appearanceValues.length === 0) {
-    // state만 있음 → 단일 색상 스킴
-    const stateMap = extractStateColorsByState(variants, dims.stateKey, warnings, dims.blockKey)
-    colorSchemeCSS  = buildSingleSchemeCSS(stateMap, warnings, name)
+    const stateMap = extractStateStyles(variants, dims.stateKey, warnings, dims.blockKey, dims.iconOnlyKey)
+    colorSchemeCSS = buildSingleSchemeCSS(stateMap, warnings, name)
   } else if (dims.stateKey && appearanceKey) {
-    // appearance + state 매트릭스
-    const schemes  = extractAppearanceSchemes(variants, appearanceKey, dims.stateKey, warnings, dims.blockKey)
+    const schemes = extractAppearanceSchemes(variants, appearanceKey, dims.stateKey, warnings, dims.blockKey, dims.iconOnlyKey)
     colorSchemeCSS = buildMultiSchemeCSS(appearanceKey, schemes, warnings, name)
   }
 
-  // ── Size / Block CSS ─────────────────────────────────────────────────
+  // ── Size / Block / Icon Only CSS ─────────────────────────────────────
   const sizeCSS = hasData && dims.sizeKey
-    ? buildSizeCSSRules(variants, dims.sizeKey, sizeValues, dims.stateKey, dims.blockKey, warnings)
+    ? buildSizeCSSRules(variants, dims.sizeKey, sizeValues, dims.stateKey, dims.blockKey, dims.iconOnlyKey, warnings)
     : ''
 
   const blockCSS = hasBlock
     ? `.root[data-block] {\n  display: flex;\n  width: 100%;\n}`
     : ''
 
-  // root gap: rootStyles에서 추출 (size별 규칙에서도 중복 설정되지만 base에도 명시)
+  const iconOnlyCSS = hasIconOnly && dims.iconOnlyKey
+    ? buildIconOnlyCSSRules(variants, dims.iconOnlyKey, dims.sizeKey, dims.stateKey)
+    : ''
+
   const baseGap = rootStyles.gap ? mapValue(rootStyles.gap) : null
+
+  // ── appearance key → data attribute name ──────────────────────────────
+  const appearanceAttrName = appearanceKey
+    ? appearanceKey.toLowerCase().replace(/\s+/g, '-')
+    : null
 
   // ── TSX 생성 ──────────────────────────────────────────────────────────
   const appearanceTypeDef = appearanceUnion
     ? `export type ${name}${capitalizeFirst(appearanceKey)} = ${appearanceUnion};\n`
     : ''
-  const appearanceProp    = appearanceUnion ? `\n  ${appearanceKey}?: ${name}${capitalizeFirst(appearanceKey)};` : ''
-  const appearanceDefault = appearanceUnion ? `\n      ${appearanceKey} = '${defaultAppearance}',` : ''
-  const appearanceAttr    = appearanceUnion ? `\n      data-${appearanceKey.toLowerCase()}={${appearanceKey}}` : ''
+  const appearancePropName = appearanceKey
+    ? appearanceKey.replace(/\s+/g, '').replace(/^(.)/, (c: string) => c.toLowerCase())
+    : null
+  const appearanceProp    = appearanceUnion && appearancePropName
+    ? `\n  ${appearancePropName}?: ${name}${capitalizeFirst(appearanceKey)};`
+    : ''
+  const appearanceDefault = appearanceUnion && appearancePropName
+    ? `\n      ${appearancePropName} = '${defaultAppearance}',`
+    : ''
+  const appearanceAttr    = appearanceUnion && appearancePropName && appearanceAttrName
+    ? `\n      data-${appearanceAttrName}={${appearancePropName}.toLowerCase().replace(/\\s+/g, '-')}`
+    : ''
   const blockProp         = hasBlock ? `\n  block?: boolean;` : ''
   const blockDefault      = hasBlock ? `\n      block = false,` : ''
   const blockAttr         = hasBlock ? `\n      data-block={block ? '' : undefined}` : ''
+  const iconOnlyProp      = hasIconOnly ? `\n  iconOnly?: boolean;` : ''
+  const iconOnlyDefault   = hasIconOnly ? `\n      iconOnly = false,` : ''
+  const iconOnlyAttr      = hasIconOnly ? `\n      data-icon-only={iconOnly ? '' : undefined}` : ''
+
+  // Loading state 존재 여부 확인
+  const hasLoadingState = dims.stateKey
+    ? variants.some(v => v.properties[dims.stateKey!]?.toLowerCase() === 'loading')
+    : false
+  const loadingProp    = hasLoadingState ? `\n  loading?: boolean;` : ''
+  const loadingDefault = hasLoadingState ? `\n      loading = false,` : ''
+  const loadingAttr    = hasLoadingState ? `\n      data-loading={loading ? '' : undefined}` : ''
+  const loadingAria    = hasLoadingState ? `\n      aria-busy={loading || undefined}` : ''
 
   const tsx = `import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
@@ -512,7 +562,7 @@ import styles from './${name}.module.css';
 ${appearanceTypeDef}export type ${name}Size = ${sizeUnion};
 
 export interface ${name}Props extends ButtonHTMLAttributes<HTMLButtonElement> {${appearanceProp}
-  size?: ${name}Size;${blockProp}
+  size?: ${name}Size;${blockProp}${iconOnlyProp}${loadingProp}
   children?: ReactNode;
 }
 
@@ -525,7 +575,7 @@ export interface ${name}Props extends ButtonHTMLAttributes<HTMLButtonElement> {$
 export const ${name} = forwardRef<HTMLButtonElement, ${name}Props>(
   (
     {${appearanceDefault}
-      size = '${defaultSize}',${blockDefault}
+      size = '${defaultSize}',${blockDefault}${iconOnlyDefault}${loadingDefault}
       disabled,
       children,
       className = '',
@@ -537,9 +587,9 @@ export const ${name} = forwardRef<HTMLButtonElement, ${name}Props>(
     <button
       ref={ref}
       type={type}
-      data-size={size}${appearanceAttr}${blockAttr}
+      data-size={size}${appearanceAttr}${blockAttr}${iconOnlyAttr}${loadingAttr}
       data-disabled={disabled ? '' : undefined}
-      aria-disabled={disabled || undefined}
+      aria-disabled={disabled || undefined}${loadingAria}
       className={\`\${styles.root}\${className ? \` \${className}\` : ''}\`}
       {...props}
     >
@@ -586,6 +636,7 @@ export default ${name};
 ${colorSchemeCSS}
 ${sizeCSS ? `\n/* ── Size variants ── */\n${sizeCSS}` : ''}
 ${blockCSS ? `\n/* ── Block ── */\n${blockCSS}` : ''}
+${iconOnlyCSS ? `\n/* ── Icon Only ── */\n${iconOnlyCSS}` : ''}
 `
 
   return { name, category: 'action', tsx, css, warnings }

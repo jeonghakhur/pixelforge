@@ -6,6 +6,7 @@ import ActivityBar, { type Section } from '@/components/layout/ActivityBar';
 import Sidebar from '@/components/layout/Sidebar';
 import TabBar, { type TokenTab } from '@/components/layout/TabBar';
 import StatusBar from '@/components/layout/StatusBar';
+import SyncAlertDialog from '@/components/common/SyncAlertDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import { getSyncStatus } from '@/lib/actions/sync-status';
 import { getTokenSummary } from '@/lib/actions/tokens';
@@ -46,7 +47,10 @@ export default function AppShell({ children, userRole }: { children: React.React
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
   const tokenRevision = useUIStore((s) => s.tokenRevision);
+  const componentRevision = useUIStore((s) => s.componentRevision);
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
+  const invalidateComponents = useUIStore((s) => s.invalidateComponents);
+  const setSyncAlert = useUIStore((s) => s.setSyncAlert);
   const lastSyncVersionRef = useRef(0);
   const [tokenTabs, setTokenTabs] = useState<TokenTab[]>([]);
 
@@ -83,26 +87,54 @@ export default function AppShell({ children, userRole }: { children: React.React
     });
   }, [tokenRevision]);
 
-  // 플러그인 sync 감지: 5초마다 polling → 버전 바뀌면 자동 갱신
+  // 플러그인 sync 감지: SSE 우선, 실패 시 폴링 폴백
   useEffect(() => {
     let mounted = true;
-    const poll = async () => {
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
+
+    // SSE 연결
+    const es = new EventSource('/api/sync/events');
+
+    es.addEventListener('sync', (e) => {
+      if (!mounted) return;
       try {
-        const status = await getSyncStatus();
-        const latest = status.flatMap((p) => p.syncs.filter((s) => s.type === 'tokens'))
-          .reduce((max, s) => Math.max(max, s.version), 0);
-        if (mounted && latest > 0) {
-          if (lastSyncVersionRef.current > 0 && latest > lastSyncVersionRef.current) {
-            invalidateTokens();
-          }
-          lastSyncVersionRef.current = latest;
+        const data = JSON.parse(e.data);
+        if (data.type === 'tokens') {
+          invalidateTokens();
+        } else if (data.type === 'component') {
+          invalidateComponents();
         }
-      } catch {}
+        if (data.changed) {
+          setSyncAlert(data);
+        }
+      } catch { /* ignore parse errors */ }
+    });
+
+    es.onerror = () => {
+      // SSE 실패 시 폴링 폴백
+      if (!fallbackTimer && mounted) {
+        fallbackTimer = setInterval(async () => {
+          try {
+            const status = await getSyncStatus();
+            const latest = status.flatMap((p) => p.syncs.filter((s) => s.type === 'tokens'))
+              .reduce((max, s) => Math.max(max, s.version), 0);
+            if (mounted && latest > 0) {
+              if (lastSyncVersionRef.current > 0 && latest > lastSyncVersionRef.current) {
+                invalidateTokens();
+              }
+              lastSyncVersionRef.current = latest;
+            }
+          } catch { /* ignore */ }
+        }, 5000);
+      }
     };
-    poll();
-    const timer = setInterval(poll, 5000);
-    return () => { mounted = false; clearInterval(timer); };
-  }, [invalidateTokens]);
+
+    return () => {
+      mounted = false;
+      es.close();
+      if (fallbackTimer) clearInterval(fallbackTimer);
+    };
+  }, [invalidateTokens, invalidateComponents, setSyncAlert]);
 
   // tokenRevision 변경 시 토큰 페이지 서버 컴포넌트 갱신
   useEffect(() => {
@@ -110,6 +142,13 @@ export default function AppShell({ children, userRole }: { children: React.React
       router.refresh();
     }
   }, [tokenRevision, pathname, router]);
+
+  // componentRevision 변경 시 컴포넌트 페이지 서버 컴포넌트 갱신
+  useEffect(() => {
+    if (componentRevision > 0 && pathname.startsWith('/components')) {
+      router.refresh();
+    }
+  }, [componentRevision, pathname, router]);
 
   // Sync store from URL on pathname change
   useEffect(() => {
@@ -179,6 +218,7 @@ export default function AppShell({ children, userRole }: { children: React.React
         </div>
       </div>
       <StatusBar />
+      <SyncAlertDialog />
     </div>
   );
 }

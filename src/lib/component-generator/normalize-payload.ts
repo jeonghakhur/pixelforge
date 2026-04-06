@@ -54,6 +54,19 @@ function toPascalCase(str: string): string {
     .replace(/^(.)/, (c: string) => c.toUpperCase());
 }
 
+/**
+ * 컴포넌트 이름 추출
+ * 슬래시 있으면 마지막 세그먼트, 없으면 그대로 PascalCase.
+ *   "Buttons/Button" → "Button"
+ *   "Components/UI/Toggle Button" → "ToggleButton"
+ *   "Primary" → "Primary"
+ *   "form-input" → "FormInput"
+ */
+function extractComponentName(str: string): string {
+  const segment = str.includes('/') ? str.split('/').pop()! : str;
+  return toPascalCase(segment);
+}
+
 // ── 메인 정규화 함수 ─────────────────────────────────────────────────
 
 export function normalizePluginPayload(
@@ -75,8 +88,8 @@ export function normalizePluginPayload(
     raw.variantOptions != null;
 
   const realName = isVariantInstance
-    ? toPascalCase(texts?.title?.trim() || texts?.all?.[0]?.trim() || rawName)
-    : toPascalCase(rawName);
+    ? extractComponentName(texts?.title?.trim() || texts?.all?.[0]?.trim() || rawName)
+    : extractComponentName(rawName);
 
   // ── 2. nodeName에서 변형 속성 추출 ──────────────────────────────
   const variantProps = parseVariantProps(nodeName);

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { type Section } from '@/components/layout/ActivityBar';
 import { getComponentsByProject, type ComponentRow as ComponentRowFull } from '@/lib/actions/components';
+import { useUIStore } from '@/stores/useUIStore';
 import AddComponentModal from '@/app/(ide)/components/AddComponentModal';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import styles from './Sidebar.module.scss';
@@ -33,6 +34,7 @@ interface SidebarProps {
 export default function Sidebar({ activeSection }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const componentRevision = useUIStore((s) => s.componentRevision);
   const [rows, setRows] = useState<ComponentRow[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -48,7 +50,7 @@ export default function Sidebar({ activeSection }: SidebarProps) {
         setRows(data.filter((r) => r.tsx !== null) as ComponentRow[])
       );
     }
-  }, [activeSection, pathname]);
+  }, [activeSection, pathname, componentRevision]);
 
   const handleCreated = (comp: ComponentRowFull) => {
     setRows((prev) => [...prev, { id: comp.id, name: comp.name, category: comp.category, tsx: comp.tsx }]);

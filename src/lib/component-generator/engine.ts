@@ -8,6 +8,18 @@ const GENERATORS: Record<string, GeneratorFn> = {
 };
 
 /**
+ * detectedType 보정: 플러그인이 layout으로 감지했지만 이름에 Button이 포함된 경우
+ * button 제너레이터로 라우팅한다.
+ */
+function resolveDetectedType(payload: PluginComponentPayload): string {
+  const { detectedType, name } = payload;
+  if (detectedType === 'layout' && /button/i.test(name)) {
+    return 'button';
+  }
+  return detectedType;
+}
+
+/**
  * 플러그인 payload → TSX + CSS Module 생성
  *
  * detectedType 기준으로 제너레이터를 선택한다.
@@ -15,29 +27,31 @@ const GENERATORS: Record<string, GeneratorFn> = {
  * 생성 중 발견된 경고(토큰 미매핑, 누락 state 등)는 warnings에 포함된다.
  */
 export function runComponentEngine(payload: PluginComponentPayload): EngineResult {
-  const { detectedType, name } = payload;
+  const resolvedType = resolveDetectedType(payload);
+  const { name } = payload;
 
-  const generator = GENERATORS[detectedType];
+  const generator = GENERATORS[resolvedType];
 
   if (!generator) {
     return {
       success: false,
       output: null,
       warnings: [],
-      error: `'${name}': detectedType '${detectedType}'는 아직 지원하지 않습니다. (지원: ${Object.keys(GENERATORS).join(', ')})`,
+      resolvedType,
+      error: `'${name}': detectedType '${resolvedType}'는 아직 지원하지 않습니다. (지원: ${Object.keys(GENERATORS).join(', ')})`,
     };
   }
 
   try {
     const output = generator(payload);
-    // 생성기 경고를 EngineResult.warnings에 병합 (string 형식으로 변환)
     const warnings = output.warnings.map(w => `[${w.code}] ${w.message}${w.value ? ` (${w.value})` : ''}`);
-    return { success: true, output, warnings };
+    return { success: true, output, warnings, resolvedType };
   } catch (err) {
     return {
       success: false,
       output: null,
       warnings: [],
+      resolvedType,
       error: `'${name}' 생성 중 오류: ${err instanceof Error ? err.message : String(err)}`,
     };
   }

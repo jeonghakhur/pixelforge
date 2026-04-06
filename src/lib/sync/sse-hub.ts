@@ -6,8 +6,22 @@
  * globalThis를 사용해 단일 인스턴스를 보장한다.
  */
 
+export interface SyncEvent {
+  /** 동기화 대상 타입 */
+  type: 'tokens' | 'component';
+  /** 변경 여부 */
+  changed: boolean;
+  /** 컴포넌트 이름 (component 타입일 때) */
+  name?: string;
+  /** 토큰 개수 (tokens 타입일 때) */
+  count?: number;
+  /** DB 버전 */
+  version?: number;
+  /** 생성/업데이트 구분 */
+  action?: 'create' | 'update';
+}
+
 declare global {
-  // eslint-disable-next-line no-var
   var __sseSubscribers: Set<ReadableStreamDefaultController> | undefined;
 }
 
@@ -23,8 +37,9 @@ export function removeSseSubscriber(ctrl: ReadableStreamDefaultController) {
   globalThis.__sseSubscribers!.delete(ctrl);
 }
 
-export function notifySyncUpdated() {
-  const msg = new TextEncoder().encode('data: sync\n\n');
+export function notifySyncUpdated(event: SyncEvent) {
+  const payload = `event: sync\ndata: ${JSON.stringify(event)}\n\n`;
+  const msg = new TextEncoder().encode(payload);
   for (const ctrl of [...globalThis.__sseSubscribers!]) {
     try {
       ctrl.enqueue(msg);

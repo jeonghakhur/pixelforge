@@ -8,6 +8,7 @@ import { eq, desc } from 'drizzle-orm';
 import { parseVariablesPayload } from '@/lib/sync/parse-variables';
 import { runTokenPipeline } from '@/lib/tokens/pipeline';
 import { setActiveProject } from '@/lib/actions/tokens';
+import { notifySyncUpdated } from '@/lib/sync/sse-hub';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -99,6 +100,14 @@ export async function POST(req: Request) {
 
   // 활성 프로젝트 명시적 설정
   await setActiveProject(projectId);
+
+  // SSE 알림
+  notifySyncUpdated({
+    type: 'tokens',
+    changed: true,
+    count: normalizedTokens.length,
+    version: result.version,
+  });
 
   return NextResponse.json(
     {

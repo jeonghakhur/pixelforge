@@ -55,10 +55,18 @@ export function getButtonA11yAttributes(config: ButtonA11yConfig): ButtonA11yAtt
 /**
  * Figma Button variant 정의 (Figma 컴포넌트 variant 이름 그대로 사용)
  */
-export const BUTTON_VARIANTS = ['Primary', 'Secondary', 'Default', 'Outline', 'Invisible'] as const;
+export const BUTTON_VARIANTS = [
+  'Primary', 'Secondary', 'Tertiary', 'Link color', 'Link gray',
+  // 기존 호환
+  'Default', 'Outline', 'Invisible',
+] as const;
 export type ButtonVariant = typeof BUTTON_VARIANTS[number];
 
-export const BUTTON_SIZES = ['xsmall', 'small', 'medium', 'large', 'xlarge'] as const;
+export const BUTTON_SIZES = [
+  'xs', 'sm', 'md', 'lg', 'xl',
+  // 기존 호환
+  'xsmall', 'small', 'medium', 'large', 'xlarge',
+] as const;
 export type ButtonSize = typeof BUTTON_SIZES[number];
 
 export function isValidButtonVariant(v: string): v is ButtonVariant {

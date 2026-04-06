@@ -9,6 +9,8 @@ import { eq, and } from 'drizzle-orm';
 import { runComponentEngine } from '@/lib/component-generator';
 import type { PluginComponentPayload } from '@/lib/component-generator';
 import { normalizePluginPayload } from '@/lib/component-generator/normalize-payload';
+import { notifySyncUpdated } from '@/lib/sync/sse-hub';
+import { setActiveProject } from '@/lib/actions/tokens';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -59,21 +61,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'data.name and data.meta.nodeId are required' }, { status: 400, headers: CORS_HEADERS });
   }
 
-  const resolvedFileKey = figmaFileKey || data.meta.figmaFileId || 'local-plugin';
+  const resolvedFileKey = figmaFileKey || data.meta.figmaFileKey || data.meta.figmaFileId || 'local-plugin';
   const project = await ensureProject(resolvedFileKey, figmaFileName || resolvedFileKey);
   const projectId = project.id;
+
+  // 컴포넌트 수신 시에도 활성 프로젝트 설정
+  await setActiveProject(projectId);
 
   // 변경 감지
   const rawPayload = JSON.stringify(data);
   const contentHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
 
   const existing = db
-    .select({ id: components.id, contentHash: components.contentHash, version: components.version })
+    .select({ id: components.id, contentHash: components.contentHash, version: components.version, tsx: components.tsx })
     .from(components)
     .where(and(eq(components.projectId, projectId), eq(components.figmaNodeId, data.meta.nodeId)))
     .get();
 
-  if (existing?.contentHash === contentHash) {
+  // 해시 동일 + tsx가 이미 존재하면 스킵 (코드가 null이면 재생성 필요)
+  if (existing?.contentHash === contentHash && existing.tsx) {
     return NextResponse.json(
       { success: true, changed: false, componentId: existing.id, version: existing.version },
       { headers: CORS_HEADERS },
@@ -98,7 +104,7 @@ export async function POST(req: Request) {
       result.output?.tsx ?? null,
       result.output?.css ?? null,
       rawPayload,
-      data.detectedType,
+      result.resolvedType,
       JSON.stringify(data.radixProps ?? {}),
       contentHash,
       version,
@@ -127,7 +133,7 @@ export async function POST(req: Request) {
       result.output?.tsx ?? null,
       result.output?.css ?? null,
       rawPayload,
-      data.detectedType,
+      result.resolvedType,
       JSON.stringify(data.radixProps ?? {}),
       contentHash,
       version,
@@ -149,10 +155,19 @@ export async function POST(req: Request) {
       id: crypto.randomUUID(),
       projectId,
       action: 'generate_component',
-      summary: `${data.name} 컴포넌트 ${existing ? '업데이트' : '생성'} (${data.detectedType}, v${version})`,
-      metadata: JSON.stringify({ name: data.name, detectedType: data.detectedType, version }),
+      summary: `${data.name} 컴포넌트 ${existing ? '업데이트' : '생성'} (${result.resolvedType}, v${version})`,
+      metadata: JSON.stringify({ name: data.name, detectedType: result.resolvedType, version }),
     }).run();
   }
+
+  // SSE 알림
+  notifySyncUpdated({
+    type: 'component',
+    changed: true,
+    name: data.name,
+    version,
+    action: existing ? 'update' : 'create',
+  });
 
   return NextResponse.json(
     { success: result.success, changed: true, componentId, version, warnings: result.warnings, error: result.error },

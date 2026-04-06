@@ -131,7 +131,10 @@ export async function getComponentByName(name: string): Promise<ComponentRow | n
 }
 
 export async function getComponentsByProject(): Promise<ComponentRow[]> {
-  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
+  const activeId = getActiveProjectId();
+  const project = activeId
+    ? db.select({ id: projects.id }).from(projects).where(eq(projects.id, activeId)).get()
+    : db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return [];
 
   return db.select({
@@ -230,7 +233,7 @@ export async function importComponentFromJson(
     db.update(components).set({
       tsx: result.output?.tsx ?? null,
       scss: result.output?.css ?? null,
-      detectedType: typeof normalized.detectedType === 'string' ? normalized.detectedType : null,
+      detectedType: result.resolvedType,
       radixProps: JSON.stringify(normalized.radixProps ?? {}),
       contentHash,
       version,
@@ -252,7 +255,7 @@ export async function importComponentFromJson(
       tsx: result.output?.tsx ?? null,
       scss: result.output?.css ?? null,
       nodePayload: rawPayload,
-      detectedType: typeof normalized.detectedType === 'string' ? normalized.detectedType : null,
+      detectedType: result.resolvedType,
       radixProps: JSON.stringify(normalized.radixProps ?? {}),
       contentHash,
       version,
