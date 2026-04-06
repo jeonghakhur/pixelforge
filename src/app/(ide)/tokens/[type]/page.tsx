@@ -9,6 +9,7 @@ import ColorGrid from './ColorGrid';
 import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
 import RadiusList from './RadiusList';
+import ShadowList from './ShadowList';
 import GenericTokenList from './GenericTokenList';
 import TokenPageActions from './TokenPageActions';
 import TokenCssSection from './TokenCssSection';
@@ -65,11 +66,14 @@ export default async function TokenPage({ params }: TokenPageProps) {
       ) : (
         <>
           <div data-token-grid>
-            {type === 'color'      && <ColorGrid tokens={tokenRows} />}
-            {type === 'typography' && <TypographyList tokens={tokenRows} />}
-            {type === 'spacing'    && <SpacingList tokens={tokenRows} />}
-            {type === 'radius'     && <RadiusList tokens={tokenRows} />}
-            {!['color', 'typography', 'spacing', 'radius'].includes(type) && (
+            {type === 'color'                            && <ColorGrid tokens={tokenRows} />}
+            {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
+            {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
+            {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}
+            {(type === 'container' || type === 'width')  && <SpacingList tokens={tokenRows} />}
+            {type === 'radius'                           && <RadiusList tokens={tokenRows} />}
+            {type === 'shadow'                           && <ShadowList tokens={tokenRows} />}
+            {!['color', 'typography', 'text-style', 'heading', 'spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
               <GenericTokenList tokens={tokenRows} />
             )}
           </div>

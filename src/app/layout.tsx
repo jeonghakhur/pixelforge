@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Geist_Mono } from 'next/font/google';
 import '@/styles/globals.scss';
 import IconProvider from '@/components/providers/IconProvider';
 
@@ -7,6 +8,12 @@ export const metadata: Metadata = {
   description: 'Figma 디자인 → Bootstrap 기반 코드 자동 생성',
 };
 
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 const themeInitScript = `
 (function(){
@@ -28,14 +35,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="ko" suppressHydrationWarning className={geistMono.variable}>
       <body>
+        {/* eslint-disable-next-line react/no-danger */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <IconProvider>{children}</IconProvider>
       </body>
     </html>

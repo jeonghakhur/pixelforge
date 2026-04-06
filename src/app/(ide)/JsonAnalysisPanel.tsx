@@ -83,7 +83,7 @@ function analyzeVariables(data: PixelForgeJson): AnalyzedCollection[] {
       for (const mode of modes) {
         const val = variable.valuesByMode[mode.modeId];
         if (!val) continue;
-        if ('type' in val) {
+        if (typeof val === 'object' && val !== null && 'type' in val) {
           // VARIABLE_ALIAS
           const target = variableById.get((val as { type: string; id: string }).id);
           entry.aliases.push({
@@ -271,14 +271,15 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
                 </span>
                 <div className={styles.varList}>
                   {radiusItems.map((r) => {
-                    const val = Object.values(r.valuesByMode)[0];
+                    const raw = Object.values(r.valuesByMode)[0];
+                    const val = typeof raw === 'number' ? raw : null;
                     return (
                       <div key={r.id} className={styles.varRow}>
                         <span className={styles.varNumIcon}>
                           <Icon icon="solar:hashtag-linear" width={10} height={10} />
                         </span>
                         <span className={styles.varName}>{r.name}</span>
-                        <span className={styles.varValue}>{val}px</span>
+                        <span className={styles.varValue}>{val != null ? `${val}px` : '—'}</span>
                       </div>
                     );
                   })}
@@ -294,14 +295,15 @@ export default function JsonAnalysisPanel({ data, importing, error, onImport, on
                 </span>
                 <div className={styles.varList}>
                   {spacingItems.map((s) => {
-                    const val = Object.values(s.valuesByMode)[0];
+                    const raw = Object.values(s.valuesByMode)[0];
+                    const val = typeof raw === 'number' ? raw : null;
                     return (
                       <div key={s.id} className={styles.varRow}>
                         <span className={styles.varNumIcon}>
                           <Icon icon="solar:hashtag-linear" width={10} height={10} />
                         </span>
                         <span className={styles.varName}>{s.name}</span>
-                        <span className={styles.varValue}>{val}px</span>
+                        <span className={styles.varValue}>{val != null ? `${val}px` : '—'}</span>
                       </div>
                     );
                   })}

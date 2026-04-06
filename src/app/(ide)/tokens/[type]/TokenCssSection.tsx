@@ -92,6 +92,7 @@ function CssPreview({
     return { above: [], focus: css.split('\n'), below: [] };
   }, [fullCss, prefix, css]);
 
+  const [isOpen, setIsOpen] = useState(false);
   const [aboveVisible, setAboveVisible] = useState(0);
   const [belowVisible, setBelowVisible] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -151,17 +152,30 @@ function CssPreview({
 
   return (
     <div className={styles.block}>
-      <div className={styles.blockHeader}>
+      <button
+        type="button"
+        className={styles.blockHeader}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+      >
         <span className={styles.blockTitle}>
           <Icon icon="solar:file-code-linear" width={13} height={13} />
           CSS Variables
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className={styles.blockMeta}>{total} lines</span>
+          <span className={`${styles.entryToggle} ${isOpen ? styles.open : ''}`}>
+            <Icon icon="solar:alt-arrow-down-linear" width={12} height={12} />
+          </span>
+        </div>
+      </button>
+
+      {isOpen && <>
+        <div className={styles.cssActions}>
           <button
             type="button"
             className={styles.copyBtn}
-            onClick={handleCopy}
+            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
             aria-label={copied ? '복사 완료!' : 'CSS 복사'}
           >
             <Icon
@@ -191,7 +205,6 @@ function CssPreview({
             </button>
           </div>
         </div>
-      </div>
 
       <div className={styles.codeWrap}>
         <table className={styles.codeTable}>
@@ -218,6 +231,7 @@ function CssPreview({
           </tbody>
         </table>
       </div>
+      </>}
     </div>
   );
 }
@@ -276,40 +290,60 @@ function HistoryEntry({
 
 // ── 히스토리 블록 ────────────────────────────────────────────
 function HistoryBlock({ type }: { type: string }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [history, setHistory] = useState<CssHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    getCssHistoryForTypeAction(type)
-      .then(setHistory)
-      .finally(() => setLoading(false));
-  }, [type]);
+  const handleToggle = () => {
+    setIsOpen((v) => {
+      const next = !v;
+      if (next && history.length === 0 && !loading) {
+        setLoading(true);
+        getCssHistoryForTypeAction(type)
+          .then(setHistory)
+          .finally(() => setLoading(false));
+      }
+      return next;
+    });
+  };
 
   return (
     <div className={styles.block}>
-      <div className={styles.blockHeader}>
+      <button
+        type="button"
+        className={styles.blockHeader}
+        onClick={handleToggle}
+        aria-expanded={isOpen}
+      >
         <span className={styles.blockTitle}>
           <Icon icon="solar:clock-circle-linear" width={13} height={13} />
           변경 이력
         </span>
-        {!loading && history.length > 0 && (
-          <span className={styles.blockMeta}>{history.length}건</span>
-        )}
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!loading && history.length > 0 && (
+            <span className={styles.blockMeta}>{history.length}건</span>
+          )}
+          <span className={`${styles.entryToggle} ${isOpen ? styles.open : ''}`}>
+            <Icon icon="solar:alt-arrow-down-linear" width={12} height={12} />
+          </span>
+        </div>
+      </button>
 
-      {loading ? (
-        <div className={styles.historyLoading}>
-          <Icon icon="solar:refresh-linear" width={14} height={14} className={styles.spinning} />
-          <span>불러오는 중…</span>
-        </div>
-      ) : history.length === 0 ? (
-        <p className={styles.historyEmpty}>변경 이력이 없습니다.</p>
-      ) : (
-        <div className={styles.entryList}>
-          {history.map((entry, idx) => (
-            <HistoryEntry key={entry.id} entry={entry} defaultOpen={idx === 0} />
-          ))}
-        </div>
+      {isOpen && (
+        loading ? (
+          <div className={styles.historyLoading}>
+            <Icon icon="solar:refresh-linear" width={14} height={14} className={styles.spinning} />
+            <span>불러오는 중…</span>
+          </div>
+        ) : history.length === 0 ? (
+          <p className={styles.historyEmpty}>변경 이력이 없습니다.</p>
+        ) : (
+          <div className={styles.entryList}>
+            {history.map((entry) => (
+              <HistoryEntry key={entry.id} entry={entry} defaultOpen={false} />
+            ))}
+          </div>
+        )
       )}
     </div>
   );

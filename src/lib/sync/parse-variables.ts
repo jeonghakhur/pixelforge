@@ -1,24 +1,27 @@
 /**
- * Plugin payload (Figma Variables API 응답) → NormalizedToken[]
+ * Plugin payload / JSON 파일 → NormalizedToken[]
  *
- * 플러그인이 POST /api/sync/tokens 로 보내는 body.tokens 를 받아
- * 공통 파이프라인이 처리할 수 있는 NormalizedToken 배열로 변환한다.
+ * 플러그인(POST /api/sync/tokens)과 JSON 파일 임포트 모두 이 파서를 사용한다.
+ * import-json.ts는 PixelForgeJson → PluginTokenPayload 형식 변환 후 이 함수를 호출한다.
  */
 
 export interface NormalizedToken {
-  type: string;         // 'color' | 'spacing' | 'radius' | 'typography' | 'float' | 'boolean' | 'string'
+  type: string;         // 'color' | 'spacing' | 'radius' | 'typography' | 'text-style' | 'heading' | 'shadow' | 'blur' | 'font' | ...
   name: string;         // 'Color/Brand/Primary'
-  value: string;        // '#0066ff' or '16' or 'Inter'
+  value: string;        // '#0066ff' or '16' or 'var(--color-neutral-900)'
   raw: string | null;   // 원본 값 문자열
   mode: string | null;  // 'Light' | 'Dark' | null
   collectionName: string | null;
   alias: string | null; // alias 참조 시 원본 variable id
+  sortOrder: number;    // Figma Variables 배열 원본 인덱스 (정렬용)
 }
+
+import { toVarName } from '@/lib/tokens/css-generator';
 
 // ───────────────────────────────────────────────────────
 // Figma Variables API 응답 타입 (플러그인 전송 포맷)
 // ───────────────────────────────────────────────────────
-interface FigmaColor { r: number; g: number; b: number; a: number }
+interface FigmaColor { r: number; g: number; b: number; a?: number }
 interface FigmaAlias { type: 'VARIABLE_ALIAS'; id: string }
 type FigmaValue = FigmaColor | FigmaAlias | number | string | boolean;
 
@@ -35,7 +38,7 @@ interface FigmaCollection {
   id: string;
   name: string;
   modes: Array<{ modeId: string; name: string }>;
-  defaultModeId: string;
+  defaultModeId?: string; // 플러그인은 제공, JSON 파일은 없을 수 있음
 }
 
 // 플러그인이 보내는 스타일 포맷 (Variables 없을 때 폴백)
@@ -53,7 +56,7 @@ interface PluginTextStyle {
   fontSize: number;
   fontWeight: number;
   letterSpacing: { unit: string; value: number };
-  lineHeight: { unit: string; value: number };
+  lineHeight: { unit: string; value: number | string };
   textCase?: string;
   textDecoration?: string;
   usageCount?: number;
@@ -61,7 +64,7 @@ interface PluginTextStyle {
 
 interface PluginEffectItem {
   type: string;          // 'DROP_SHADOW' | 'INNER_SHADOW' | 'LAYER_BLUR' | 'BACKGROUND_BLUR'
-  visible: boolean;
+  visible?: boolean;
   radius: number;
   color?: FigmaColor;
   offset?: { x: number; y: number };
@@ -79,6 +82,13 @@ interface PluginEffectStyle {
   usageCount?: number;
 }
 
+/** PixelForge JSON 파일의 fonts 배열 포맷 */
+interface PluginFontFamily {
+  family: string;
+  cssVar: string;
+  styles: string[];
+}
+
 export interface PluginTokenPayload {
   variables?: {
     // 플러그인은 variableCollections 또는 collections 키를 사용
@@ -89,16 +99,17 @@ export interface PluginTokenPayload {
   // 플러그인이 타입별로 분류해서 보내는 Float 변수 배열
   spacing?: FigmaVariable[];
   radius?: FigmaVariable[];
-  // 이펙트 스타일
+  // 이펙트 스타일 (최상위)
   effects?: PluginEffectStyle[];
-  // 플러그인 스타일 포맷 (Variables 없을 때 colors 폴백)
+  // 플러그인 스타일 포맷
   styles?: {
     colors?: PluginStyleColor[];
     textStyles?: PluginTextStyle[];
     headings?: PluginTextStyle[];
     texts?: PluginTextStyle[];
-    fonts?: PluginTextStyle[];
     effects?: PluginEffectStyle[];
+    /** PixelForge JSON 파일의 fonts 배열 (font family 정보) */
+    fontFamilies?: PluginFontFamily[];
   };
 }
 
@@ -112,8 +123,9 @@ function toHex(n: number): string {
 
 function rgbaToHex(c: FigmaColor): string {
   const hex = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
-  if (c.a < 1) {
-    return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${Math.round(c.a * 100) / 100})`;
+  const alpha = c.a ?? 1;
+  if (alpha < 1) {
+    return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${Math.round(alpha * 100) / 100})`;
   }
   return hex;
 }
@@ -126,19 +138,46 @@ function isAlias(v: FigmaValue): v is FigmaAlias {
   return typeof v === 'object' && v !== null && (v as FigmaAlias).type === 'VARIABLE_ALIAS';
 }
 
-/** FLOAT variable을 scopes + 이름 패턴으로 타입 분류 */
-function inferFloatType(name: string, scopes: string[] = []): string {
+/** CSS 변수 이름 생성 (css-generator.ts의 toVarName과 동일 로직) */
+/** alias ID → CSS var() 참조 변환 */
+function resolveAliasToVar(
+  aliasId: string,
+  varById: Map<string, { name: string; resolvedType: string; scopes?: string[] }>,
+): string {
+  const target = varById.get(aliasId);
+  if (!target) return '';
+  // COLOR는 prefix 없음(toVarName의 빈 prefix 경로 사용), FLOAT 등은 타입 추론
+  const prefix = target.resolvedType === 'COLOR' ? '' : inferFloatType(target.name, target.scopes ?? []);
+  return `var(${toVarName(target.name, prefix)})`;
+}
+
+/**
+ * spacing 이름 패턴이지만 이 값 이상이면 layout-spacing으로 분류한다.
+ * (컴포넌트 패딩/갭 vs 레이아웃 너비·섹션 높이 경계)
+ * Figma 파일에서 scopes가 설정되지 않을 때 값으로 구분하는 폴백 전략.
+ */
+const LAYOUT_SPACING_THRESHOLD_PX = 256;
+
+/** FLOAT variable을 scopes + 이름 패턴 + 값으로 타입 분류 */
+function inferFloatType(name: string, scopes: string[] = [], value?: number): string {
   if (scopes.includes('CORNER_RADIUS')) return 'radius';
   if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
   if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
 
   const lower = name.toLowerCase();
   if (/radius|corner|rounded/.test(lower)) return 'radius';
-  if (/spacing|gap|padding|margin|width|height/.test(lower)) return 'spacing';
+  // container/width는 spacing 보다 먼저 매칭 (width 키워드 충돌 방지)
+  if (/^container/.test(lower) || /paragraph.?max.?width/.test(lower)) return 'container';
+  if (/^width-/.test(lower)) return 'width';
+  // typography 체크를 spacing보다 먼저 — "line height/..."이 height 키워드에 걸리지 않도록
   if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
+  if (/spacing|gap|padding|margin|width|height/.test(lower)) {
+    // 값이 임계값 초과면 레이아웃 스케일 spacing으로 분리
+    if (value !== undefined && value > LAYOUT_SPACING_THRESHOLD_PX) return 'layout-spacing';
+    return 'spacing';
+  }
   if (/resolution/.test(lower)) return 'resolution';
   if (/size/.test(lower)) return 'size';
-
   return 'float';
 }
 
@@ -163,7 +202,7 @@ function buildCollectionMap(
 // 타이포그래피 헬퍼
 // ───────────────────────────────────────────────────────
 
-function formatLineHeight(lh: { unit: string; value: number } | undefined): string {
+function formatLineHeight(lh: { unit: string; value: number | string } | undefined): string {
   if (!lh) return 'normal';
   if (lh.unit === 'PIXELS') return `${lh.value}px`;
   if (lh.unit === 'PERCENT') return `${lh.value}%`;
@@ -182,7 +221,7 @@ function formatLetterSpacing(
 }
 
 // ───────────────────────────────────────────────────────
-// 메인 파서
+// 메인 파서 (플러그인 sync + JSON 임포트 공통)
 // ───────────────────────────────────────────────────────
 export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedToken[] {
   const vars = payload.variables;
@@ -206,179 +245,86 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
   const collections = vars?.variableCollections ?? vars?.collections;
   const collectionMap = buildCollectionMap(collections);
 
-  // ── 1차 패스: variableId → 실제값 맵 구축 (alias 해소용) ──
-  const valueMap = new Map<string, { value: string; raw: string }>();
-  for (const variable of uniqueVars) {
-    const collection = variable.collectionId ? collectionMap.get(variable.collectionId) : undefined;
-    const defaultModeId = collection?.defaultModeId ?? Object.keys(variable.valuesByMode)[0];
-    const rawValue = variable.valuesByMode[defaultModeId];
-    if (rawValue === undefined || isAlias(rawValue)) continue;
+  // variableId → 메타 맵 (alias → CSS var() 변환용)
+  const varById = new Map(
+    uniqueVars.map((v) => [v.id, { name: v.name, resolvedType: v.resolvedType, scopes: v.scopes }]),
+  );
 
-    switch (variable.resolvedType) {
-      case 'COLOR': {
-        if (!isColor(rawValue)) break;
-        const hex = rgbaToHex(rawValue);
-        valueMap.set(variable.id, { value: hex, raw: hex });
-        break;
-      }
-      case 'FLOAT': {
-        const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
-        valueMap.set(variable.id, { value: String(floatVal), raw: `${floatVal}px` });
-        break;
-      }
-      case 'STRING': {
-        const strVal = String(rawValue);
-        valueMap.set(variable.id, { value: strVal, raw: strVal });
-        break;
-      }
-      case 'BOOLEAN': {
-        const boolVal = String(rawValue);
-        valueMap.set(variable.id, { value: boolVal, raw: boolVal });
-        break;
-      }
-    }
-  }
-
-  // ── 2차 패스: 토큰 생성 (alias는 valueMap에서 해소) ──
   const result: NormalizedToken[] = [];
 
-  for (const variable of uniqueVars) {
+  // 모든 모드를 순회하여 모드별 별도 토큰 생성 (다크/라이트 CSS 분리 지원)
+  for (let varIdx = 0; varIdx < uniqueVars.length; varIdx++) {
+    const variable = uniqueVars[varIdx];
     const collection = variable.collectionId ? collectionMap.get(variable.collectionId) : undefined;
-    const defaultModeId = collection?.defaultModeId ?? Object.keys(variable.valuesByMode)[0];
-    const modeName = collection?.modes.find((m) => m.modeId === defaultModeId)?.name ?? null;
-    const rawValue = variable.valuesByMode[defaultModeId];
+    const modes = collection?.modes ?? [];
+    const modeEntries = modes.length > 0
+      ? modes.map((m) => ({ modeId: m.modeId, modeName: m.name }))
+      : Object.keys(variable.valuesByMode).map((modeId) => ({ modeId, modeName: null }));
 
-    if (rawValue === undefined) continue;
+    for (const { modeId, modeName } of modeEntries) {
+      const rawValue = variable.valuesByMode[modeId];
+      if (rawValue === undefined) continue;
 
-    const base: Omit<NormalizedToken, 'type' | 'value' | 'raw'> = {
-      name: variable.name,
-      mode: modeName,
-      collectionName: collection?.name ?? null,
-      alias: isAlias(rawValue) ? rawValue.id : null,
-    };
+      const base: Omit<NormalizedToken, 'type' | 'value' | 'raw'> = {
+        name: variable.name,
+        mode: modeName,
+        collectionName: collection?.name ?? null,
+        alias: isAlias(rawValue) ? (rawValue as FigmaAlias).id : null,
+        sortOrder: varIdx,
+      };
 
-    if (isAlias(rawValue)) {
-      const resolved = valueMap.get(rawValue.id);
-      const type = variable.resolvedType === 'COLOR' ? 'color' : inferFloatType(variable.name, variable.scopes);
-      result.push({
-        ...base,
-        type,
-        value: resolved?.value ?? '',
-        raw: resolved?.raw ?? rawValue.id,
-      });
-      continue;
+      if (isAlias(rawValue)) {
+        // alias → CSS var() 참조로 변환
+        const aliasId = (rawValue as FigmaAlias).id;
+        const cssVar = resolveAliasToVar(aliasId, varById);
+        let type: string;
+        if (variable.resolvedType === 'COLOR') {
+          type = 'color';
+        } else {
+          // alias target의 실제 값을 조회해 임계값 분류에 사용
+          const targetVar = uniqueVars.find((v) => v.id === aliasId);
+          const targetVal = targetVar
+            ? (() => { const v = Object.values(targetVar.valuesByMode)[0]; return typeof v === 'number' ? v : undefined; })()
+            : undefined;
+          type = inferFloatType(variable.name, variable.scopes, targetVal);
+        }
+        result.push({ ...base, type, value: cssVar, raw: cssVar || aliasId });
+        continue;
+      }
+
+      switch (variable.resolvedType) {
+        case 'COLOR': {
+          if (!isColor(rawValue)) break;
+          const hex = rgbaToHex(rawValue);
+          result.push({ ...base, type: 'color', value: hex, raw: hex });
+          break;
+        }
+        case 'FLOAT': {
+          const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
+          const type = inferFloatType(variable.name, variable.scopes, floatVal);
+          result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
+          break;
+        }
+        case 'STRING': {
+          const strVal = String(rawValue);
+          const lower = variable.name.toLowerCase();
+          const strType = /font.?(family|size|weight)|line.?height|letter.?spacing/.test(lower)
+            ? 'typography'
+            : 'string';
+          result.push({ ...base, type: strType, value: strVal, raw: strVal });
+          break;
+        }
+        case 'BOOLEAN': {
+          const boolVal = String(rawValue);
+          result.push({ ...base, type: 'boolean', value: boolVal, raw: boolVal });
+          break;
+        }
+      }
     }
-
-    switch (variable.resolvedType) {
-      case 'COLOR': {
-        if (!isColor(rawValue)) break;
-        const hex = rgbaToHex(rawValue);
-        result.push({ ...base, type: 'color', value: hex, raw: hex });
-        break;
-      }
-      case 'FLOAT': {
-        const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
-        const type = inferFloatType(variable.name, variable.scopes);
-        result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
-        break;
-      }
-      case 'STRING': {
-        const strVal = String(rawValue);
-        result.push({ ...base, type: 'string', value: strVal, raw: strVal });
-        break;
-      }
-      case 'BOOLEAN': {
-        const boolVal = String(rawValue);
-        result.push({ ...base, type: 'boolean', value: boolVal, raw: boolVal });
-        break;
-      }
-    }
   }
 
-  // styles.textStyles / styles.headings / styles.texts → typography
-  // (styles.fonts는 FontData[] 포맷으로 fontName/fontSize 없음 — 별도 처리 필요 시 확장)
-  const textStyleArrays = [
-    ...(payload.styles?.textStyles ?? []),
-    ...(payload.styles?.headings ?? []),
-    ...(payload.styles?.texts ?? []),
-  ];
-  const seenTextIds = new Set<string>();
-  for (const ts of textStyleArrays) {
-    if (seenTextIds.has(ts.id)) continue;
-    seenTextIds.add(ts.id);
-
-    const lineHeight = formatLineHeight(ts.lineHeight);
-    const letterSpacing = formatLetterSpacing(ts.letterSpacing);
-    const raw = [
-      `${ts.fontWeight} ${ts.fontSize}px/${lineHeight} '${ts.fontName.family}'`,
-      letterSpacing !== '0' ? `ls:${letterSpacing}` : '',
-    ].filter(Boolean).join(' ');
-
-    result.push({
-      type: 'typography',
-      name: ts.name,
-      value: JSON.stringify({
-        fontFamily: ts.fontName.family,
-        fontStyle: ts.fontName.style,
-        fontSize: ts.fontSize,
-        fontWeight: ts.fontWeight,
-        lineHeight,
-        letterSpacing,
-      }),
-      raw,
-      mode: null,
-      collectionName: null,
-      alias: null,
-    });
-  }
-
-  // effects / styles.effects → elevation
-  const effectStyles: PluginEffectStyle[] = [
-    ...(payload.effects ?? []),
-    ...(payload.styles?.effects ?? []),
-  ];
-  const seenEffectIds = new Set<string>();
-  for (const es of effectStyles) {
-    if (seenEffectIds.has(es.id)) continue;
-    seenEffectIds.add(es.id);
-
-    const visibleEffects = es.effects.filter((e) => e.visible !== false);
-    const shadows = visibleEffects
-      .filter((e) => e.type === 'DROP_SHADOW' || e.type === 'INNER_SHADOW')
-      .map((e) => {
-        const color = e.color
-          ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
-          : 'transparent';
-        const x = e.offset?.x ?? 0;
-        const y = e.offset?.y ?? 0;
-        const inset = e.type === 'INNER_SHADOW' ? 'inset ' : '';
-        return `${inset}${x}px ${y}px ${e.radius}px ${e.spread ?? 0}px ${color}`;
-      });
-
-    const raw = shadows.length > 0 ? shadows.join(', ') : 'none';
-
-    const effectType = /shadow/i.test(es.name) ? 'shadow' : 'elevation';
-
-    result.push({
-      type: effectType,
-      name: es.name,
-      value: JSON.stringify({
-        effects: visibleEffects.map((e) => ({
-          type: e.type,
-          radius: e.radius,
-          spread: e.spread ?? 0,
-          color: e.color ?? null,
-          offset: e.offset ?? { x: 0, y: 0 },
-          blendMode: e.blendMode ?? 'NORMAL',
-        })),
-        cssBoxShadow: raw,
-      }),
-      raw,
-      mode: null,
-      collectionName: null,
-      alias: null,
-    });
-  }
+  // styles 섹션의 sortOrder 기준점 (variables 다음 순서)
+  let styleOrder = uniqueVars.length;
 
   // styles.colors 폴백 — variables에 색상이 없을 때
   const hasColors = result.some((t) => t.type === 'color');
@@ -395,8 +341,127 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         mode: null,
         collectionName: null,
         alias: null,
+        sortOrder: styleOrder++,
       });
     }
+  }
+
+  // 텍스트 스타일 — 각 배열을 별도 타입으로 저장
+  const textStyleGroups: Array<{ items: PluginTextStyle[]; type: string }> = [
+    { items: payload.styles?.textStyles ?? [], type: 'text-style' },
+    { items: payload.styles?.headings   ?? [], type: 'heading'    },
+    { items: payload.styles?.texts      ?? [], type: 'typography' },
+  ];
+  const seenTextIds = new Set<string>();
+
+  for (const { items, type } of textStyleGroups) {
+    for (const ts of items) {
+      if (seenTextIds.has(ts.id)) continue;
+      seenTextIds.add(ts.id);
+
+      const lineHeight = formatLineHeight(ts.lineHeight);
+      const letterSpacing = formatLetterSpacing(ts.letterSpacing);
+      const raw = [
+        `${ts.fontWeight} ${ts.fontSize}px/${lineHeight} '${ts.fontName.family}'`,
+        letterSpacing !== '0' ? `ls:${letterSpacing}` : '',
+      ].filter(Boolean).join(' ');
+
+      result.push({
+        type,
+        name: ts.name,
+        value: JSON.stringify({
+          fontFamily: ts.fontName.family,
+          fontStyle:  ts.fontName.style,
+          fontSize:   ts.fontSize,
+          fontWeight: ts.fontWeight,
+          lineHeight,
+          letterSpacing,
+        }),
+        raw,
+        mode: null,
+        collectionName: null,
+        alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+  }
+
+  // 이펙트 스타일 → shadow / blur
+  const effectStyles: PluginEffectStyle[] = [
+    ...(payload.effects        ?? []),
+    ...(payload.styles?.effects ?? []),
+  ];
+  const seenEffectIds = new Set<string>();
+
+  for (const es of effectStyles) {
+    if (seenEffectIds.has(es.id)) continue;
+    seenEffectIds.add(es.id);
+
+    const visibleEffects = es.effects.filter((e) => e.visible !== false);
+
+    // BACKGROUND_BLUR → blur 타입 (color 없음)
+    const blurLayers = visibleEffects.filter((e) => e.type === 'BACKGROUND_BLUR');
+    if (blurLayers.length > 0) {
+      result.push({
+        type: 'blur',
+        name: es.name,
+        value: String(blurLayers[0].radius),
+        raw: `blur(${blurLayers[0].radius}px)`,
+        mode: null,
+        collectionName: null,
+        alias: null,
+        sortOrder: styleOrder++,
+      });
+      continue;
+    }
+
+    // DROP_SHADOW / INNER_SHADOW → shadow 타입
+    const shadowLayers = visibleEffects.filter(
+      (e) => (e.type === 'DROP_SHADOW' || e.type === 'INNER_SHADOW') && e.color != null,
+    );
+    if (shadowLayers.length === 0) continue;
+
+    const cssBoxShadow = shadowLayers.map((e) => {
+      const color = e.color
+        ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
+        : 'transparent';
+      const x = e.offset?.x ?? 0;
+      const y = e.offset?.y ?? 0;
+      const inset = e.type === 'INNER_SHADOW' ? 'inset ' : '';
+      return `${inset}${x}px ${y}px ${e.radius}px ${e.spread ?? 0}px ${color}`;
+    }).join(', ');
+
+    result.push({
+      type: 'shadow',
+      name: es.name,
+      value: JSON.stringify(shadowLayers.map((e) => ({
+        type:    e.type,
+        offsetX: e.offset?.x ?? 0,
+        offsetY: e.offset?.y ?? 0,
+        radius:  e.radius,
+        spread:  e.spread ?? 0,
+        color:   e.color ?? null,
+      }))),
+      raw: cssBoxShadow,
+      mode: null,
+      collectionName: null,
+      alias: null,
+      sortOrder: styleOrder++,
+    });
+  }
+
+  // font families (PixelForge JSON 파일 포맷)
+  for (const f of payload.styles?.fontFamilies ?? []) {
+    result.push({
+      type: 'font',
+      name: f.family,
+      value: JSON.stringify({ family: f.family, cssVar: f.cssVar, styles: f.styles }),
+      raw: f.family,
+      mode: null,
+      collectionName: null,
+      alias: null,
+      sortOrder: styleOrder++,
+    });
   }
 
   return result;

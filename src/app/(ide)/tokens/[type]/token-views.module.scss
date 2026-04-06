@@ -64,6 +64,36 @@
   opacity: 0.55;
 }
 
+// ── 패밀리 (컬렉션 내 그룹) ──────────────
+.colorFamily {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.colorFamilyDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: map-get($spacers, 2) 0;
+}
+
+.colorFamilyLabel {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.colorFamilyCount {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
 // ===========================
 // 색상 카드 그리드
 // ===========================
@@ -189,6 +219,24 @@
   }
 
   &:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+}
+
+.colorCardVarRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.colorCardVar {
+  flex: 1;
+  font-size: 11px;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
 }
 
 .colorCardDivider {
@@ -698,4 +746,73 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ===========================
+// Shadow
+// ===========================
+.shadowGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: map-get($spacers, 4);
+}
+
+.shadowCard {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 4);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: $border-radius-lg;
+}
+
+.shadowPreview {
+  width: 100%;
+  height: 80px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  border-radius: $border-radius;
+}
+
+.shadowMeta {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.shadowNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 2);
+}
+
+.shadowName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.shadowLayers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 1);
+}
+
+.shadowLayerBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+}
+
+.shadowRaw {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  font-family: monospace;
+  word-break: break-all;
 }

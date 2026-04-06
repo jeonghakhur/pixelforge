@@ -163,6 +163,7 @@ function migrateColumns(): void {
     `ALTER TABLE components ADD COLUMN version INTEGER NOT NULL DEFAULT 1;`,
     `ALTER TABLE components ADD COLUMN figma_node_id TEXT;`,
     `ALTER TABLE components ADD COLUMN figma_file_key TEXT;`,
+    `ALTER TABLE tokens ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;`,
   ];
   for (const sql of alters) {
     try { sqlite.exec(sql); } catch { /* already exists — skip */ }

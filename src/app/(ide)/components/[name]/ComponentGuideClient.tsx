@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import { deleteComponent } from '@/lib/actions/components';
@@ -40,6 +40,117 @@ function parseDefaultProp(tsx: string, prop: string): string {
 
 function parseHasBlockProp(tsx: string): boolean {
   return /block\?\s*:\s*boolean/.test(tsx);
+}
+
+// ── 동적 props 파서 ─────────────────────────────────────────────────────────
+// 생성된 TSX에서 union type props와 boolean props를 자동 추출
+
+interface UnionPropDef {
+  kind: 'union';
+  name: string;           // prop 이름 (hierarchy, size 등)
+  values: string[];       // union 값 목록
+  defaultValue: string;   // 기본값
+  dataAttr: string;       // data-* 속성명
+}
+
+interface BooleanPropDef {
+  kind: 'boolean';
+  name: string;           // prop 이름 (iconOnly, loading 등)
+  defaultValue: boolean;
+  dataAttr: string;       // data-* 속성명
+}
+
+type SandboxPropDef = UnionPropDef | BooleanPropDef;
+
+/** TSX에서 export type → interface prop 매핑으로 union type props 추출 */
+function parseAllUnionTypes(tsx: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+
+  // 1. 모든 export type 선언 수집: ButtonCTAHierarchy → ['Primary', ...]
+  const typeDecls: Record<string, string[]> = {};
+  const typeRe = /export type (\w+) = ([^;]+);/g;
+  let m;
+  while ((m = typeRe.exec(tsx)) !== null) {
+    typeDecls[m[1]] = m[2].split('|').map((s) => s.trim().replace(/'/g, '').replace(/"/g, ''));
+  }
+
+  // 2. interface에서 prop → type 매핑: hierarchy?: ButtonCTAHierarchy
+  const propRe = /(\w+)\??\s*:\s*(\w+);/g;
+  while ((m = propRe.exec(tsx)) !== null) {
+    const propName = m[1];
+    const typeName = m[2];
+    if (typeDecls[typeName]) {
+      map.set(propName, typeDecls[typeName]);
+    }
+  }
+
+  return map;
+}
+
+/** TSX destructuring에서 prop = defaultValue 패턴 추출 */
+function parseDestructuredProps(tsx: string): Array<{ name: string; default: string }> {
+  // ({\n  hierarchy = 'Primary',\n  size = 'xs',\n  iconOnly = false, ... }) 패턴
+  const blockMatch = tsx.match(/\(\s*\{([\s\S]*?)\},\s*\n\s*ref/);
+  if (!blockMatch) return [];
+
+  const results: Array<{ name: string; default: string }> = [];
+  const lines = blockMatch[1].split('\n');
+  for (const line of lines) {
+    const propMatch = line.match(/^\s*(\w+)\s*=\s*(.+?),?\s*$/);
+    if (propMatch) {
+      results.push({ name: propMatch[1], default: propMatch[2].replace(/'/g, '').replace(/"/g, '') });
+    }
+  }
+  return results;
+}
+
+/** TSX에서 data-xxx={prop...} 매핑 추출 */
+function parseDataAttrMapping(tsx: string, propName: string): string {
+  // data-hierarchy={hierarchy...} → 'hierarchy'
+  // data-icon-only={iconOnly...} → 'icon-only'
+  const re = new RegExp(`data-([a-z][a-z0-9-]*)=\\{${propName}`);
+  const m = tsx.match(re);
+  return m ? m[1] : propName.replace(/([A-Z])/g, '-$1').toLowerCase();
+}
+
+/** TSX에서 Sandbox에 필요한 모든 props를 동적 추출 */
+function parseSandboxProps(tsx: string): SandboxPropDef[] {
+  if (!tsx) return [];
+
+  const unionTypes = parseAllUnionTypes(tsx);
+  const destructured = parseDestructuredProps(tsx);
+  const props: SandboxPropDef[] = [];
+
+  // disabled, children, className, type, ...props는 제외
+  const SKIP = new Set(['disabled', 'children', 'className', 'type']);
+
+  for (const { name, default: defaultVal } of destructured) {
+    if (SKIP.has(name)) continue;
+
+    const dataAttr = parseDataAttrMapping(tsx, name);
+
+    // union type prop인지 확인 (interface prop → type 매핑)
+    const unionValues = unionTypes.get(name);
+
+    if (unionValues && unionValues.length > 0) {
+      props.push({
+        kind: 'union',
+        name,
+        values: unionValues,
+        defaultValue: defaultVal,
+        dataAttr,
+      });
+    } else if (defaultVal === 'false' || defaultVal === 'true') {
+      props.push({
+        kind: 'boolean',
+        name,
+        defaultValue: defaultVal === 'true',
+        dataAttr,
+      });
+    }
+  }
+
+  return props;
 }
 
 function buildPropsFromTsx(tsx: string, detectedType: string): PropDef[] {
@@ -114,37 +225,53 @@ function useHighlightedCode(code: string, lang: 'tsx' | 'css') {
 
 // ── Sandbox ──────────────────────────────────────────────────────────────────
 
-function ButtonSandbox({ name, css, tokensCss, radixProps, tsx }: {
+function ButtonSandbox({ name, css, tokensCss, tsx }: {
   name: string;
   css: string | null;
   tokensCss: string | null;
-  radixProps: string | null;
   tsx: string | null;
 }) {
-  // TSX에서 실제 variant/size 목록 추출
-  const variants = tsx ? parseUnionType(tsx, 'Variant') : [];
-  const sizes    = tsx ? parseUnionType(tsx, 'Size')    : [];
-  const hasBlock = tsx ? parseHasBlockProp(tsx) : false;
+  // TSX에서 모든 props를 동적 파싱
+  const sandboxProps = parseSandboxProps(tsx ?? '');
 
-  // 초기 선택값 — radixProps 기준
-  let initVariant = variants[0] ?? '';
-  let initSize    = sizes[0]    ?? '';
-  try {
-    const p = JSON.parse(radixProps ?? '{}');
-    if (p.variant && variants.includes(p.variant)) initVariant = p.variant;
-    if (p.size    && sizes.includes(p.size))       initSize    = p.size;
-  } catch {}
+  // union props → 개별 state
+  const unionProps = sandboxProps.filter((p): p is UnionPropDef => p.kind === 'union');
+  const boolProps  = sandboxProps.filter((p): p is BooleanPropDef => p.kind === 'boolean');
 
-  const [selVariant,  setVariant]  = useState(initVariant);
-  const [selSize,     setSize]     = useState(initSize);
+  // state 관리: union props
+  const initUnion: Record<string, string> = {};
+  for (const p of unionProps) initUnion[p.name] = p.defaultValue;
+  const [unionValues, setUnionValues] = useState(initUnion);
+
+  // state 관리: boolean props
+  const initBool: Record<string, boolean> = {};
+  for (const p of boolProps) initBool[p.name] = p.defaultValue;
+  const [boolValues, setBoolValues] = useState(initBool);
+
+  // disabled는 항상 지원 (TSX destructuring에서 default 없이 나오므로 별도 관리)
   const [selDisabled, setDisabled] = useState(false);
-  const [selBlock,    setBlock]    = useState(false);
+
+  // children: TSX에 children prop이 있으면 텍스트 입력 지원
+  const hasChildren = tsx ? /children\??:\s*ReactNode/.test(tsx) : false;
+  const [childrenText, setChildrenText] = useState(name);
 
   // sandbox 스코프 격리
   const scope = `sb-${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
   const scopedTokens = tokensCss ? tokensCss.replace(/:root\s*\{/g, `.${scope} {`) : '';
   const scopedCss    = css       ? css.replace(/\.root/g, `.${scope} .root`)        : '';
   const injectedCss  = scopedTokens + scopedCss;
+
+  // 프리뷰 버튼의 data 속성 동적 구성
+  const dataAttrs: Record<string, string | undefined> = {};
+  for (const p of unionProps) {
+    const val = unionValues[p.name] ?? p.defaultValue;
+    // TSX에서 .toLowerCase().replace(/\s+/g, '-') 변환하는 경우 반영
+    dataAttrs[`data-${p.dataAttr}`] = val.toLowerCase().replace(/\s+/g, '-');
+  }
+  for (const p of boolProps) {
+    dataAttrs[`data-${p.dataAttr}`] = boolValues[p.name] ? '' : undefined;
+  }
+  dataAttrs['data-disabled'] = selDisabled ? '' : undefined;
 
   return (
     <div className={styles.sandboxBg}>
@@ -156,65 +283,62 @@ function ButtonSandbox({ name, css, tokensCss, radixProps, tsx }: {
       <div className={styles.sandboxLayout}>
         {/* ── 컨트롤 패널 ── */}
         <div className={styles.sandboxControls}>
-          {variants.length > 0 && (
-            <div className={styles.controlGroup}>
-              <span className={styles.controlLabel}>variant</span>
+          {unionProps.map((p) => (
+            <div key={p.name} className={styles.controlGroup}>
+              <span className={styles.controlLabel}>{p.name}</span>
               <div className={styles.controlPills}>
-                {variants.map((v) => (
+                {p.values.map((v) => (
                   <button
                     key={v}
                     type="button"
-                    className={`${styles.pill} ${selVariant === v ? styles.pillActive : ''}`}
-                    onClick={() => setVariant(v)}
+                    className={`${styles.pill} ${unionValues[p.name] === v ? styles.pillActive : ''}`}
+                    onClick={() => setUnionValues((prev) => ({ ...prev, [p.name]: v }))}
                   >
                     {v}
                   </button>
                 ))}
               </div>
             </div>
+          ))}
+
+          {hasChildren && (
+            <div className={styles.controlGroup}>
+              <span className={styles.controlLabel}>children</span>
+              <input
+                type="text"
+                value={childrenText}
+                onChange={(e) => setChildrenText(e.target.value)}
+                className={styles.controlInput}
+                placeholder="버튼 텍스트"
+              />
+            </div>
           )}
 
-          {sizes.length > 0 && (
+          {(boolProps.length > 0 || true /* disabled 항상 표시 */) && (
             <div className={styles.controlGroup}>
-              <span className={styles.controlLabel}>size</span>
-              <div className={styles.controlPills}>
-                {sizes.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`${styles.pill} ${selSize === s ? styles.pillActive : ''}`}
-                    onClick={() => setSize(s)}
-                  >
-                    {s}
-                  </button>
+              <span className={styles.controlLabel}>state</span>
+              <div className={styles.controlToggles}>
+                <label className={styles.toggle}>
+                  <input
+                    type="checkbox"
+                    checked={selDisabled}
+                    onChange={(e) => setDisabled(e.target.checked)}
+                  />
+                  <span>disabled</span>
+                </label>
+                {boolProps.map((p) => (
+                  <label key={p.name} className={styles.toggle}>
+                    <input
+                      type="checkbox"
+                      checked={boolValues[p.name] ?? false}
+                      onChange={(e) => setBoolValues((prev) => ({ ...prev, [p.name]: e.target.checked }))}
+                    />
+                    <span>{p.name}</span>
+                  </label>
                 ))}
               </div>
             </div>
           )}
-
-          <div className={styles.controlGroup}>
-            <span className={styles.controlLabel}>state</span>
-            <div className={styles.controlToggles}>
-              <label className={styles.toggle}>
-                <input
-                  type="checkbox"
-                  checked={selDisabled}
-                  onChange={(e) => setDisabled(e.target.checked)}
-                />
-                <span>disabled</span>
-              </label>
-              {hasBlock && (
-                <label className={styles.toggle}>
-                  <input
-                    type="checkbox"
-                    checked={selBlock}
-                    onChange={(e) => setBlock(e.target.checked)}
-                  />
-                  <span>block</span>
-                </label>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* ── 프리뷰 ── */}
@@ -226,15 +350,11 @@ function ButtonSandbox({ name, css, tokensCss, radixProps, tsx }: {
           ) : (
             <button
               type="button"
-              data-variant={selVariant}
-              data-size={selSize}
-              data-block={selBlock ? '' : undefined}
-              data-disabled={selDisabled ? '' : undefined}
+              {...dataAttrs}
               aria-disabled={selDisabled || undefined}
               className={`${scope} root`}
-              style={selBlock ? { width: '100%' } : undefined}
             >
-              {name}
+              {childrenText || name}
             </button>
           )}
         </div>
@@ -246,14 +366,16 @@ function ButtonSandbox({ name, css, tokensCss, radixProps, tsx }: {
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version, tokensCss }: Props) {
   const router = useRouter();
-  const [codeTab, setCodeTab] = useState<CodeTab>('tsx');
-  const [codeOpen, setCodeOpen] = useState(true);
-  const [codeHeight, setCodeHeight] = useState(320);
-  const [copied, setCopied] = useState(false);
-
   const CODE_HEIGHT_STEP = 200;
   const CODE_HEIGHT_MIN = 160;
   const CODE_HEIGHT_MAX = 1200;
+  const CODE_HEIGHT_DEFAULT = 800;
+  const codeBlockRef = useRef<HTMLDivElement>(null);
+
+  const [codeTab, setCodeTab] = useState<CodeTab>('tsx');
+  const [codeOpen, setCodeOpen] = useState(true);
+  const [codeHeight, setCodeHeight] = useState(CODE_HEIGHT_DEFAULT);
+  const [copied, setCopied] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -266,6 +388,15 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
 
   const currentCode = codeTab === 'tsx' ? (tsx ?? '') : (css ?? '');
   const highlightedHtml = useHighlightedCode(currentCode, codeTab === 'css' ? 'css' : 'tsx');
+
+  // 코드 내용이 바뀔 때 실제 높이를 측정해 자동 조정
+  // 내용이 800px보다 짧으면 실제 높이로, 길면 800px로 cap
+  useEffect(() => {
+    const el = codeBlockRef.current;
+    if (!el) return;
+    const contentHeight = el.scrollHeight;
+    setCodeHeight(Math.min(CODE_HEIGHT_DEFAULT, contentHeight));
+  }, [highlightedHtml, currentCode]);
   const props = buildPropsFromTsx(tsx ?? '', detectedType ?? '');
   const usage = USAGE_BY_TYPE[detectedType ?? ''];
 
@@ -310,7 +441,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Interactive Sandbox</h2>
         {detectedType === 'button' ? (
-          <ButtonSandbox name={name} css={css} tokensCss={tokensCss} radixProps={radixProps} tsx={tsx} />
+          <ButtonSandbox name={name} css={css} tokensCss={tokensCss} tsx={tsx} />
         ) : (
           <div className={styles.sandboxBg}>
             <div className={styles.sandboxCanvas}>
@@ -391,7 +522,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
 
           {/* Collapsible body */}
           <div className={`${styles.collapseBody} ${codeOpen ? styles.open : ''}`} style={{ maxHeight: codeOpen ? `${codeHeight + 40}px` : '0' }}>
-            <div className={styles.codeBlock} style={{ maxHeight: `${codeHeight}px` }}>
+            <div ref={codeBlockRef} className={styles.codeBlock} style={{ maxHeight: `${codeHeight}px` }}>
               {highlightedHtml ? (
                 <div
                   className={styles.shikiWrap}

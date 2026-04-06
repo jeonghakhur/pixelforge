@@ -89,10 +89,11 @@ function normalizedToTokenRow(t: NormalizedToken): Omit<TokenRow, 'id'> {
     name: t.name,
     value: t.value,
     raw: t.raw,
-    source: 'variables' as const,  // upsert 시 재지정됨
+    source: 'variables' as const,
     mode: t.mode,
     collectionName: t.collectionName,
     alias: t.alias,
+    sortOrder: t.sortOrder,
   };
 }
 
@@ -137,6 +138,7 @@ export async function runTokenPipeline(
         mode: t.mode,
         collectionName: t.collectionName,
         alias: t.alias,
+        sortOrder: t.sortOrder,
       })),
     );
   }
@@ -219,6 +221,10 @@ export async function runTokenPipeline(
     const cssDir = path.join(process.cwd(), 'design-tokens');
     fs.mkdirSync(cssDir, { recursive: true });
     fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+    // public/tokens.css도 동기화 (정적 파일 서빙용)
+    const publicDir = path.join(process.cwd(), 'public');
+    fs.mkdirSync(publicDir, { recursive: true });
+    fs.writeFileSync(path.join(publicDir, 'tokens.css'), css, 'utf-8');
   } catch {
     // CSS 재생성 실패는 파이프라인을 중단하지 않음
   }

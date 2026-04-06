@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots } from '@/lib/db/schema';
+import { tokens, projects, histories, tokenSources, appSettings, tokenSnapshots, tokenTypeConfigs } from '@/lib/db/schema';
 import { eq, desc, sql, and, lt } from 'drizzle-orm';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { extractFileKey, extractNodeId, FigmaClient, type FigmaVariablesResponse } from '@/lib/figma/api';
@@ -54,6 +54,7 @@ export interface TokenRow {
   mode: string | null;
   collectionName: string | null;
   alias: string | null;
+  sortOrder: number;
 }
 
 export async function getTokensByType(type: string): Promise<TokenRow[]> {
@@ -69,9 +70,11 @@ export async function getTokensByType(type: string): Promise<TokenRow[]> {
     mode: tokens.mode,
     collectionName: tokens.collectionName,
     alias: tokens.alias,
+    sortOrder: tokens.sortOrder,
   })
     .from(tokens)
     .where(and(eq(tokens.projectId, project.id), eq(tokens.type, type)))
+    .orderBy(tokens.sortOrder)
     .all();
 }
 
@@ -88,6 +91,7 @@ export async function getAllTokensAction(): Promise<TokenRow[]> {
     mode: tokens.mode,
     collectionName: tokens.collectionName,
     alias: tokens.alias,
+    sortOrder: tokens.sortOrder,
   })
     .from(tokens)
     .where(eq(tokens.projectId, project.id))
@@ -181,14 +185,14 @@ export async function deleteTokenAction(id: string): Promise<{ error: string | n
 
 export async function deleteAllTokensAction(): Promise<{ error: string | null; deleted: number }> {
   try {
-    const project = getActiveProject();
-    if (!project) return { error: null, deleted: 0 };
-    const rows = db.select({ id: tokens.id }).from(tokens).where(eq(tokens.projectId, project.id)).all();
-    db.delete(tokenSnapshots).where(eq(tokenSnapshots.projectId, project.id)).run();
-    db.delete(tokens).where(eq(tokens.projectId, project.id)).run();
-    db.delete(tokenSources).where(eq(tokenSources.projectId, project.id)).run();
+    const count = db.select({ count: sql<number>`count(*)` }).from(tokens).get()?.count ?? 0;
+    db.delete(tokenSnapshots).run();
+    db.delete(tokenSources).run();
+    db.delete(tokenTypeConfigs).run();
+    db.delete(histories).run();
+    db.delete(tokens).run();
     deleteTokensCss();
-    return { error: null, deleted: rows.length };
+    return { error: null, deleted: count };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패', deleted: 0 };
   }
@@ -964,6 +968,7 @@ export async function rollbackSnapshotAction(
     const cssDir = path.join(process.cwd(), 'design-tokens');
     fs.mkdirSync(cssDir, { recursive: true });
     fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+    fs.writeFileSync(path.join(process.cwd(), 'public', 'tokens.css'), css, 'utf-8');
   } catch {}
 
   return { error: null, restoredVersion: prev?.version ?? null };

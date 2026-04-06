@@ -51,6 +51,7 @@ export const tokens = sqliteTable('tokens', {
   mode: text('mode'),
   collectionName: text('collection_name'),
   alias: text('alias'),
+  sortOrder: integer('sort_order').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 

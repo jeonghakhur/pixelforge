@@ -7,6 +7,8 @@ import { Icon } from '@iconify/react';
 import { useUIStore } from '@/stores/useUIStore';
 import type { TokenSummary, HistoryEntry } from '@/lib/actions/tokens';
 import type { TokenMenuEntry } from '@/lib/actions/token-menu';
+import type { PixelForgeJson } from '@/lib/actions/import-json';
+import { importFromJsonAction } from '@/lib/actions/import-json';
 import TokenImportTabs from '@/components/common/TokenImportTabs';
 import SnapshotHistory from './SnapshotHistory';
 import styles from './TokenDashboard.module.scss';
@@ -62,7 +64,11 @@ export default function TokenDashboard({
   const router = useRouter();
   const setSection = useUIStore((s) => s.setSection);
   const setTab = useUIStore((s) => s.setTab);
+  const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<PixelForgeJson | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // 플러그인 sync 완료 시 자동 갱신 (5초 폴링)
   useEffect(() => {
@@ -90,6 +96,32 @@ export default function TokenDashboard({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [isImportOpen]);
+
+  const handleParsed = (data: PixelForgeJson) => {
+    setPreviewData(data);
+    setIsImportOpen(false);
+    setImportError(null);
+  };
+
+  const handlePreviewImport = async () => {
+    if (!previewData) return;
+    setImporting(true);
+    setImportError(null);
+    const res = await importFromJsonAction(previewData);
+    setImporting(false);
+    if (res.error) {
+      setImportError(res.error);
+      return;
+    }
+    setPreviewData(null);
+    invalidateTokens();
+    router.refresh();
+  };
+
+  const handlePreviewCancel = () => {
+    setPreviewData(null);
+    setImportError(null);
+  };
 
   const total = Object.values(summary.counts).reduce((a, b) => a + b, 0);
 
@@ -157,139 +189,184 @@ export default function TokenDashboard({
         <p className={styles.subtitle}>Global Design System Central Console</p>
       </div>
 
+      {/* ── 임포트 대기 배너 ── */}
+      {previewData && (
+        <div className={styles.importBanner}>
+          <div className={styles.importBannerLeft}>
+            <Icon icon="solar:file-check-linear" width={16} height={16} className={styles.importBannerIcon} />
+            <span className={styles.importBannerFile}>{previewData.meta.fileName}</span>
+            <span className={styles.importBannerDivider} />
+            <span className={styles.importBannerDesc}>
+              분석 완료 — 토큰 생성하기를 눌러 저장하세요
+            </span>
+          </div>
+          <div className={styles.importBannerRight}>
+            {importError && (
+              <span className={styles.importBannerError} role="alert">{importError}</span>
+            )}
+            <button
+              type="button"
+              className={styles.importBannerCancelBtn}
+              onClick={handlePreviewCancel}
+              disabled={importing}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className={styles.importBannerGenerateBtn}
+              onClick={handlePreviewImport}
+              disabled={importing}
+            >
+              {importing ? (
+                <>
+                  <Icon icon="solar:loading-linear" width={14} height={14} className={styles.spinning} />
+                  생성 중...
+                </>
+              ) : (
+                <>
+                  <Icon icon="solar:import-linear" width={14} height={14} />
+                  토큰 생성하기
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── 통계 벤토 그리드 (12열) ── */}
       <div className={styles.statsGrid}>
-        {/* 총합 카드 */}
-        <div className={styles.totalCard}>
-          <div>
-            <span className={styles.totalEyebrow}>Total Active Tokens</span>
-            <div className={styles.totalNum}>{total > 0 ? `${total}+` : '—'}</div>
-          </div>
-          <div className={styles.totalSub}>
-            <Icon icon="solar:trending-up-linear" width={14} height={14} />
-            <span>{segments.length}가지 타입 활성</span>
-          </div>
-        </div>
+            {/* 총합 카드 */}
+            <div className={styles.totalCard}>
+              <div>
+                <span className={styles.totalEyebrow}>Total Active Tokens</span>
+                <div className={styles.totalNum}>{total > 0 ? `${total}+` : '—'}</div>
+              </div>
+              <div className={styles.totalSub}>
+                <Icon icon="solar:trending-up-linear" width={14} height={14} />
+                <span>{segments.length}가지 타입 활성</span>
+              </div>
+            </div>
 
-        {/* 타입 카드 행 */}
-        <div className={styles.typeCards}>
-          {tokenMenu.map((t, i) => {
-            const count = summary.counts[t.type] ?? 0;
-            const pct = total > 0 ? (count / total) * 100 : 0;
-            const color = TYPE_COLORS[i % TYPE_COLORS.length];
-            return (
-              <button
-                key={t.type}
-                type="button"
-                className={`${styles.typeCard} ${count === 0 ? styles.typeCardEmpty : ''}`}
-                onClick={() => count > 0 && handleTypeClick(t.type)}
-                style={{ '--tc': color } as React.CSSProperties}
-              >
-                <span className={styles.typeEyebrow}>{t.label}</span>
-                <div className={styles.typeCount}>{count}</div>
-                <div className={styles.typeBar}>
-                  <div
-                    className={styles.typeBarFill}
-                    style={{ width: `${pct}%`, background: color }}
-                  />
+            {/* 타입 카드 행 */}
+            <div className={styles.typeCards}>
+              {tokenMenu.map((t, i) => {
+                const count = summary.counts[t.type] ?? 0;
+                const pct = total > 0 ? (count / total) * 100 : 0;
+                const color = TYPE_COLORS[i % TYPE_COLORS.length];
+                return (
+                  <button
+                    key={t.type}
+                    type="button"
+                    className={`${styles.typeCard} ${count === 0 ? styles.typeCardEmpty : ''}`}
+                    onClick={() => count > 0 && handleTypeClick(t.type)}
+                    style={{ '--tc': color } as React.CSSProperties}
+                  >
+                    <span className={styles.typeEyebrow}>{t.label}</span>
+                    <div className={styles.typeCount}>{count}</div>
+                    <div className={styles.typeBar}>
+                      <div
+                        className={styles.typeBarFill}
+                        style={{ width: `${pct}%`, background: color }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── 하단 2단 (분포 차트 + 로그) ── */}
+          <div className={styles.bottomGrid}>
+
+            {/* 토큰 분포 */}
+            <div className={styles.chartCard}>
+              <h2 className={styles.cardTitle}>Token Distribution</h2>
+
+              <div className={styles.donutWrap}>
+                <svg className={styles.donut} viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r={RADIUS} fill="transparent"
+                    stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                  {arcs.map((arc) => (
+                    <circle key={arc.type} cx="18" cy="18" r={RADIUS}
+                      fill="transparent" stroke={arc.color} strokeWidth="8"
+                      strokeDasharray={arc.dashArray}
+                      strokeDashoffset={arc.dashOffset}
+                    />
+                  ))}
+                </svg>
+                <div className={styles.donutCenter}>
+                  <span className={styles.donutPct}>{total > 0 ? '100%' : '0%'}</span>
+                  <span className={styles.donutLabel}>Defined</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+              </div>
 
-      {/* ── 하단 2단 (분포 차트 + 로그) ── */}
-      <div className={styles.bottomGrid}>
-
-        {/* 토큰 분포 */}
-        <div className={styles.chartCard}>
-          <h2 className={styles.cardTitle}>Token Distribution</h2>
-
-          <div className={styles.donutWrap}>
-            <svg className={styles.donut} viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r={RADIUS} fill="transparent"
-                stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-              {arcs.map((arc) => (
-                <circle key={arc.type} cx="18" cy="18" r={RADIUS}
-                  fill="transparent" stroke={arc.color} strokeWidth="8"
-                  strokeDasharray={arc.dashArray}
-                  strokeDashoffset={arc.dashOffset}
-                />
-              ))}
-            </svg>
-            <div className={styles.donutCenter}>
-              <span className={styles.donutPct}>{total > 0 ? '100%' : '0%'}</span>
-              <span className={styles.donutLabel}>Defined</span>
-            </div>
-          </div>
-
-          <ul className={styles.legend}>
-            {arcs.map((arc) => (
-              <li key={arc.type} className={styles.legendItem}>
-                <span className={styles.legendDot} style={{ background: arc.color }} />
-                <span className={styles.legendName}>{arc.label}</span>
-                <span className={styles.legendPct}>{arc.pct.toFixed(0)}%</span>
-              </li>
-            ))}
-            {arcs.length === 0 && (
-              <li className={styles.legendEmpty}>토큰 없음</li>
-            )}
-          </ul>
-        </div>
-
-        {/* 토큰 변경 이력 */}
-        <SnapshotHistory />
-
-        {/* 활동 로그 */}
-        <div className={styles.logCard}>
-          <div className={styles.logHeader}>
-            <h2 className={styles.cardTitle}>Audit Log: Recent Changes</h2>
-          </div>
-
-          {histories.length === 0 ? (
-            <div className={styles.logEmpty}>
-              <Icon icon="solar:history-linear" width={22} height={22} className={styles.logEmptyIcon} />
-              <p>아직 활동 기록이 없습니다</p>
-            </div>
-          ) : (
-            <table className={styles.logTable}>
-              <thead>
-                <tr>
-                  <th className={styles.logTh}>Action</th>
-                  <th className={styles.logTh}>Summary</th>
-                  <th className={styles.logTh}>Author</th>
-                  <th className={styles.logTh}>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {histories.map((h) => (
-                  <tr key={h.id} className={styles.logRow}>
-                    <td className={styles.logTd}>
-                      <div className={styles.logAction}>
-                        <span className={styles.logDot} />
-                        <span className={styles.logActionText}>{actionLabel(h.action)}</span>
-                      </div>
-                    </td>
-                    <td className={styles.logTd}>
-                      <span className={styles.logMono}>{h.summary}</span>
-                    </td>
-                    <td className={styles.logTd}>
-                      <div className={styles.logAuthor}>
-                        <Icon icon="solar:user-circle-linear" width={18} height={18} className={styles.logAvatar} />
-                        <span>System</span>
-                      </div>
-                    </td>
-                    <td className={`${styles.logTd} ${styles.logTime}`}>
-                      {formatRelative(h.createdAt)}
-                    </td>
-                  </tr>
+              <ul className={styles.legend}>
+                {arcs.map((arc) => (
+                  <li key={arc.type} className={styles.legendItem}>
+                    <span className={styles.legendDot} style={{ background: arc.color }} />
+                    <span className={styles.legendName}>{arc.label}</span>
+                    <span className={styles.legendPct}>{arc.pct.toFixed(0)}%</span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+                {arcs.length === 0 && (
+                  <li className={styles.legendEmpty}>토큰 없음</li>
+                )}
+              </ul>
+            </div>
+
+            {/* 토큰 변경 이력 */}
+            <SnapshotHistory />
+
+            {/* 활동 로그 */}
+            <div className={styles.logCard}>
+              <div className={styles.logHeader}>
+                <h2 className={styles.cardTitle}>Audit Log: Recent Changes</h2>
+              </div>
+
+              {histories.length === 0 ? (
+                <div className={styles.logEmpty}>
+                  <Icon icon="solar:history-linear" width={22} height={22} className={styles.logEmptyIcon} />
+                  <p>아직 활동 기록이 없습니다</p>
+                </div>
+              ) : (
+                <table className={styles.logTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.logTh}>Action</th>
+                      <th className={styles.logTh}>Summary</th>
+                      <th className={styles.logTh}>Author</th>
+                      <th className={styles.logTh}>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {histories.map((h) => (
+                      <tr key={h.id} className={styles.logRow}>
+                        <td className={styles.logTd}>
+                          <div className={styles.logAction}>
+                            <span className={styles.logDot} />
+                            <span className={styles.logActionText}>{actionLabel(h.action)}</span>
+                          </div>
+                        </td>
+                        <td className={styles.logTd}>
+                          <span className={styles.logMono}>{h.summary}</span>
+                        </td>
+                        <td className={styles.logTd}>
+                          <div className={styles.logAuthor}>
+                            <Icon icon="solar:user-circle-linear" width={18} height={18} className={styles.logAvatar} />
+                            <span>System</span>
+                          </div>
+                        </td>
+                        <td className={`${styles.logTd} ${styles.logTime}`}>
+                          {formatRelative(h.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
 
       {/* ── JSON 임포트 모달 ── */}
       {isImportOpen && createPortal(
@@ -318,10 +395,7 @@ export default function TokenDashboard({
               </button>
             </div>
             <TokenImportTabs
-              onImportSuccess={() => {
-                setIsImportOpen(false);
-                router.refresh();
-              }}
+              onParsed={handleParsed}
             />
           </div>
         </div>,

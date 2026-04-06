@@ -4,24 +4,13 @@ import { db } from '@/lib/db';
 import { projects } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
-import type { NormalizedToken } from '@/lib/sync/parse-variables';
+import { parseVariablesPayload, type PluginTokenPayload } from '@/lib/sync/parse-variables';
 import { runTokenPipeline } from '@/lib/tokens/pipeline';
+import { setActiveProject } from '@/lib/actions/tokens';
 
 // ===========================
-// PixelForge JSON 포맷 타입
+// PixelForge JSON 파일 포맷 타입
 // ===========================
-interface JsonColor { r: number; g: number; b: number; a?: number }
-interface JsonVariableAlias { type: string; id: string }
-
-// 최상위 배열 토큰 항목 (radius, spacing 등 플러그인 직접 출력)
-interface TopLevelTokenItem {
-  id: string;
-  name: string;
-  resolvedType: string;
-  valuesByMode: Record<string, number>;
-  collectionId: string;
-  usageCount?: number;
-}
 
 export interface PixelForgeJson {
   variables?: {
@@ -35,32 +24,78 @@ export interface PixelForgeJson {
       id: string;
       name: string;
       resolvedType: 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
-      valuesByMode: Record<string, JsonColor | JsonVariableAlias>;
+      valuesByMode: Record<string, unknown>;
       collectionId: string;
       scopes?: string[];
     }>;
   };
-  // 플러그인이 최상위에 직접 배출하는 타입별 배열
-  radius?: TopLevelTokenItem[];
-  spacing?: TopLevelTokenItem[];
+  radius?: Array<{
+    id: string;
+    name: string;
+    resolvedType: string;
+    valuesByMode: Record<string, unknown>;
+    collectionId: string;
+    scopes?: string[];
+  }>;
+  spacing?: Array<{
+    id: string;
+    name: string;
+    resolvedType: string;
+    valuesByMode: Record<string, unknown>;
+    collectionId: string;
+    scopes?: string[];
+  }>;
   styles?: {
-    colors: Array<{
+    colors?: Array<{
       id: string;
       name: string;
-      paints: Array<{
-        type: string;
-        color?: JsonColor;
-        opacity?: number;
-      }>;
+      paints: Array<{ type: string; color?: { r: number; g: number; b: number; a?: number }; opacity?: number }>;
     }>;
-    texts: Array<{
+    texts?: Array<{
       id: string;
       name: string;
       fontName: { family: string; style: string };
       fontSize: number;
       fontWeight: number;
       letterSpacing: { unit: string; value: number };
-      lineHeight: { unit: string; value: number };
+      lineHeight: { unit: string; value: number | string };
+    }>;
+    textStyles?: Array<{
+      id: string;
+      name: string;
+      fontName: { family: string; style: string };
+      fontSize: number;
+      fontWeight: number;
+      letterSpacing: { unit: string; value: number };
+      lineHeight: { unit: string; value: number | string };
+    }>;
+    headings?: Array<{
+      id: string;
+      name: string;
+      fontName: { family: string; style: string };
+      fontSize: number;
+      fontWeight: number;
+      letterSpacing: { unit: string; value: number };
+      lineHeight: { unit: string; value: number | string };
+    }>;
+    effects?: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      effects: Array<{
+        type: string;
+        visible?: boolean;
+        radius: number;
+        color?: { r: number; g: number; b: number; a: number };
+        offset?: { x: number; y: number };
+        spread?: number;
+        blendMode?: string;
+      }>;
+    }>;
+    fonts?: Array<{
+      family: string;
+      cssVar: string;
+      styles: string[];
     }>;
   };
   meta: {
@@ -83,165 +118,34 @@ export interface ImportJsonResult {
 const JSON_PROJECT_KEY = 'json-import';
 
 // ───────────────────────────────────────────────
-// 파서 유틸리티
+// PixelForgeJson → PluginTokenPayload 형식 변환
+// (parse-variables.ts의 단일 파서를 공유하기 위한 어댑터)
 // ───────────────────────────────────────────────
-
-function toHex(v: number): string {
-  return Math.round(v * 255).toString(16).padStart(2, '0');
-}
-
-function rgbToHex(r: number, g: number, b: number, a?: number): string {
-  const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  if (a !== undefined && a < 1) {
-    return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${Math.round(a * 100) / 100})`;
-  }
-  return hex;
-}
-
-function isAlias(v: JsonColor | JsonVariableAlias): v is JsonVariableAlias {
-  return 'type' in v && (v as JsonVariableAlias).type === 'VARIABLE_ALIAS';
-}
-
-function inferFloatType(name: string, scopes: string[] = []): string {
-  if (scopes.includes('CORNER_RADIUS')) return 'radius';
-  if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
-  if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
-  const lower = name.toLowerCase();
-  if (/radius|corner|rounded/.test(lower)) return 'radius';
-  if (/spacing|gap|padding|margin|width|height/.test(lower)) return 'spacing';
-  if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
-  return 'float';
-}
-
-// ───────────────────────────────────────────────
-// JSON → NormalizedToken[] 변환
-// ───────────────────────────────────────────────
-
-function parseJsonToNormalizedTokens(data: PixelForgeJson): NormalizedToken[] {
-  const result: NormalizedToken[] = [];
-
-  if (data.variables) {
-    const collectionMap = new Map(data.variables.collections.map((c) => [c.id, c]));
-
-    // modeId → { modeName, collectionName }
-    const modeMap = new Map<string, { modeName: string; collectionName: string }>();
-    for (const col of data.variables.collections) {
-      for (const mode of col.modes) {
-        modeMap.set(mode.modeId, { modeName: mode.name, collectionName: col.name });
-      }
-    }
-
-    for (const variable of data.variables.variables) {
-      const collection = collectionMap.get(variable.collectionId);
-      // defaultModeId 없으면 첫 번째 mode 사용
-      const defaultModeId = collection?.modes[0]?.modeId ?? Object.keys(variable.valuesByMode)[0];
-      if (!defaultModeId) continue;
-
-      const rawValue = variable.valuesByMode[defaultModeId];
-      if (rawValue === undefined) continue;
-
-      const modeInfo = modeMap.get(defaultModeId);
-
-      const base: Omit<NormalizedToken, 'type' | 'value' | 'raw'> = {
-        name: variable.name,
-        mode: modeInfo?.modeName ?? null,
-        collectionName: modeInfo?.collectionName ?? null,
-        alias: isAlias(rawValue) ? rawValue.id : null,
-      };
-
-      if (isAlias(rawValue)) {
-        result.push({
-          ...base,
-          type: variable.resolvedType === 'COLOR' ? 'color' : inferFloatType(variable.name, variable.scopes),
-          value: '',
-          raw: rawValue.id,
-        });
-        continue;
-      }
-
-      switch (variable.resolvedType) {
-        case 'COLOR': {
-          const c = rawValue as JsonColor;
-          const hex = rgbToHex(c.r, c.g, c.b, c.a);
-          result.push({ ...base, type: 'color', value: hex, raw: hex });
-          break;
+function toPluginPayload(data: PixelForgeJson): PluginTokenPayload {
+  return {
+    variables: data.variables
+      ? {
+          // collections: defaultModeId 없음 → parse-variables에서 첫 모드를 기본으로 사용
+          collections: data.variables.collections as PluginTokenPayload['variables'] extends infer V
+            ? V extends { collections?: infer C } ? NonNullable<C> : never
+            : never,
+          variables: data.variables.variables as PluginTokenPayload['variables'] extends infer V
+            ? V extends { variables?: infer Vs } ? NonNullable<Vs> : never
+            : never,
         }
-        case 'FLOAT': {
-          const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
-          const type = inferFloatType(variable.name, variable.scopes);
-          result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
-          break;
-        }
-        case 'STRING': {
-          const strVal = String(rawValue);
-          result.push({ ...base, type: 'string', value: strVal, raw: strVal });
-          break;
-        }
-        case 'BOOLEAN': {
-          const boolVal = String(rawValue);
-          result.push({ ...base, type: 'boolean', value: boolVal, raw: boolVal });
-          break;
-        }
-      }
-    }
-  }
-
-  // variables에서 색상을 못 얻었으면 styles.colors로 폴백
-  const hasColors = result.some((t) => t.type === 'color');
-  if (!hasColors && data.styles?.colors) {
-    for (const style of data.styles.colors) {
-      const paint = style.paints.find((p) => p.type === 'SOLID' && p.color);
-      if (!paint?.color) continue;
-      const { r, g, b } = paint.color;
-      const hex = rgbToHex(r, g, b, paint.opacity);
-      result.push({ type: 'color', name: style.name, value: hex, raw: hex, mode: null, collectionName: null, alias: null });
-    }
-  }
-
-  // styles.texts → typography 토큰
-  if (data.styles?.texts) {
-    for (const text of data.styles.texts) {
-      const fontFamily = text.fontName?.family ?? '';
-      const fontSize = text.fontSize ?? 0;
-      result.push({
-        type: 'typography',
-        name: text.name,
-        value: `${fontFamily} ${fontSize}px`,
-        raw: `${fontFamily} ${fontSize}px`,
-        mode: null,
-        collectionName: null,
-        alias: null,
-      });
-    }
-  }
-
-  // ── 최상위 배열 토큰 파싱 (radius, spacing)
-  const TOP_LEVEL_TYPES: Array<{ key: keyof PixelForgeJson; type: string }> = [
-    { key: 'radius', type: 'radius' },
-    { key: 'spacing', type: 'spacing' },
-  ];
-
-  for (const { key, type } of TOP_LEVEL_TYPES) {
-    const arr = data[key] as TopLevelTokenItem[] | undefined;
-    if (!Array.isArray(arr)) continue;
-    for (const item of arr) {
-      const modeId = Object.keys(item.valuesByMode)[0];
-      if (modeId === undefined) continue;
-      const val = item.valuesByMode[modeId];
-      if (typeof val !== 'number') continue;
-      result.push({
-        type,
-        name: item.name,
-        value: String(val),
-        raw: `${val}px`,
-        mode: null,
-        collectionName: null,
-        alias: null,
-      });
-    }
-  }
-
-  return result;
+      : undefined,
+    // radius / spacing 최상위 배열 — FigmaVariable과 구조 호환
+    radius:  (data.radius  ?? []) as PluginTokenPayload['radius'],
+    spacing: (data.spacing ?? []) as PluginTokenPayload['spacing'],
+    styles: {
+      colors:       data.styles?.colors,
+      texts:        data.styles?.texts,
+      textStyles:   data.styles?.textStyles,
+      headings:     data.styles?.headings,
+      effects:      data.styles?.effects,
+      fontFamilies: data.styles?.fonts,
+    },
+  };
 }
 
 // ===========================
@@ -274,8 +178,8 @@ export async function importFromJsonAction(data: PixelForgeJson): Promise<Import
       });
     }
 
-    // 2. JSON → NormalizedToken[] 변환
-    const normalizedTokens = parseJsonToNormalizedTokens(data);
+    // 2. PixelForgeJson → PluginTokenPayload 변환 후 공통 파서 실행
+    const normalizedTokens = parseVariablesPayload(toPluginPayload(data));
 
     // 3. 공통 파이프라인 실행
     await runTokenPipeline(projectId, normalizedTokens, {
@@ -283,7 +187,10 @@ export async function importFromJsonAction(data: PixelForgeJson): Promise<Import
       figmaKey: data.meta.figmaFileKey,
     });
 
-    const colors = normalizedTokens.filter((t) => t.type === 'color').length;
+    // 4. 임포트된 프로젝트를 활성 프로젝트로 설정 (대시보드에 즉시 반영)
+    await setActiveProject(projectId);
+
+    const colors    = normalizedTokens.filter((t) => t.type === 'color').length;
     const typography = normalizedTokens.filter((t) => t.type === 'typography').length;
 
     return { error: null, colors, typography, projectId };

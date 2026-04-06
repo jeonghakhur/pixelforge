@@ -23,10 +23,12 @@ interface ImportResult {
 interface Props {
   defaultTab?: InputTab;
   onImportSuccess?: (result: ImportResult) => void;
+  /** 파싱 완료 시 즉시 호출 — 제공되면 내부 review 단계를 건너뜁니다 */
+  onParsed?: (data: PixelForgeJson) => void;
 }
 
 // ── 임포트될 토큰 수 미리 계산 (클라이언트 사이드 프리뷰용)
-function previewTokenCounts(data: PixelForgeJson) {
+export function previewTokenCounts(data: PixelForgeJson) {
   let colors = 0;
 
   if (data.variables) {
@@ -37,7 +39,7 @@ function previewTokenCounts(data: PixelForgeJson) {
       const modeId = col?.modes[0]?.modeId ?? Object.keys(v.valuesByMode)[0];
       if (!modeId) continue;
       const val = v.valuesByMode[modeId];
-      if (!val || 'type' in val) continue; // alias 제외
+      if (!val || (typeof val === 'object' && val !== null && 'type' in val)) continue; // alias 제외
       colors++;
     }
   }
@@ -51,7 +53,7 @@ function previewTokenCounts(data: PixelForgeJson) {
   return { colors, typography, radius, spacing };
 }
 
-export default function TokenImportTabs({ defaultTab = 'paste', onImportSuccess }: Props) {
+export default function TokenImportTabs({ defaultTab = 'file', onImportSuccess, onParsed }: Props) {
   const [step, setStep] = useState<Step>('input');
   const [activeTab, setActiveTab] = useState<InputTab>(defaultTab);
   const [parsedData, setParsedData] = useState<PixelForgeJson | null>(null);
@@ -67,6 +69,10 @@ export default function TokenImportTabs({ defaultTab = 'paste', onImportSuccess 
     try {
       const data = JSON.parse(text.trim()) as PixelForgeJson;
       if (!data.meta) throw new Error('올바른 PixelForge JSON 파일이 아닙니다.');
+      if (onParsed) {
+        onParsed(data);
+        return;
+      }
       setParsedData(data);
       setParseError(null);
       setStep('review');
@@ -74,7 +80,7 @@ export default function TokenImportTabs({ defaultTab = 'paste', onImportSuccess 
       setParseError(err instanceof Error ? err.message : 'JSON 파싱에 실패했습니다.');
       setParsedData(null);
     }
-  }, []);
+  }, [onParsed]);
 
   const handleFileRead = useCallback((file: File) => {
     if (!file.name.endsWith('.json') && file.type !== 'application/json') {

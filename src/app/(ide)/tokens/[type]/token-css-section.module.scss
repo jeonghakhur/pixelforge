@@ -39,6 +39,25 @@ $gh-remove-fg:  #f85149;
   background: $gh-elevated;
   border-bottom: 1px solid $gh-border;
   gap: 12px;
+  width: 100%;
+  text-align: left;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.04); }
+}
+
+.cssActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 6px 14px;
+  background: $gh-elevated;
+  border-bottom: 1px solid $gh-border;
 }
 
 .blockTitle {
