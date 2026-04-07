@@ -124,7 +124,7 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
 
 // ── 컴포넌트 ─────────────────────────────────────────────
 
-export default function ColorGrid({ tokens: initial, cssVarOrder = [] }: { tokens: ResolvedColorToken[]; cssVarOrder?: string[] }) {
+export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorToken[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokens, setTokens] = useState<ResolvedColorToken[]>(initial);
   const [modeFilter, setModeFilter] = useState<'all' | 'light' | 'dark'>('all');
@@ -132,36 +132,14 @@ export default function ColorGrid({ tokens: initial, cssVarOrder = [] }: { token
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // tokens.css 변수 순서로 정렬 인덱스 구축
-  const varOrderMap = useMemo(() => {
-    const map = new Map<string, number>();
-    cssVarOrder.forEach((v, i) => map.set(v, i));
-    return map;
-  }, [cssVarOrder]);
-
-  const sorted = useMemo(() => {
-    if (varOrderMap.size === 0) return tokens;
-    // tokens.css 순서로 정렬 — 같은 변수명의 Light/Dark 모드는 Light 먼저
-    return [...tokens].sort((a, b) => {
-      const varA = toCssVar(a.type, a.name);
-      const varB = toCssVar(b.type, b.name);
-      const idxA = varOrderMap.get(varA) ?? 99999;
-      const idxB = varOrderMap.get(varB) ?? 99999;
-      if (idxA !== idxB) return idxA - idxB;
-      // 같은 변수 → Light 먼저
-      const darkA = a.mode?.toLowerCase().includes('dark') ? 1 : 0;
-      const darkB = b.mode?.toLowerCase().includes('dark') ? 1 : 0;
-      return darkA - darkB;
-    });
-  }, [tokens, varOrderMap]);
-
+  // 서버에서 이미 tokens.css 순서로 정렬되어 전달됨
   const filtered = useMemo(() => {
-    if (modeFilter === 'all') return sorted;
-    return sorted.filter((t) => {
+    if (modeFilter === 'all') return tokens;
+    return tokens.filter((t) => {
       if (!t.mode) return modeFilter === 'light';
       return t.mode.toLowerCase().includes(modeFilter);
     });
-  }, [sorted, modeFilter]);
+  }, [tokens, modeFilter]);
 
   const collections = useMemo(() => groupTokens(filtered), [filtered]);
 

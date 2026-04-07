@@ -2,10 +2,26 @@ export const dynamic = 'force-dynamic';
 
 import fs from 'fs';
 import path from 'path';
-import { getTokensByType } from '@/lib/actions/tokens';
-import { resolveAliasColors } from '@/lib/tokens/resolve-alias';
+import { getTokensByType, type TokenRow } from '@/lib/actions/tokens';
+import { resolveAliasColors, type ResolvedColorToken } from '@/lib/tokens/resolve-alias';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
-import { generateCssCode } from '@/lib/tokens/css-generator';
+import { generateCssCode, toVarName } from '@/lib/tokens/css-generator';
+
+/** tokens.css 변수 순서로 토큰 정렬 (서버에서 완료) */
+function sortByCssOrder(tokens: ResolvedColorToken[], cssVarOrder: string[]): ResolvedColorToken[] {
+  if (cssVarOrder.length === 0) return tokens;
+  const orderMap = new Map(cssVarOrder.map((v, i) => [v, i]));
+  return [...tokens].sort((a, b) => {
+    const varA = toVarName(a.name, '');
+    const varB = toVarName(b.name, '');
+    const idxA = orderMap.get(varA) ?? 99999;
+    const idxB = orderMap.get(varB) ?? 99999;
+    if (idxA !== idxB) return idxA - idxB;
+    const darkA = a.mode?.toLowerCase().includes('dark') ? 1 : 0;
+    const darkB = b.mode?.toLowerCase().includes('dark') ? 1 : 0;
+    return darkA - darkB;
+  });
+}
 import ColorGrid from './ColorGrid';
 import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
@@ -79,7 +95,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
             <link rel="stylesheet" href="/css/tokens.css" />
           )}
           <div data-token-grid>
-            {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} cssVarOrder={cssVarOrder} />}
+            {type === 'color'                            && <ColorGrid tokens={sortByCssOrder(resolveAliasColors(tokenRows), cssVarOrder)} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
             {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
             {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}
