@@ -1,13 +1,14 @@
 /**
  * Figma CSS 변수 → 프로젝트 디자인 시스템 변수 매핑
  *
- * Figma 플러그인은 Variable 경로를 그대로 CSS 변수로 내보냄:
- *   var(--colors-brand-600)               ← Colors/Brand/600
- *   var(--colors-background-bg-brand-solid) ← Colors/Background/bg-brand-solid
+ * 플러그인 → PixelForge 변수명 변환 규칙:
+ *   Primitive palette  : Colors/Brand/600               → var(--colors-brand-600)
+ *   Semantic (alias)   : Colors/Background/bg-brand-solid → var(--bg-brand-solid)   (마지막 세그먼트)
+ *   Component colors   : Component colors/.../utility-brand-600 → var(--utility-brand-600) (마지막 세그먼트)
+ *   Spacing            : Spacing/8                      → var(--spacing-8)
+ *   Layout spacing     : Layout spacing/80              → var(--layout-spacing-80)
  *
- * PixelForge 토큰 파이프라인은 첫 세그먼트(Colors/) 제거 + 중복 dedup:
- *   var(--brand-600)
- *   var(--bg-brand-solid)
+ * DB에 구버전 형식(var(--color-colors-*))이 남아 있는 경우는 css-generator.ts::resolveAliasRef 참조.
  */
 
 import { colorSlugToVarName } from '@/lib/tokens/css-generator';

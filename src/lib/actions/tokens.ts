@@ -12,7 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import { generateTokensCss } from '@/lib/tokens/css-exporter';
 function deleteTokensCss() {
-  try { fs.unlinkSync(path.join(process.cwd(), 'design-tokens', 'tokens.css')); } catch { /* 없으면 무시 */ }
+  try { fs.unlinkSync(path.join(process.cwd(), 'public', 'css', 'tokens.css')); } catch { /* 없으면 무시 */ }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -965,10 +965,9 @@ export async function rollbackSnapshotAction(
       .where(eq(tokens.projectId, projectId))
       .all() as TokenRow[];
     const css = generateAllCssCode(allTokenRows);
-    const cssDir = path.join(process.cwd(), 'design-tokens');
+    const cssDir = path.join(process.cwd(), 'public', 'css');
     fs.mkdirSync(cssDir, { recursive: true });
     fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
-    fs.writeFileSync(path.join(process.cwd(), 'public', 'tokens.css'), css, 'utf-8');
   } catch {}
 
   return { error: null, restoredVersion: prev?.version ?? null };

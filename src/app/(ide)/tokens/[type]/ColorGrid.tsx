@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import type { TokenRow } from '@/lib/actions/tokens';
+import type { ResolvedColorToken } from '@/lib/tokens/resolve-alias';
 import { deleteTokenAction } from '@/lib/actions/tokens';
 import { toVarName, TYPE_PREFIX } from '@/lib/tokens/css-generator';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -65,10 +66,10 @@ function toCssVar(type: string, name: string): string {
   return toVarName(name, prefix);
 }
 
-// ── 그룹핑 (Figma 원본 순서 유지) ───────────────────────
+// ── 그룹핑 ───────────────────────────────────────────────
 
 interface ColorFamily {
-  key: string;       // family 키 (경로 앞 1~2 세그먼트)
+  key: string;
   tokens: TokenRow[];
 }
 
@@ -77,10 +78,17 @@ interface ColorCollection {
   families: ColorFamily[];
 }
 
-function groupTokens(tokens: TokenRow[]): ColorCollection[] {
-  // 입력은 이미 sortOrder 기준으로 정렬됨 (DB 쿼리에서 ORDER BY sort_order)
+/** family 키에서 시맨틱 그룹 정렬 키 추출 */
+function familySortKey(familyKey: string): number {
+  const sub = familyKey.split('/').pop()?.toLowerCase() ?? '';
+  const ORDER: Record<string, number> = {
+    'base': 0, 'background': 100, 'text': 101, 'foreground': 102, 'border': 103,
+    'effects': 104, 'utility': 200, 'components': 201, 'alpha': 202,
+  };
+  return ORDER[sub] ?? 50;
+}
 
-  // 1. 컬렉션 순서 유지 (처음 등장 순)
+function groupTokens(tokens: TokenRow[]): ColorCollection[] {
   const collectionOrder: string[] = [];
   const collectionMap = new Map<string, TokenRow[]>();
   for (const token of tokens) {
@@ -96,23 +104,19 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
   return collectionOrder.map((collectionName) => {
     const list = collectionMap.get(collectionName)!;
 
-    // 2. family 키 추출 (경로 앞 1~2 세그먼트) — 등장 순서 유지
-    const familyOrder: string[] = [];
     const familyMap = new Map<string, TokenRow[]>();
     for (const token of list) {
       const segs = token.name.split('/');
       const familyKey = segs.length >= 3 ? `${segs[0]}/${segs[1]}` : segs[0];
       if (!familyMap.has(familyKey)) {
-        familyOrder.push(familyKey);
         familyMap.set(familyKey, []);
       }
       familyMap.get(familyKey)!.push(token);
     }
 
-    const families: ColorFamily[] = familyOrder.map((key) => ({
-      key,
-      tokens: familyMap.get(key)!,   // 이미 sortOrder 순
-    }));
+    const families: ColorFamily[] = [...familyMap.entries()]
+      .sort(([a], [b]) => familySortKey(a) - familySortKey(b))
+      .map(([key, familyTokens]) => ({ key, tokens: familyTokens }));
 
     return { name: collectionName, families };
   });
@@ -120,14 +124,23 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
 
 // ── 컴포넌트 ─────────────────────────────────────────────
 
-export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
+export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorToken[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
-  const [tokens, setTokens] = useState<TokenRow[]>(initial);
+  const [tokens, setTokens] = useState<ResolvedColorToken[]>(initial);
+  const [modeFilter, setModeFilter] = useState<'all' | 'light' | 'dark'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const collections = useMemo(() => groupTokens(tokens), [tokens]);
+  const filtered = useMemo(() => {
+    if (modeFilter === 'all') return tokens;
+    return tokens.filter((t) => {
+      if (!t.mode) return modeFilter === 'light';
+      return t.mode.toLowerCase().includes(modeFilter);
+    });
+  }, [tokens, modeFilter]);
+
+  const collections = useMemo(() => groupTokens(filtered), [filtered]);
 
   const handleCopy = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
@@ -149,6 +162,25 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
 
   return (
     <>
+      <div className={styles.colorModeFilter}>
+        {(['all', 'light', 'dark'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={`${styles.colorModeBtn} ${modeFilter === mode ? styles.colorModeBtnActive : ''}`}
+            onClick={() => setModeFilter(mode)}
+          >
+            {mode === 'all' ? 'All' : mode === 'light' ? 'Light' : 'Dark'}
+            {mode !== 'all' && (
+              <span className={styles.colorModeCount}>
+                {tokens.filter((t) =>
+                  mode === 'light' ? !t.mode || t.mode.toLowerCase().includes('light') : t.mode?.toLowerCase().includes('dark'),
+                ).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
       <div className={styles.colorGroups}>
         {collections.map((collection) => (
           <section key={collection.name} className={styles.colorGroupSection}>
@@ -163,10 +195,8 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
 
             {collection.families.map((family, familyIdx) => (
               <div key={family.key} className={styles.colorFamily}>
-                {/* 패밀리 구분선 (첫 번째 제외) */}
                 {familyIdx > 0 && <div className={styles.colorFamilyDivider} />}
 
-                {/* 패밀리 레이블 (컬렉션 이름과 다를 때만 표시) */}
                 {family.key !== collection.name && (
                   <div className={styles.colorFamilyLabel}>
                     <span>{family.key.split('/').pop()}</span>
@@ -176,20 +206,27 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
 
                 <div className={styles.colorCardGrid}>
                   {family.tokens.map((token) => {
-                    const color = parseColor(token.value);
+                    const resolved = (token as ResolvedColorToken).resolvedHex;
+                    const aliasTarget = (token as ResolvedColorToken).aliasTarget;
+                    const color = parseColor(resolved ?? token.value);
                     if (!color) return null;
                     const isCopied = copiedId === token.id;
                     const cssVar = toCssVar(token.type, token.name);
                     const light = isLight(color.r, color.g, color.b);
+                    const hasAlpha = color.a < 1;
                     const hexUpper = color.hex.toUpperCase();
                     const rgb = `${color.r}, ${color.g}, ${color.b}`;
+                    const rgbaStr = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+                    const displayHex = hasAlpha
+                      ? `${hexUpper} ${Math.round(color.a * 100)}%`
+                      : hexUpper;
 
                     return (
                       <div key={token.id} className={styles.colorCard}>
                         {/* 스와치 */}
                         <div
                           className={styles.colorCardSwatch}
-                          style={{ backgroundColor: color.hex }}
+                          style={{ backgroundColor: hasAlpha ? rgbaStr : color.hex }}
                         >
                           {token.mode && (
                             <span
@@ -211,12 +248,6 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
 
                         {/* 정보 */}
                         <div className={styles.colorCardBody}>
-                          <div className={styles.colorCardNameRow}>
-                            <span className={styles.colorCardName} title={token.name}>
-                              {token.name}
-                            </span>
-                          </div>
-
                           <div className={styles.colorCardVarRow}>
                             <span className={styles.colorCardVar} title={cssVar}>
                               {cssVar}
@@ -235,15 +266,26 @@ export default function ColorGrid({ tokens: initial }: { tokens: TokenRow[] }) {
                             </button>
                           </div>
 
+                          {aliasTarget && (
+                            <div className={styles.colorCardAliasRow}>
+                              <span className={styles.colorCardAliasIcon}>
+                                <Icon icon="solar:arrow-right-linear" width={10} height={10} />
+                              </span>
+                              <span className={styles.colorCardAliasRef} title={aliasTarget}>
+                                {aliasTarget.replace(/^--/, '')}
+                              </span>
+                            </div>
+                          )}
+
                           <div className={styles.colorCardDivider} />
 
                           <div className={styles.colorCardRow}>
                             <span className={styles.colorCardRowLabel}>HEX</span>
-                            <span className={styles.colorCardRowValue}>{hexUpper}</span>
+                            <span className={styles.colorCardRowValue}>{displayHex}</span>
                           </div>
                           <div className={styles.colorCardRow}>
-                            <span className={styles.colorCardRowLabel}>RGB</span>
-                            <span className={styles.colorCardRowValue}>{rgb}</span>
+                            <span className={styles.colorCardRowLabel}>{hasAlpha ? 'RGBA' : 'RGB'}</span>
+                            <span className={styles.colorCardRowValue}>{hasAlpha ? `${rgb}, ${color.a}` : rgb}</span>
                           </div>
                         </div>
                       </div>

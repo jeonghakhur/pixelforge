@@ -8,7 +8,7 @@
  *   1. tokens 테이블 upsert (DELETE 보내온 타입만 → INSERT, 나머지 타입 유지)
  *   2. computeSnapshotDiff  (이전 스냅샷과 비교)
  *   3. tokenSnapshots INSERT (tokenCounts, diffSummary)
- *   4. CSS 재생성 → design-tokens/tokens.css 저장
+ *   4. CSS 재생성 → public/css/tokens.css 저장
  *   5. token_sources upsert (lastExtractedAt, tokenCount, figmaKey)
  *   6. 변경된 타입에 대해 백그라운드 스크린샷 트리거
  */
@@ -218,13 +218,9 @@ export async function runTokenPipeline(
       .all() as TokenRow[];
 
     const css = generateAllCssCode(allTokenRows);
-    const cssDir = path.join(process.cwd(), 'design-tokens');
+    const cssDir = path.join(process.cwd(), 'public', 'css');
     fs.mkdirSync(cssDir, { recursive: true });
     fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
-    // public/tokens.css도 동기화 (정적 파일 서빙용)
-    const publicDir = path.join(process.cwd(), 'public');
-    fs.mkdirSync(publicDir, { recursive: true });
-    fs.writeFileSync(path.join(publicDir, 'tokens.css'), css, 'utf-8');
   } catch {
     // CSS 재생성 실패는 파이프라인을 중단하지 않음
   }

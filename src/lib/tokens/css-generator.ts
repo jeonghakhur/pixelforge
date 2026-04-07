@@ -200,21 +200,25 @@ export function colorSlugToVarName(slug: string): string {
 /**
  * DB에 저장된 alias 참조 값에서 실제 CSS 변수명을 해석한다.
  *
- * DB raw 형태:  var(--color-colors-neutral-900)
- *               var(--color-component-colors-utility-brand-utility-brand-600)
- *               var(--spacing-8)
+ * DB raw 형태 (플러그인 구버전 → 현재):
+ *   구버전: var(--color-colors-neutral-900)        ← 불필요한 color- prefix 포함
+ *           var(--color-component-colors-utility-brand-utility-brand-600)
+ *   현재:   var(--colors-neutral-900)              ← 플러그인 198ff3f 이후 올바른 형식
+ *           var(--bg-brand-solid)
+ *           var(--spacing-8)
  *
  * 변환 규칙:
- *   color-colors-*            → colors-*  (Primitive)  또는 dedup된 시맨틱
- *   color-component-colors-*  → component-colors-*의 dedup
- *   color-colors-background-* → bg-*  (semantic dedup)
- *   spacing-*                 → spacing-* (그대로)
+ *   color-colors-*      → colors-* (구버전 호환: color- prefix 제거)
+ *   colors-*            → colorSlugToVarName (Primitive/Semantic 분기)
+ *   component-colors-*  → colorSlugToVarName (마지막 세그먼트 추출)
+ *   spacing-N (N≥80)    → layout-spacing-N  (Figma "Spacing" 단일 컬렉션 구버전 호환)
+ *                          현재는 "Layout spacing" 컬렉션으로 분리되어 불필요하나 DB 호환용 유지
  */
 function resolveAliasRef(rawVar: string): string {
   return rawVar.replace(/var\(--([^)]+)\)/g, (_, varName: string) => {
     let slug = varName;
 
-    // 1. --color- prefix 제거 (DB 저장 시 추가된 불필요한 prefix)
+    // 1. --color- prefix 제거 (구버전 DB 호환: 플러그인이 color- prefix를 잘못 추가했던 시기)
     if (slug.startsWith('color-')) {
       slug = slug.slice('color-'.length);
     }
@@ -224,7 +228,10 @@ function resolveAliasRef(rawVar: string): string {
       return `var(--${colorSlugToVarName(slug)})`;
     }
 
-    // 3. spacing alias → layout-spacing 리매핑 (spacing 0~64만 존재, 80+ → layout-spacing)
+    // 3. spacing alias → layout-spacing 리매핑
+    //    tokens.css: --spacing-* (0~64px 스케일), --layout-spacing-* (80px~)
+    //    Figma "Layout spacing" 컬렉션은 플러그인이 --layout-spacing-N으로 직접 출력하므로
+    //    이 분기는 구버전 단일 "Spacing" 컬렉션 데이터 호환용
     if (slug.startsWith('spacing-')) {
       const numMatch = slug.match(/^spacing-(\d+)$/);
       if (numMatch && parseInt(numMatch[1]) >= 80) {
@@ -232,7 +239,7 @@ function resolveAliasRef(rawVar: string): string {
       }
     }
 
-    // 4. 나머지 그대로
+    // 4. 나머지 그대로 (--bg-*, --text-*, --utility-*, --radius-* 등 이미 올바른 형식)
     return `var(--${slug})`;
   });
 }
@@ -426,6 +433,20 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
   if (isColor) {
     groups.sort((a, b) => a.groupName.localeCompare(b.groupName));
   }
+  // Primitives 패밀리 등장 순서 수집 (Figma 원본 순서 보존)
+  if (isColor) {
+    for (const group of groups) {
+      if (!group.groupName.startsWith('1-primitives')) continue;
+      const familyOrder: string[] = [];
+      for (const item of group.items) {
+        const fam = extractColorFamily(item.varName);
+        if (!familyOrder.includes(fam)) familyOrder.push(fam);
+      }
+      _primitiveFamilyOrder = familyOrder;
+      break;
+    }
+  }
+
   // 숫자/크기 기반 정렬
   for (const group of groups) {
     group.items.sort((a, b) => sortVarLines(a, b, prefix));
@@ -466,6 +487,22 @@ const SIZE_ORDER: Record<string, number> = {
 };
 
 function sortVarLines(a: VarLine, b: VarLine, prefix: string): number {
+  // Color Primitives: 패밀리별 그룹핑 → 스케일순
+  //   --colors-brand-50, --colors-brand-100, ... --colors-brand-950
+  //   --colors-red-50, --colors-red-100, ... --colors-red-950
+  if (prefix === '' && a.varName.startsWith('--colors-') && b.varName.startsWith('--colors-')) {
+    const famA = extractColorFamily(a.varName);
+    const famB = extractColorFamily(b.varName);
+    if (famA !== famB) {
+      return familySortKey(famA) - familySortKey(famB);
+    }
+    // 같은 패밀리 내: 스케일 순
+    const scaleA = extractNumericKey(a.varName);
+    const scaleB = extractNumericKey(b.varName);
+    if (scaleA !== Infinity || scaleB !== Infinity) return scaleA - scaleB;
+    return a.varName.localeCompare(b.varName);
+  }
+
   // px 값으로 정렬 가능하면 값 기준
   const pxA = extractPxValue(a.value);
   const pxB = extractPxValue(b.value);
@@ -483,6 +520,21 @@ function sortVarLines(a: VarLine, b: VarLine, prefix: string): number {
 
   // 폴백: 원래 순서 유지
   return 0;
+}
+
+/** Primitives 패밀리 등장 순서 (Figma 원본 순서 보존) */
+let _primitiveFamilyOrder: string[] = [];
+
+/** --colors-brand-600 → 'brand', --colors-base-white → 'base' */
+function extractColorFamily(varName: string): string {
+  const m = varName.match(/^--colors-([\w-]+?)-\w+$/);
+  return m ? m[1] : varName;
+}
+
+/** 패밀리 정렬 키 (Figma 등장 순서 기반) */
+function familySortKey(family: string): number {
+  const idx = _primitiveFamilyOrder.indexOf(family);
+  return idx >= 0 ? idx : 999;
 }
 
 /** CSS 값에서 px 숫자 추출 (8px → 8, 9999px → 9999, var(--...) → null) */

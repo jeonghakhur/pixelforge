@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import path from 'path';
 import { getTokensByType } from '@/lib/actions/tokens';
+import { resolveAliasColors } from '@/lib/tokens/resolve-alias';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 import { generateCssCode } from '@/lib/tokens/css-generator';
 import ColorGrid from './ColorGrid';
@@ -36,7 +37,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
 
   let fullCss = '';
   try {
-    const cssPath = path.join(process.cwd(), 'design-tokens', 'tokens.css');
+    const cssPath = path.join(process.cwd(), 'public', 'css', 'tokens.css');
     if (fs.existsSync(cssPath)) fullCss = fs.readFileSync(cssPath, 'utf-8');
   } catch { /* ignore */ }
 
@@ -66,7 +67,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
       ) : (
         <>
           <div data-token-grid>
-            {type === 'color'                            && <ColorGrid tokens={tokenRows} />}
+            {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
             {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
             {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}

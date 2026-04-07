@@ -2,6 +2,47 @@
 @use '../../../../styles/mixins' as *;
 
 // ===========================
+// 모드 필터
+// ===========================
+.colorModeFilter {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.colorModeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-pill;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+  }
+}
+
+.colorModeBtnActive {
+  color: var(--text-primary);
+  background: var(--glass-highlight);
+  border-color: var(--text-muted);
+}
+
+.colorModeCount {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+// ===========================
 // 색상 그룹 섹션 (Tokens Studio 스타일)
 // ===========================
 .colorGroups {
@@ -237,6 +278,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: default;
+}
+
+.colorCardAliasRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.colorCardAliasIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+}
+
+.colorCardAliasRef {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .colorCardDivider {

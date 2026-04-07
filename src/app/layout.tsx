@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Geist_Mono } from 'next/font/google';
 import '@/styles/globals.scss';
 import IconProvider from '@/components/providers/IconProvider';
@@ -36,9 +37,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning className={geistMono.variable}>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
-        {/* eslint-disable-next-line react/no-danger */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <IconProvider>{children}</IconProvider>
       </body>
     </html>
