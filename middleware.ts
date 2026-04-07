@@ -24,7 +24,6 @@ export async function middleware(request: NextRequest) {
   ].join('; '));
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   const session = await getIronSession<SessionData>(request, response, SESSION_OPTIONS);
 
