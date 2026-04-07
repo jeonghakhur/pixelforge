@@ -486,39 +486,106 @@ const SIZE_ORDER: Record<string, number> = {
   '10xl': 15, '11xl': 16, 'full': 99,
 };
 
+/**
+ * 시맨틱 색상 토큰 정렬 키
+ *
+ * 규칙:
+ *   1. 기본 계층 (primary → secondary → tertiary → quaternary) + 변형
+ *   2. 독립 토큰 (white, placeholder)
+ *   3. brand- 그룹 (brand-primary → brand-secondary → brand-tertiary) + 변형
+ *   4. 상태 색상 (error → warning → success) + 변형
+ *   5. 변형(_hover, _on-brand, _alt)은 부모 바로 뒤
+ */
+const SEMANTIC_HIERARCHY: Record<string, number> = {
+  'primary': 10, 'secondary': 20, 'tertiary': 30, 'quaternary': 40,
+};
+const SEMANTIC_INDEPENDENT: Record<string, number> = {
+  'white': 100, 'placeholder': 101,
+};
+const SEMANTIC_ROLE: Record<string, number> = {
+  'error': 300, 'warning': 310, 'success': 320,
+};
+
+function semanticSortKey(varName: string): number {
+  // --text-primary_on-brand → base='text-primary', variant='on-brand'
+  // --bg-brand-solid_hover → base='bg-brand-solid', variant='hover'
+  const clean = varName.replace(/^--/, '');
+  const underIdx = clean.indexOf('_');
+  const base = underIdx > 0 ? clean.slice(0, underIdx) : clean;
+  const hasVariant = underIdx > 0;
+
+  // prefix 제거 (text-, bg-, fg-, border-)
+  const prefixes = ['text-', 'bg-', 'fg-', 'border-', 'utility-', 'alpha-'];
+  let slug = base;
+  for (const p of prefixes) {
+    if (slug.startsWith(p)) { slug = slug.slice(p.length); break; }
+  }
+
+  // brand- 그룹 (brand-primary, brand-secondary, brand-tertiary)
+  if (slug.startsWith('brand-')) {
+    const brandSlug = slug.slice('brand-'.length);
+    const hier = SEMANTIC_HIERARCHY[brandSlug];
+    if (hier !== undefined) return 200 + hier + (hasVariant ? 1 : 0);
+    return 250 + (hasVariant ? 1 : 0);
+  }
+
+  // 상태 (error-primary, warning-primary, success-primary)
+  for (const [role, order] of Object.entries(SEMANTIC_ROLE)) {
+    if (slug.startsWith(role)) return order + (hasVariant ? 1 : 0);
+  }
+
+  // 기본 계층 (primary, secondary, tertiary, quaternary)
+  const hier = SEMANTIC_HIERARCHY[slug];
+  if (hier !== undefined) return hier + (hasVariant ? 1 : 0);
+
+  // 독립 (white, placeholder)
+  const indep = SEMANTIC_INDEPENDENT[slug];
+  if (indep !== undefined) return indep + (hasVariant ? 1 : 0);
+
+  // solid, _hover 등 기타
+  return 150 + (hasVariant ? 1 : 0);
+}
+
 function sortVarLines(a: VarLine, b: VarLine, prefix: string): number {
   // Color Primitives: 패밀리별 그룹핑 → 스케일순
-  //   --colors-brand-50, --colors-brand-100, ... --colors-brand-950
-  //   --colors-red-50, --colors-red-100, ... --colors-red-950
   if (prefix === '' && a.varName.startsWith('--colors-') && b.varName.startsWith('--colors-')) {
     const famA = extractColorFamily(a.varName);
     const famB = extractColorFamily(b.varName);
     if (famA !== famB) {
       return familySortKey(famA) - familySortKey(famB);
     }
-    // 같은 패밀리 내: 스케일 순
     const scaleA = extractNumericKey(a.varName);
     const scaleB = extractNumericKey(b.varName);
     if (scaleA !== Infinity || scaleB !== Infinity) return scaleA - scaleB;
     return a.varName.localeCompare(b.varName);
   }
 
-  // px 값으로 정렬 가능하면 값 기준
+  // 시맨틱 색상 (--text-*, --bg-*, --fg-*, --border-*): 계층 순 + 변형 부모 뒤
+  if (prefix === '' && !a.varName.startsWith('--colors-') && !b.varName.startsWith('--colors-')) {
+    const semA = semanticSortKey(a.varName);
+    const semB = semanticSortKey(b.varName);
+    if (semA !== semB) return semA - semB;
+    // 같은 시맨틱 키 내: 스케일 숫자순 (utility-brand-50 → 100 → ... → 950)
+    const numA = extractNumericKey(a.varName);
+    const numB = extractNumericKey(b.varName);
+    if (numA !== Infinity && numB !== Infinity) return numA - numB;
+  }
+
+  // px 값 기준
   const pxA = extractPxValue(a.value);
   const pxB = extractPxValue(b.value);
   if (pxA !== null && pxB !== null) return pxA - pxB;
 
-  // 변수명 끝의 숫자 (spacing-0-5 → 0.5, layout-spacing-96 → 96)
+  // 변수명 끝 숫자 (spacing-0-5 → 0.5, layout-spacing-96 → 96)
   const numA = extractNumericKey(a.varName);
   const numB = extractNumericKey(b.varName);
   if (numA !== Infinity && numB !== Infinity) return numA - numB;
 
-  // T-shirt 사이즈 (xxs, sm, md, lg, xl ...)
+  // T-shirt 사이즈
   const sizeA = extractSizeKey(a.varName);
   const sizeB = extractSizeKey(b.varName);
   if (sizeA !== Infinity && sizeB !== Infinity) return sizeA - sizeB;
 
-  // 폴백: 원래 순서 유지
   return 0;
 }
 

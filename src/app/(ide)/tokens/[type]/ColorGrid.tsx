@@ -124,7 +124,7 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
 
 // ── 컴포넌트 ─────────────────────────────────────────────
 
-export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorToken[] }) {
+export default function ColorGrid({ tokens: initial, cssVarOrder = [] }: { tokens: ResolvedColorToken[]; cssVarOrder?: string[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokens, setTokens] = useState<ResolvedColorToken[]>(initial);
   const [modeFilter, setModeFilter] = useState<'all' | 'light' | 'dark'>('all');
@@ -132,13 +132,31 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // tokens.css 변수 순서로 정렬 인덱스 구축
+  const varOrderMap = useMemo(() => {
+    const map = new Map<string, number>();
+    cssVarOrder.forEach((v, i) => map.set(v, i));
+    return map;
+  }, [cssVarOrder]);
+
+  const sorted = useMemo(() => {
+    if (varOrderMap.size === 0) return tokens;
+    return [...tokens].sort((a, b) => {
+      const varA = toCssVar(a.type, a.name);
+      const varB = toCssVar(b.type, b.name);
+      const idxA = varOrderMap.get(varA) ?? 99999;
+      const idxB = varOrderMap.get(varB) ?? 99999;
+      return idxA - idxB;
+    });
+  }, [tokens, varOrderMap]);
+
   const filtered = useMemo(() => {
-    if (modeFilter === 'all') return tokens;
-    return tokens.filter((t) => {
+    if (modeFilter === 'all') return sorted;
+    return sorted.filter((t) => {
       if (!t.mode) return modeFilter === 'light';
       return t.mode.toLowerCase().includes(modeFilter);
     });
-  }, [tokens, modeFilter]);
+  }, [sorted, modeFilter]);
 
   const collections = useMemo(() => groupTokens(filtered), [filtered]);
 
@@ -226,7 +244,7 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
                         {/* 스와치 */}
                         <div
                           className={styles.colorCardSwatch}
-                          style={{ backgroundColor: hasAlpha ? rgbaStr : color.hex }}
+                          style={{ backgroundColor: `var(${cssVar}, ${hasAlpha ? rgbaStr : color.hex})` }}
                         >
                           {token.mode && (
                             <span

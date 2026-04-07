@@ -36,9 +36,18 @@ export default async function TokenPage({ params }: TokenPageProps) {
   const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
 
   let fullCss = '';
+  let cssVarOrder: string[] = [];
   try {
     const cssPath = path.join(process.cwd(), 'public', 'css', 'tokens.css');
-    if (fs.existsSync(cssPath)) fullCss = fs.readFileSync(cssPath, 'utf-8');
+    if (fs.existsSync(cssPath)) {
+      fullCss = fs.readFileSync(cssPath, 'utf-8');
+      // tokens.css에서 변수명 순서 추출 (:root + dark 모두)
+      const varRe = /^\s+(--[\w-]+):/gm;
+      let m;
+      while ((m = varRe.exec(fullCss)) !== null) {
+        if (!cssVarOrder.includes(m[1])) cssVarOrder.push(m[1]);
+      }
+    }
   } catch { /* ignore */ }
 
   return (
@@ -66,8 +75,11 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </div>
       ) : (
         <>
+          {type === 'color' && (
+            <link rel="stylesheet" href="/css/tokens.css" />
+          )}
           <div data-token-grid>
-            {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}
+            {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} cssVarOrder={cssVarOrder} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
             {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
             {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}
