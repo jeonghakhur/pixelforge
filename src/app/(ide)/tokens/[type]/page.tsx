@@ -2,26 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import fs from 'fs';
 import path from 'path';
-import { getTokensByType, type TokenRow } from '@/lib/actions/tokens';
-import { resolveAliasColors, type ResolvedColorToken } from '@/lib/tokens/resolve-alias';
+import { getTokensByType } from '@/lib/actions/tokens';
+import { resolveAliasColors } from '@/lib/tokens/resolve-alias';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
-import { generateCssCode, toVarName } from '@/lib/tokens/css-generator';
-
-/** tokens.css 변수 순서로 토큰 정렬 (서버에서 완료) */
-function sortByCssOrder(tokens: ResolvedColorToken[], cssVarOrder: string[]): ResolvedColorToken[] {
-  if (cssVarOrder.length === 0) return tokens;
-  const orderMap = new Map(cssVarOrder.map((v, i) => [v, i]));
-  return [...tokens].sort((a, b) => {
-    const varA = toVarName(a.name, '');
-    const varB = toVarName(b.name, '');
-    const idxA = orderMap.get(varA) ?? 99999;
-    const idxB = orderMap.get(varB) ?? 99999;
-    if (idxA !== idxB) return idxA - idxB;
-    const darkA = a.mode?.toLowerCase().includes('dark') ? 1 : 0;
-    const darkB = b.mode?.toLowerCase().includes('dark') ? 1 : 0;
-    return darkA - darkB;
-  });
-}
+import { generateCssCode } from '@/lib/tokens/css-generator';
 import ColorGrid from './ColorGrid';
 import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
@@ -52,18 +36,9 @@ export default async function TokenPage({ params }: TokenPageProps) {
   const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
 
   let fullCss = '';
-  let cssVarOrder: string[] = [];
   try {
     const cssPath = path.join(process.cwd(), 'public', 'css', 'tokens.css');
-    if (fs.existsSync(cssPath)) {
-      fullCss = fs.readFileSync(cssPath, 'utf-8');
-      // tokens.css에서 변수명 순서 추출 (:root + dark 모두)
-      const varRe = /^\s+(--[\w-]+):/gm;
-      let m;
-      while ((m = varRe.exec(fullCss)) !== null) {
-        if (!cssVarOrder.includes(m[1])) cssVarOrder.push(m[1]);
-      }
-    }
+    if (fs.existsSync(cssPath)) fullCss = fs.readFileSync(cssPath, 'utf-8');
   } catch { /* ignore */ }
 
   return (
@@ -95,7 +70,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
             <link rel="stylesheet" href="/css/tokens.css" />
           )}
           <div data-token-grid>
-            {type === 'color'                            && <ColorGrid tokens={sortByCssOrder(resolveAliasColors(tokenRows), cssVarOrder)} />}
+            {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
             {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
             {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}

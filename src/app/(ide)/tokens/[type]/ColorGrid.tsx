@@ -5,7 +5,7 @@ import { Icon } from '@iconify/react';
 import type { TokenRow } from '@/lib/actions/tokens';
 import type { ResolvedColorToken } from '@/lib/tokens/resolve-alias';
 import { deleteTokenAction } from '@/lib/actions/tokens';
-import { toVarName, TYPE_PREFIX } from '@/lib/tokens/css-generator';
+import { toVarName, TYPE_PREFIX, semanticSortKey } from '@/lib/tokens/css-generator';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './token-views.module.scss';
@@ -114,9 +114,30 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
       familyMap.get(familyKey)!.push(token);
     }
 
-    // family 정렬: cssVarOrder가 적용된 토큰 순서를 유지 (등장 순서 = tokens.css 순서)
+    // family 내 토큰을 css-generator와 동일한 시맨틱 정렬 적용
     const families: ColorFamily[] = [...familyMap.entries()]
-      .map(([key, familyTokens]) => ({ key, tokens: familyTokens }));
+      .map(([key, familyTokens]) => ({
+        key,
+        tokens: [...familyTokens].sort((a, b) => {
+          const varA = toCssVar(a.type, a.name);
+          const varB = toCssVar(b.type, b.name);
+          // Primitives (--colors-*): 숫자 스케일 순
+          if (varA.startsWith('--colors-') && varB.startsWith('--colors-')) {
+            const numA = parseInt(varA.match(/-(\d+)$/)?.[1] ?? '0');
+            const numB = parseInt(varB.match(/-(\d+)$/)?.[1] ?? '0');
+            if (numA !== numB) return numA - numB;
+            return varA.localeCompare(varB);
+          }
+          // Semantic: semanticSortKey
+          const semA = semanticSortKey(varA);
+          const semB = semanticSortKey(varB);
+          if (semA !== semB) return semA - semB;
+          // 같은 키 내 숫자순 (utility-brand-50 → 100 → ...)
+          const numA = parseInt(varA.match(/-(\d+)$/)?.[1] ?? '99999');
+          const numB = parseInt(varB.match(/-(\d+)$/)?.[1] ?? '99999');
+          return numA - numB;
+        }),
+      }));
 
     return { name: collectionName, families };
   });

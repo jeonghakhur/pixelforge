@@ -506,7 +506,7 @@ const SEMANTIC_ROLE: Record<string, number> = {
   'error': 300, 'warning': 310, 'success': 320,
 };
 
-function semanticSortKey(varName: string): number {
+export function semanticSortKey(varName: string): number {
   // --text-primary_on-brand → base='text-primary', variant='on-brand'
   // --bg-brand-solid_hover → base='bg-brand-solid', variant='hover'
   const clean = varName.replace(/^--/, '');
