@@ -114,8 +114,8 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
       familyMap.get(familyKey)!.push(token);
     }
 
+    // family 정렬: cssVarOrder가 적용된 토큰 순서를 유지 (등장 순서 = tokens.css 순서)
     const families: ColorFamily[] = [...familyMap.entries()]
-      .sort(([a], [b]) => familySortKey(a) - familySortKey(b))
       .map(([key, familyTokens]) => ({ key, tokens: familyTokens }));
 
     return { name: collectionName, families };
@@ -141,12 +141,17 @@ export default function ColorGrid({ tokens: initial, cssVarOrder = [] }: { token
 
   const sorted = useMemo(() => {
     if (varOrderMap.size === 0) return tokens;
+    // tokens.css 순서로 정렬 — 같은 변수명의 Light/Dark 모드는 Light 먼저
     return [...tokens].sort((a, b) => {
       const varA = toCssVar(a.type, a.name);
       const varB = toCssVar(b.type, b.name);
       const idxA = varOrderMap.get(varA) ?? 99999;
       const idxB = varOrderMap.get(varB) ?? 99999;
-      return idxA - idxB;
+      if (idxA !== idxB) return idxA - idxB;
+      // 같은 변수 → Light 먼저
+      const darkA = a.mode?.toLowerCase().includes('dark') ? 1 : 0;
+      const darkB = b.mode?.toLowerCase().includes('dark') ? 1 : 0;
+      return darkA - darkB;
     });
   }, [tokens, varOrderMap]);
 
