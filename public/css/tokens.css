@@ -776,6 +776,124 @@
 
   /* ── Container ── */
   --container-paragraph-max-width: var(--layout-spacing-180);
+
+  /* ── Text Style ── */
+  /* Text xl */
+  --text-xl-regular: 400 20px/30px 'Inter';
+  --text-xl-medium: 500 20px/30px 'Inter';
+  --text-xl-semibold: 600 20px/30px 'Inter';
+  --text-xl-bold: 700 20px/30px 'Inter';
+
+  /* Text lg */
+  --text-lg-regular: 400 18px/28px 'Inter';
+  --text-lg-medium: 500 18px/28px 'Inter';
+  --text-lg-semibold: 600 18px/28px 'Inter';
+  --text-lg-bold: 700 18px/28px 'Inter';
+
+  /* Text md */
+  --text-md-regular: 400 16px/24px 'Inter';
+  --text-md-medium: 500 16px/24px 'Inter';
+  --text-md-semibold: 600 16px/24px 'Inter';
+  --text-md-bold: 700 16px/24px 'Inter';
+
+  /* Text sm */
+  --text-sm-regular: 400 14px/20px 'Inter';
+  --text-sm-medium: 500 14px/20px 'Inter';
+  --text-sm-semibold: 600 14px/20px 'Inter';
+  --text-sm-bold: 700 14px/20px 'Inter';
+
+  /* Text xs */
+  --text-xs-regular: 400 12px/18px 'Inter';
+  --text-xs-medium: 500 12px/18px 'Inter';
+  --text-xs-semibold: 600 12px/18px 'Inter';
+  --text-xs-bold: 700 12px/18px 'Inter';
+
+  /* ── Heading ── */
+  /* Display 2xl */
+  --heading-display-2xl-regular: 400 72px/90px 'Inter';
+  --heading-display-2xl-regular-ls: -0.02em;
+  --heading-display-2xl-medium: 500 72px/90px 'Inter';
+  --heading-display-2xl-medium-ls: -0.02em;
+  --heading-display-2xl-semibold: 600 72px/90px 'Inter';
+  --heading-display-2xl-semibold-ls: -0.02em;
+  --heading-display-2xl-bold: 700 72px/90px 'Inter';
+  --heading-display-2xl-bold-ls: -0.02em;
+
+  /* Display xl */
+  --heading-display-xl-regular: 400 60px/72px 'Inter';
+  --heading-display-xl-regular-ls: -0.02em;
+  --heading-display-xl-medium: 500 60px/72px 'Inter';
+  --heading-display-xl-medium-ls: -0.02em;
+  --heading-display-xl-semibold: 600 60px/72px 'Inter';
+  --heading-display-xl-semibold-ls: -0.02em;
+  --heading-display-xl-bold: 700 60px/72px 'Inter';
+  --heading-display-xl-bold-ls: -0.02em;
+
+  /* Display lg */
+  --heading-display-lg-regular: 400 48px/60px 'Inter';
+  --heading-display-lg-regular-ls: -0.02em;
+  --heading-display-lg-medium: 500 48px/60px 'Inter';
+  --heading-display-lg-medium-ls: -0.02em;
+  --heading-display-lg-semibold: 600 48px/60px 'Inter';
+  --heading-display-lg-semibold-ls: -0.02em;
+  --heading-display-lg-bold: 700 48px/60px 'Inter';
+  --heading-display-lg-bold-ls: -0.02em;
+
+  /* Display md */
+  --heading-display-md-regular: 400 36px/44px 'Inter';
+  --heading-display-md-regular-ls: -0.02em;
+  --heading-display-md-medium: 500 36px/44px 'Inter';
+  --heading-display-md-medium-ls: -0.02em;
+  --heading-display-md-semibold: 600 36px/44px 'Inter';
+  --heading-display-md-semibold-ls: -0.02em;
+  --heading-display-md-bold: 700 36px/44px 'Inter';
+  --heading-display-md-bold-ls: -0.02em;
+
+  /* Display sm */
+  --heading-display-sm-regular: 400 30px/38px 'Inter';
+  --heading-display-sm-medium: 500 30px/38px 'Inter';
+  --heading-display-sm-semibold: 600 30px/38px 'Inter';
+  --heading-display-sm-bold: 700 30px/38px 'Inter';
+
+  /* Display xs */
+  --heading-display-xs-regular: 400 24px/32px 'Inter';
+  --heading-display-xs-medium: 500 24px/32px 'Inter';
+  --heading-display-xs-semibold: 600 24px/32px 'Inter';
+  --heading-display-xs-bold: 700 24px/32px 'Inter';
+
+  /* ── Shadow ── */
+  /* Shadows */
+  --shadow-shadow-xs: 0px 1px 2px 0px rgba(0,0,0,0.05);
+  --shadow-shadow-xs-skeuomorphic: 0px 1px 2px 0px rgba(0,0,0,0.05), inset 0px -2px 0px 0px rgba(0,0,0,0.05), inset 0px 0px 0px 1px rgba(0,0,0,0.18);
+  --shadow-shadow-sm: 0px 1px 2px -1px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+  --shadow-shadow-md: 0px 2px 4px -2px rgba(0,0,0,0.06), 0px 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-shadow-main-centre-md: 0px 75px 150px 0px rgba(10,10,10,0.14);
+  --shadow-shadow-grid-md: 32px 32px 64px 0px rgba(10,10,10,0.08);
+  --shadow-shadow-lg: 0px 2px 2px -1px rgba(0,0,0,0.04), 0px 4px 6px -2px rgba(0,0,0,0.03), 0px 12px 16px -4px rgba(0,0,0,0.08);
+  --shadow-shadow-main-centre-lg: 0px 100px 200px 0px rgba(10,10,10,0.18);
+  --shadow-shadow-overlay-right-lg: -40px 40px 72px 0px rgba(10,10,10,0.12);
+  --shadow-shadow-overlay-left-lg: 100px 100px 150px 0px rgba(10,10,10,0.12);
+  --shadow-shadow-xl: 0px 3px 3px -1.5px rgba(0,0,0,0.04), 0px 8px 8px -4px rgba(0,0,0,0.03), 0px 20px 24px -4px rgba(0,0,0,0.08);
+  --shadow-shadow-2xl: 0px 4px 4px -2px rgba(0,0,0,0.04), 0px 24px 48px -12px rgba(0,0,0,0.18);
+  --shadow-shadow-3xl: 0px 5px 5px -2.5px rgba(0,0,0,0.04), 0px 32px 64px -12px rgba(0,0,0,0.14);
+  --shadow-avatar-inner-shadow: inset 0px 0px 0px 0.5px rgba(0,0,0,0.16), inset 0px 0px 0px 1px rgba(255,255,255,0.24);
+  --shadow-avatar-icon: inset 0px 0px 0px 0.5px rgba(0,0,0,0.16), inset 0px 0px 0px 1px rgba(255,255,255,0.24), 0px 0px 0px 1px #ffffff;
+
+  /* Focus rings */
+  --shadow-focus-ring: 0px 0px 0px 4px #9e77ed, 0px 0px 0px 2px #ffffff;
+  --shadow-focus-ring-shadow-xs: 0px 0px 0px 4px #9e77ed, 0px 0px 0px 2px #ffffff, 0px 1px 2px 0px rgba(0,0,0,0.05);
+  --shadow-focus-ring-shadow-xs-skeuomorphic: 0px 0px 0px 4px #9e77ed, 0px 0px 0px 2px #ffffff, 0px 1px 2px 0px rgba(0,0,0,0.05), inset 0px -2px 0px 0px rgba(0,0,0,0.05), inset 0px 0px 0px 1px rgba(0,0,0,0.18);
+  --shadow-focus-ring-shadow-sm: 0px 0px 0px 4px #9e77ed, 0px 0px 0px 2px #ffffff, 0px 1px 2px 0px rgba(0,0,0,0.1), 0px 1px 3px 0px rgba(0,0,0,0.1);
+  --shadow-focus-ring-error: 0px 0px 0px 4px #ef4444, 0px 0px 0px 2px #ffffff;
+  --shadow-focus-ring-error-shadow-xs: 0px 0px 0px 4px #ef4444, 0px 0px 0px 2px #ffffff, 0px 1px 2px 0px rgba(0,0,0,0.05);
+  --shadow-focus-ring-error-shadow-xs-skeuomorphic: 0px 0px 0px 4px #ef4444, 0px 0px 0px 2px #ffffff, 0px 1px 2px 0px rgba(0,0,0,0.05), inset 0px -2px 0px 0px rgba(0,0,0,0.05), inset 0px 0px 0px 1px rgba(0,0,0,0.18);
+
+  /* ── blur ── */
+  /* Backdrop blurs */
+  --blur-backdrop-blur-sm: blur(8px);
+  --blur-backdrop-blur-md: blur(16px);
+  --blur-backdrop-blur-lg: blur(24px);
+  --blur-backdrop-blur-xl: blur(40px);
 }
 
 [data-theme="dark"] {

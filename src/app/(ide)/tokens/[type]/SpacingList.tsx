@@ -1,33 +1,16 @@
 'use client';
 
-import { useState, useMemo, type ChangeEvent } from 'react';
+import { useState, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import type { TokenRow } from '@/lib/actions/tokens';
-import { deleteTokenAction, updateTokenValueAction } from '@/lib/actions/tokens';
-import Modal from '@/components/common/Modal';
+import { deleteTokenAction } from '@/lib/actions/tokens';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
 import styles from './token-views.module.scss';
 
-interface SpacingData {
-  paddingTop?: number;
-  paddingRight?: number;
-  paddingBottom?: number;
-  paddingLeft?: number;
-  gap?: number;
-}
-
-function parseSpacingData(value: string): SpacingData | null {
-  try { return JSON.parse(value) as SpacingData; } catch { return null; }
-}
+/* ── 유틸 ─────────────────────────────────────────── */
 
 function extractPxValue(token: TokenRow): number {
-  const sp = parseSpacingData(token.value);
-  if (sp) {
-    const vals = [sp.gap, sp.paddingTop, sp.paddingRight, sp.paddingBottom, sp.paddingLeft]
-      .filter((v): v is number => v !== undefined && v > 0);
-    if (vals.length > 0) return Math.max(...vals);
-  }
   const num = parseFloat(token.value);
   if (!isNaN(num)) return num;
   if (token.raw) {
@@ -42,30 +25,101 @@ function displayName(fullName: string): string {
   return slash >= 0 ? fullName.slice(slash + 1) : fullName;
 }
 
-interface EditState {
-  paddingTop: string;
-  paddingRight: string;
-  paddingBottom: string;
-  paddingLeft: string;
-  gap: string;
+/** alias 필드(var(--spacing-8) 형태)에서 참조하는 primitive 이름을 찾아 반환 */
+function resolveAliasLabel(
+  alias: string | null,
+  primitiveMap: Map<string, TokenRow>,
+): string | null {
+  if (!alias) return null;
+  // value가 var(--spacing-X) 형태 → X를 추출해서 primitive 매핑
+  const varMatch = alias.match(/^VariableID:(.+)$/);
+  if (varMatch) {
+    // alias 가 VariableID 형태인 경우는 primitive와 직접 매핑 불가 → value 기반 매핑
+    return null;
+  }
+  return null;
 }
+
+/** value 문자열(var(--spacing-8) 등)에서 primitive 참조명 추출 */
+function extractAliasRef(value: string): string | null {
+  const m = value.match(/^var\(--(.+)\)$/);
+  return m ? m[1] : null;
+}
+
+/* ── 그룹핑 ───────────────────────────────────────── */
+
+interface SpacingCollection {
+  name: string;
+  label: string;
+  description: string;
+  tokens: TokenRow[];
+}
+
+const COLLECTION_ORDER: Record<string, number> = {
+  '_Primitives': 0,
+  '3. Spacing': 1,
+  '4. Widths': 2,
+  '5. Containers': 3,
+};
+
+const COLLECTION_LABELS: Record<string, string> = {
+  '_Primitives': 'Primitives',
+  '3. Spacing': 'Spacing',
+  '4. Widths': 'Widths',
+  '5. Containers': 'Containers',
+};
+
+const COLLECTION_DESCRIPTIONS: Record<string, string> = {
+  '_Primitives': '기본 수치 스페이싱 스케일입니다. 하나의 스페이싱 단위는 4px에 해당합니다.',
+  '3. Spacing': '시맨틱 스페이싱 토큰은 Primitive 값을 참조하여 일관된 간격 시스템을 제공합니다.',
+  '4. Widths': '컨텐츠 영역과 컴포넌트의 너비를 정의하는 토큰입니다.',
+  '5. Containers': '컨테이너 패딩과 최대 너비 전용 변수입니다.',
+};
+
+function groupByCollection(tokens: TokenRow[]): SpacingCollection[] {
+  const map = new Map<string, TokenRow[]>();
+
+  for (const token of tokens) {
+    const key = token.collectionName || '_Primitives';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(token);
+  }
+
+  return [...map.entries()]
+    .sort(([a], [b]) => (COLLECTION_ORDER[a] ?? 99) - (COLLECTION_ORDER[b] ?? 99))
+    .map(([name, list]) => ({
+      name,
+      label: COLLECTION_LABELS[name] ?? name,
+      description: COLLECTION_DESCRIPTIONS[name] ?? '',
+      tokens: [...list].sort((a, b) => extractPxValue(a) - extractPxValue(b)),
+    }));
+}
+
+/* ── 컴포넌트 ─────────────────────────────────────── */
 
 export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
-  const [tokens, setTokens] = useState<TokenRow[]>(() =>
-    [...initial].sort((a, b) => extractPxValue(a) - extractPxValue(b))
-  );
+  const [tokens, setTokens] = useState<TokenRow[]>(initial);
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [editingToken, setEditingToken] = useState<TokenRow | null>(null);
-  const [editState, setEditState] = useState<EditState>({
-    paddingTop: '', paddingRight: '', paddingBottom: '', paddingLeft: '', gap: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const pxValues = useMemo(() => tokens.map(extractPxValue), [tokens]);
-  const maxVal = useMemo(() => Math.max(...pxValues, 1), [pxValues]);
+  const collections = useMemo(() => groupByCollection(tokens), [tokens]);
+
+  /** primitive name → token 매핑 (alias 해석용) */
+  const primitiveByVar = useMemo(() => {
+    const map = new Map<string, TokenRow>();
+    for (const token of tokens) {
+      if ((token.collectionName || '_Primitives') === '_Primitives') {
+        // var name: spacing-0, spacing-0-5, spacing-1 ...
+        const name = displayName(token.name);
+        // "0 (0px)" → "0", "0․5 (2px)" → "0-5"
+        const clean = name.replace(/\s*\(.*\)/, '').replace(/[․.]/g, '-');
+        map.set(`spacing-${clean}`, token);
+      }
+    }
+    return map;
+  }, [tokens]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -79,111 +133,119 @@ export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] })
     setDeleteTarget(null);
   };
 
-  const openEdit = (token: TokenRow) => {
-    const sp = parseSpacingData(token.value);
-    setEditingToken(token);
-    setEditState({
-      paddingTop: sp?.paddingTop != null ? String(sp.paddingTop) : '',
-      paddingRight: sp?.paddingRight != null ? String(sp.paddingRight) : '',
-      paddingBottom: sp?.paddingBottom != null ? String(sp.paddingBottom) : '',
-      paddingLeft: sp?.paddingLeft != null ? String(sp.paddingLeft) : '',
-      gap: sp?.gap != null ? String(sp.gap) : '',
-    });
+  const handleCopy = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
   };
-
-  const handleSave = async () => {
-    if (!editingToken) return;
-    const num = (v: string) => (v !== '' ? parseFloat(v) : undefined);
-    const data: SpacingData = {
-      paddingTop: num(editState.paddingTop),
-      paddingRight: num(editState.paddingRight),
-      paddingBottom: num(editState.paddingBottom),
-      paddingLeft: num(editState.paddingLeft),
-      gap: num(editState.gap),
-    };
-    const newValue = JSON.stringify(data);
-    const raw = `${data.paddingTop ?? 0}/${data.paddingRight ?? 0}/${data.paddingBottom ?? 0}/${data.paddingLeft ?? 0} gap:${data.gap ?? 0}`;
-    setSaving(true);
-    const { error } = await updateTokenValueAction(editingToken.id, newValue, raw);
-    setSaving(false);
-    if (!error) {
-      setTokens((prev) =>
-        prev.map((t) => (t.id === editingToken.id ? { ...t, value: newValue, raw } : t))
-      );
-      setEditingToken(null);
-    }
-  };
-
-  const copyJSON = async () => {
-    const json = JSON.stringify(
-      tokens.reduce<Record<string, { value: string }>>((acc, t) => {
-        acc[t.name] = { value: t.raw ?? t.value };
-        return acc;
-      }, {}),
-      null, 2
-    );
-    await navigator.clipboard.writeText(json);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const set = (field: keyof EditState) => (e: ChangeEvent<HTMLInputElement>) =>
-    setEditState((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
     <>
-      <div className={styles.spacingHeader}>
-        <p className={styles.spacingSubtitle}>선(Line) 대신 여백으로 위계를 정의합니다.</p>
-        <span className={styles.baseUnitBadge}>Base Unit: 4px</span>
-      </div>
-      <div className={styles.spacingLayout}>
-        {/* ── 좌: 토큰 행 목록 ── */}
-        <div className={styles.spacingRows}>
-          {tokens.map((token, i) => {
-            const px = pxValues[i];
-            const rem = (px / 16).toFixed(px % 16 === 0 ? 0 : 2);
-            const barPct = maxVal > 0 ? (px / maxVal) * 100 : 0;
-            return (
-              <div key={token.id} className={styles.spacingRow}>
-                <div className={styles.spacingRowName}>
-                  <span className={styles.spacingRowLabel}>{displayName(token.name)}</span>
-                  <span className={styles.spacingRowRem}>({rem}rem)</span>
-                </div>
-                <div className={styles.spacingTrack}>
-                  <div
-                    className={styles.spacingFill}
-                    style={{ width: `${barPct}%` }}
-                  />
-                </div>
-                <span className={styles.spacingPx}>{px}px</span>
-                <div className={styles.spacingRowActions}>
-                  <button type="button" className={styles.actionBtn} onClick={() => openEdit(token)} aria-label="편집">
-                    <Icon icon="solar:pen-2-linear" width={13} height={13} />
-                  </button>
-                  <button type="button" className={`${styles.actionBtn} ${styles.actionBtnDelete}`} onClick={() => setDeleteTarget(token)} aria-label="삭제">
-                    <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
-                  </button>
+      <div className={styles.spacingCollections}>
+        {collections.map((collection) => {
+          const isPrimitive = collection.name === '_Primitives';
+          const maxVal = Math.max(...collection.tokens.map(extractPxValue), 1);
+
+          return (
+            <section key={collection.name} className={styles.spacingSection}>
+              {/* 섹션 헤더 */}
+              <div className={styles.spacingSectionHeader}>
+                <div className={styles.spacingSectionHeaderLeft}>
+                  <h3 className={styles.spacingSectionTitle}>{collection.label}</h3>
+                  <span className={styles.spacingSectionCount}>{collection.tokens.length}</span>
+                  {isPrimitive && (
+                    <span className={styles.baseUnitBadge}>Base: 4px</span>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* ── 우: 사이드바 ── */}
-        <aside className={styles.spacingSidebar}>
-          <div className={styles.spacingInfoCard}>
-            <Icon icon="solar:ruler-angular-linear" width={28} height={28} className={styles.spacingInfoIcon} />
-            <h3 className={styles.spacingInfoTitle}>Grid Consistency</h3>
-            <p className={styles.spacingInfoDesc}>
-              모든 수직/수평 간격은 spacing 토큰을 사용하여 일관성을 유지합니다.
-              이는 복잡한 대시보드에서도 시각적 피로를 최소화하는 핵심입니다.
-            </p>
-          </div>
-          <button type="button" className={styles.copyJsonBtn} onClick={copyJSON}>
-            <Icon icon={copied ? 'solar:check-read-linear' : 'solar:copy-linear'} width={14} height={14} />
-            {copied ? 'Copied!' : 'Copy JSON Tokens'}
-          </button>
-        </aside>
+              {collection.description && (
+                <p className={styles.spacingSectionDesc}>{collection.description}</p>
+              )}
+
+              {/* 테이블 헤더 */}
+              <div className={`${styles.spacingTableHeader} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
+                <span className={styles.spacingColName}>Name</span>
+                {!isPrimitive && <span className={styles.spacingColAlias}>Reference</span>}
+                <span className={styles.spacingColRem}>Rem</span>
+                <span className={styles.spacingColPx}>Pixels</span>
+                <span className={styles.spacingColBar}>Scale</span>
+                <span className={styles.spacingColActions} />
+              </div>
+
+              {/* 토큰 행 */}
+              <div className={`${styles.spacingTableBody} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
+                {collection.tokens.map((token) => {
+                  const px = extractPxValue(token);
+                  const rem = px / 16;
+                  const remStr = rem % 1 === 0 ? `${rem}` : rem.toFixed(2).replace(/0+$/, '');
+                  const barPct = maxVal > 0 ? (px / maxVal) * 100 : 0;
+                  const aliasRef = extractAliasRef(token.value);
+                  const resolvedPrimitive = aliasRef ? primitiveByVar.get(aliasRef) : null;
+                  const resolvedPx = resolvedPrimitive ? extractPxValue(resolvedPrimitive) : null;
+                  const isCopied = copiedId === token.id;
+
+                  return (
+                    <div key={token.id} className={`${styles.spacingTableRow} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
+                      <div className={styles.spacingColName}>
+                        <span className={styles.spacingTokenName}>{displayName(token.name)}</span>
+                      </div>
+
+                      {!isPrimitive && (
+                        <div className={styles.spacingColAlias}>
+                          {aliasRef && (
+                            <span className={styles.spacingAliasRef} title={`var(--${aliasRef})`}>
+                              <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.spacingAliasIcon} />
+                              {aliasRef}
+                              {resolvedPx !== null && (
+                                <span className={styles.spacingAliasResolved}>({resolvedPx}px)</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <span className={styles.spacingColRem}>{remStr}rem</span>
+                      <span className={styles.spacingColPx}>{px}px</span>
+
+                      <div className={styles.spacingColBar}>
+                        <div className={styles.spacingTrack}>
+                          <div
+                            className={styles.spacingFill}
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.spacingColActions}>
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => handleCopy(`var(--pf-${token.type}-${displayName(token.name).replace(/[^\w-]/g, '-').toLowerCase()})`, token.id)}
+                          aria-label="CSS 변수 복사"
+                        >
+                          <Icon
+                            icon={isCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+                            width={13}
+                            height={13}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.actionBtnDelete}`}
+                          onClick={() => setDeleteTarget(token)}
+                          aria-label="삭제"
+                        >
+                          <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <ConfirmDialog
@@ -195,46 +257,6 @@ export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] })
         confirmLabel="삭제"
         loading={deleting}
       />
-
-      <Modal
-        isOpen={editingToken !== null}
-        onClose={() => setEditingToken(null)}
-        title={`간격 편집 — ${editingToken?.name ?? ''}`}
-        size="sm"
-      >
-        <div className={styles.editForm}>
-          <div className={styles.editRow2}>
-            <div className={styles.editField}>
-              <label className={styles.editLabel} htmlFor="edit-pt">Padding Top</label>
-              <input id="edit-pt" type="number" className={styles.editInput} value={editState.paddingTop} onChange={set('paddingTop')} min={0} placeholder="0" />
-            </div>
-            <div className={styles.editField}>
-              <label className={styles.editLabel} htmlFor="edit-pr">Padding Right</label>
-              <input id="edit-pr" type="number" className={styles.editInput} value={editState.paddingRight} onChange={set('paddingRight')} min={0} placeholder="0" />
-            </div>
-          </div>
-          <div className={styles.editRow2}>
-            <div className={styles.editField}>
-              <label className={styles.editLabel} htmlFor="edit-pb">Padding Bottom</label>
-              <input id="edit-pb" type="number" className={styles.editInput} value={editState.paddingBottom} onChange={set('paddingBottom')} min={0} placeholder="0" />
-            </div>
-            <div className={styles.editField}>
-              <label className={styles.editLabel} htmlFor="edit-pl">Padding Left</label>
-              <input id="edit-pl" type="number" className={styles.editInput} value={editState.paddingLeft} onChange={set('paddingLeft')} min={0} placeholder="0" />
-            </div>
-          </div>
-          <div className={styles.editField}>
-            <label className={styles.editLabel} htmlFor="edit-gap">Gap</label>
-            <input id="edit-gap" type="number" className={styles.editInput} value={editState.gap} onChange={set('gap')} min={0} placeholder="0" />
-          </div>
-        </div>
-        <div className={styles.editFooter}>
-          <button type="button" className={styles.editCancelBtn} onClick={() => setEditingToken(null)}>취소</button>
-          <button type="button" className={styles.editSaveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? '저장 중...' : '저장'}
-          </button>
-        </div>
-      </Modal>
     </>
   );
 }
