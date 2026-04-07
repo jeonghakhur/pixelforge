@@ -18,12 +18,10 @@ export async function middleware(request: NextRequest) {
     "img-src 'self' data: blob: https://*.figma.com https://s3-alpha.figma.com",
     "connect-src 'self' https://api.figma.com",
     "font-src 'self'",
-    "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
   ].join('; '));
   response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
 
   const session = await getIronSession<SessionData>(request, response, SESSION_OPTIONS);
 
