@@ -670,7 +670,12 @@ export function generateAllCssCode(allTokens: TokenRow[]): string {
   lines.push(...renderBlock(':root', rootTokens));
 
   if (darkTokens.length > 0) {
+    // data-theme 속성 기반 전환
     lines.push('', ...renderBlock('[data-theme="dark"]', darkTokens));
+    // 시스템 설정 기반 전환 (data-theme 미지정 시)
+    lines.push('', `@media (prefers-color-scheme: dark) {`);
+    lines.push(...renderBlock('  :root:not([data-theme="light"])', darkTokens).map(l => `  ${l}`));
+    lines.push('}');
   }
 
   return lines.join('\n');

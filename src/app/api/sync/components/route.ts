@@ -6,9 +6,8 @@ import { components, componentNodeSnapshots, projects, histories } from '@/lib/d
 import { CORS_HEADERS } from '@/lib/sync/cors';
 import { ensureProject } from '@/lib/sync/upsert-payload';
 import { eq, and } from 'drizzle-orm';
-import { runComponentEngine } from '@/lib/component-generator';
-import type { PluginComponentPayload } from '@/lib/component-generator';
-import { normalizePluginPayload } from '@/lib/component-generator/normalize-payload';
+import { runPipeline } from '@/lib/component-generator';
+import type { PluginPayload } from '@/lib/component-generator';
 import { notifySyncUpdated } from '@/lib/sync/sse-hub';
 import { setActiveProject } from '@/lib/actions/tokens';
 
@@ -51,17 +50,19 @@ export async function POST(req: Request) {
     figmaFileKey?: string;
     figmaFileName?: string;
     meta: null;
-    data: PluginComponentPayload;
+    data: PluginPayload;
   };
 
   const { figmaFileKey, figmaFileName } = body;
-  const data = normalizePluginPayload(body.data as unknown as Record<string, unknown>);
+  const rawData = body.data as unknown as Record<string, unknown>;
+  const dataMeta = (rawData.meta ?? {}) as Record<string, string>;
+  const dataName = (rawData.name as string) ?? '';
 
-  if (!data?.name || !data?.meta?.nodeId) {
+  if (!dataName.trim() || !dataMeta.nodeId) {
     return NextResponse.json({ error: 'data.name and data.meta.nodeId are required' }, { status: 400, headers: CORS_HEADERS });
   }
 
-  const resolvedFileKey = figmaFileKey || data.meta.figmaFileKey || data.meta.figmaFileId || 'local-plugin';
+  const resolvedFileKey = figmaFileKey || dataMeta.figmaFileKey || dataMeta.figmaFileId || 'local-plugin';
   const project = await ensureProject(resolvedFileKey, figmaFileName || resolvedFileKey);
   const projectId = project.id;
 
@@ -69,13 +70,13 @@ export async function POST(req: Request) {
   await setActiveProject(projectId);
 
   // 변경 감지
-  const rawPayload = JSON.stringify(data);
+  const rawPayload = JSON.stringify(rawData);
   const contentHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
 
   const existing = db
     .select({ id: components.id, contentHash: components.contentHash, version: components.version, tsx: components.tsx })
     .from(components)
-    .where(and(eq(components.projectId, projectId), eq(components.figmaNodeId, data.meta.nodeId)))
+    .where(and(eq(components.projectId, projectId), eq(components.figmaNodeId, dataMeta.nodeId)))
     .get();
 
   // 해시 동일 + tsx가 이미 존재하면 스킵 (코드가 null이면 재생성 필요)
@@ -86,8 +87,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // 코드 생성
-  const result = runComponentEngine(data);
+  // 파이프라인: normalize → detect → generate
+  const result = runPipeline(rawData);
+  const componentName = result.output?.name ?? dataName;
   const now = new Date();
   let componentId: string;
   let version: number;
@@ -105,7 +107,7 @@ export async function POST(req: Request) {
       result.output?.css ?? null,
       rawPayload,
       result.resolvedType,
-      JSON.stringify(data.radixProps ?? {}),
+      JSON.stringify((rawData.radixProps as Record<string, string>) ?? {}),
       contentHash,
       version,
       now.getTime(),
@@ -126,15 +128,15 @@ export async function POST(req: Request) {
     `).run(
       componentId,
       projectId,
-      data.meta.nodeId,
+      dataMeta.nodeId,
       resolvedFileKey,
-      data.name,
+      componentName,
       result.output?.category ?? 'action',
       result.output?.tsx ?? null,
       result.output?.css ?? null,
       rawPayload,
       result.resolvedType,
-      JSON.stringify(data.radixProps ?? {}),
+      JSON.stringify((rawData.radixProps as Record<string, string>) ?? {}),
       contentHash,
       version,
       nextOrder,
@@ -155,8 +157,8 @@ export async function POST(req: Request) {
       id: crypto.randomUUID(),
       projectId,
       action: 'generate_component',
-      summary: `${data.name} 컴포넌트 ${existing ? '업데이트' : '생성'} (${result.resolvedType}, v${version})`,
-      metadata: JSON.stringify({ name: data.name, detectedType: result.resolvedType, version }),
+      summary: `${componentName} 컴포넌트 ${existing ? '업데이트' : '생성'} (${result.resolvedType}, v${version})`,
+      metadata: JSON.stringify({ name: componentName, detectedType: result.resolvedType, version }),
     }).run();
   }
 
@@ -164,7 +166,7 @@ export async function POST(req: Request) {
   notifySyncUpdated({
     type: 'component',
     changed: true,
-    name: data.name,
+    name: componentName,
     version,
     action: existing ? 'update' : 'create',
   });

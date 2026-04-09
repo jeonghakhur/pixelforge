@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import { deleteComponent } from '@/lib/actions/components';
+import { useUIStore } from '@/stores/useUIStore';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import styles from './page.module.scss';
 
@@ -16,31 +17,9 @@ interface Props {
   css: string | null;
   radixProps: string | null;
   version: number;
-  tokensCss: string | null;
 }
 
 type CodeTab = 'tsx' | 'css';
-
-interface PropDef { name: string; type: string; default: string; description: string }
-
-// ── TSX 파싱 헬퍼 — 생성된 코드에서 실제 타입 추출 ──────────────────────────
-
-function parseUnionType(tsx: string, keyword: 'Variant' | 'Size'): string[] {
-  const re = new RegExp(`export type \\w+${keyword} = ([^;]+);`);
-  const match = tsx.match(re);
-  if (!match) return [];
-  return match[1].split('|').map((s) => s.trim().replace(/'/g, '').replace(/"/g, ''));
-}
-
-function parseDefaultProp(tsx: string, prop: string): string {
-  const re = new RegExp(`${prop}\\s*=\\s*'([^']+)'`);
-  const match = tsx.match(re);
-  return match ? `'${match[1]}'` : '—';
-}
-
-function parseHasBlockProp(tsx: string): boolean {
-  return /block\?\s*:\s*boolean/.test(tsx);
-}
 
 // ── 동적 props 파서 ─────────────────────────────────────────────────────────
 // 생성된 TSX에서 union type props와 boolean props를 자동 추출
@@ -153,34 +132,6 @@ function parseSandboxProps(tsx: string): SandboxPropDef[] {
   return props;
 }
 
-function buildPropsFromTsx(tsx: string, detectedType: string): PropDef[] {
-  if (detectedType !== 'button' || !tsx) return [];
-
-  const variants = parseUnionType(tsx, 'Variant');
-  const sizes    = parseUnionType(tsx, 'Size');
-  const hasBlock = parseHasBlockProp(tsx);
-
-  const variantType = variants.length > 0
-    ? variants.map((v) => `'${v}'`).join(' | ')
-    : "'Primary'|'Secondary'|'Default'|'Outline'|'Invisible'";
-  const sizeType = sizes.length > 0
-    ? sizes.map((s) => `'${s}'`).join(' | ')
-    : "'xsmall'|'small'|'medium'|'large'|'xlarge'";
-
-  const props: PropDef[] = [
-    { name: 'variant',  type: variantType, default: parseDefaultProp(tsx, 'variant'), description: '버튼의 시각적 스타일 (Figma variant 이름 기준)' },
-    { name: 'size',     type: sizeType,    default: parseDefaultProp(tsx, 'size'),    description: '패딩과 폰트 크기 스케일' },
-  ];
-  if (hasBlock) {
-    props.push({ name: 'block', type: 'boolean', default: 'false', description: '전체 너비 (width: 100%) 레이아웃' });
-  }
-  props.push(
-    { name: 'disabled',  type: 'boolean',   default: 'false', description: '비활성화 — aria-disabled + data-disabled 동시 적용' },
-    { name: 'children',  type: 'ReactNode', default: '—',     description: '버튼 내부 콘텐츠' },
-  );
-  return props;
-}
-
 const USAGE_BY_TYPE: Record<string, { dos: string[]; donts: string[] }> = {
   button: {
     dos: [
@@ -225,16 +176,14 @@ function useHighlightedCode(code: string, lang: 'tsx' | 'css') {
 
 // ── Sandbox ──────────────────────────────────────────────────────────────────
 
-function ButtonSandbox({ name, css, tokensCss, tsx }: {
+function ButtonSandbox({ name, css, tsx }: {
   name: string;
   css: string | null;
-  tokensCss: string | null;
   tsx: string | null;
 }) {
   // TSX에서 모든 props를 동적 파싱
   const sandboxProps = parseSandboxProps(tsx ?? '');
 
-  // union props → 개별 state
   const unionProps = sandboxProps.filter((p): p is UnionPropDef => p.kind === 'union');
   const boolProps  = sandboxProps.filter((p): p is BooleanPropDef => p.kind === 'boolean');
 
@@ -248,24 +197,17 @@ function ButtonSandbox({ name, css, tokensCss, tsx }: {
   for (const p of boolProps) initBool[p.name] = p.defaultValue;
   const [boolValues, setBoolValues] = useState(initBool);
 
-  // disabled는 항상 지원 (TSX destructuring에서 default 없이 나오므로 별도 관리)
+  // disabled는 항상 지원
   const [selDisabled, setDisabled] = useState(false);
 
-  // children: TSX에 children prop이 있으면 텍스트 입력 지원
+  // children
   const hasChildren = tsx ? /children\??:\s*ReactNode/.test(tsx) : false;
   const [childrenText, setChildrenText] = useState(name);
 
-  // sandbox 스코프 격리
-  const scope = `sb-${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-  const scopedTokens = tokensCss ? tokensCss.replace(/:root\s*\{/g, `.${scope} {`) : '';
-  const scopedCss    = css       ? css.replace(/\.root/g, `.${scope} .root`)        : '';
-  const injectedCss  = scopedTokens + scopedCss;
-
-  // 프리뷰 버튼의 data 속성 동적 구성
+  // 프리뷰 data 속성 동적 구성
   const dataAttrs: Record<string, string | undefined> = {};
   for (const p of unionProps) {
     const val = unionValues[p.name] ?? p.defaultValue;
-    // TSX에서 .toLowerCase().replace(/\s+/g, '-') 변환하는 경우 반영
     dataAttrs[`data-${p.dataAttr}`] = val.toLowerCase().replace(/\s+/g, '-');
   }
   for (const p of boolProps) {
@@ -273,98 +215,160 @@ function ButtonSandbox({ name, css, tokensCss, tsx }: {
   }
   dataAttrs['data-disabled'] = selDisabled ? '' : undefined;
 
+  // 부모 테마 동기화
+  const resolvedTheme = useUIStore((s) => s.resolvedTheme);
+
+  // iframe sandbox
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const buildIframeHtml = useCallback(() => {
+    const attrs = Object.entries(dataAttrs)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => v === '' ? k : `${k}="${v}"`)
+      .join(' ');
+
+    return `<!DOCTYPE html>
+<html data-theme="${resolvedTheme}">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="/css/tokens.css" />
+  <style>*, *::before, *::after { box-sizing: border-box; }</style>
+  <style>${css ?? ''}</style>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <button type="button" class="root" ${attrs}>${childrenText || name}</button>
+</body>
+</html>`;
+  }, [css, dataAttrs, childrenText, name, resolvedTheme]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(buildIframeHtml());
+    doc.close();
+  }, [buildIframeHtml]);
+
   return (
-    <div className={styles.sandboxBg}>
-      {injectedCss && (
-        // eslint-disable-next-line react/no-danger
-        <style dangerouslySetInnerHTML={{ __html: injectedCss }} />
-      )}
-
-      <div className={styles.sandboxLayout}>
-        {/* ── 컨트롤 패널 ── */}
-        <div className={styles.sandboxControls}>
-          {unionProps.map((p) => (
-            <div key={p.name} className={styles.controlGroup}>
-              <span className={styles.controlLabel}>{p.name}</span>
-              <div className={styles.controlPills}>
-                {p.values.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    className={`${styles.pill} ${unionValues[p.name] === v ? styles.pillActive : ''}`}
-                    onClick={() => setUnionValues((prev) => ({ ...prev, [p.name]: v }))}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {hasChildren && (
-            <div className={styles.controlGroup}>
-              <span className={styles.controlLabel}>children</span>
-              <input
-                type="text"
-                value={childrenText}
-                onChange={(e) => setChildrenText(e.target.value)}
-                className={styles.controlInput}
-                placeholder="버튼 텍스트"
-              />
-            </div>
-          )}
-
-          {(boolProps.length > 0 || true /* disabled 항상 표시 */) && (
-            <div className={styles.controlGroup}>
-              <span className={styles.controlLabel}>state</span>
-              <div className={styles.controlToggles}>
-                <label className={styles.toggle}>
-                  <input
-                    type="checkbox"
-                    checked={selDisabled}
-                    onChange={(e) => setDisabled(e.target.checked)}
-                  />
-                  <span>disabled</span>
-                </label>
-                {boolProps.map((p) => (
-                  <label key={p.name} className={styles.toggle}>
-                    <input
-                      type="checkbox"
-                      checked={boolValues[p.name] ?? false}
-                      onChange={(e) => setBoolValues((prev) => ({ ...prev, [p.name]: e.target.checked }))}
-                    />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── 프리뷰 ── */}
-        <div className={`${styles.sandboxCanvas} ${scope}`}>
+    <>
+      {/* ── Preview (전체 너비) ── */}
+      <div className={styles.sandboxBg}>
+        <div className={styles.sandboxCanvas}>
           {!css ? (
             <p className={styles.sandboxPlaceholder}>
               CSS가 없습니다 — 플러그인 데이터를 전송하면 실제 스타일이 표시됩니다.
             </p>
           ) : (
-            <button
-              type="button"
-              {...dataAttrs}
-              aria-disabled={selDisabled || undefined}
-              className={`${scope} root`}
-            >
-              {childrenText || name}
-            </button>
+            <iframe
+              ref={iframeRef}
+              title={`${name} preview`}
+              className={styles.sandboxIframe}
+              sandbox="allow-same-origin"
+            />
           )}
         </div>
       </div>
-    </div>
+
+      {/* ── Props Controls ── */}
+      <div className={styles.tableWrapper}>
+        <table className={styles.propsTable}>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Type</th>
+              <th>Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            {unionProps.map((p) => (
+              <tr key={p.name}>
+                <td className={styles.propName}>{p.name}</td>
+                <td className={styles.propType}>
+                  {p.values.map((v) => `'${v}'`).join(' | ')}
+                </td>
+                <td>
+                  <select
+                    className={styles.propSelect}
+                    value={unionValues[p.name] ?? p.defaultValue}
+                    onChange={(e) => setUnionValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                  >
+                    {p.values.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+
+            {hasChildren && (
+              <tr>
+                <td className={styles.propName}>children</td>
+                <td className={styles.propType}>ReactNode</td>
+                <td>
+                  <input
+                    type="text"
+                    value={childrenText}
+                    onChange={(e) => setChildrenText(e.target.value)}
+                    className={styles.propInput}
+                    placeholder="버튼 텍스트"
+                  />
+                </td>
+              </tr>
+            )}
+
+            <tr>
+              <td className={styles.propName}>disabled</td>
+              <td className={styles.propType}>boolean</td>
+              <td>
+                <label className={styles.propToggle}>
+                  <input
+                    type="checkbox"
+                    checked={selDisabled}
+                    onChange={(e) => setDisabled(e.target.checked)}
+                  />
+                  <span>{selDisabled ? 'true' : 'false'}</span>
+                </label>
+              </td>
+            </tr>
+
+            {boolProps.map((p) => (
+              <tr key={p.name}>
+                <td className={styles.propName}>{p.name}</td>
+                <td className={styles.propType}>boolean</td>
+                <td>
+                  <label className={styles.propToggle}>
+                    <input
+                      type="checkbox"
+                      checked={boolValues[p.name] ?? false}
+                      onChange={(e) => setBoolValues((prev) => ({ ...prev, [p.name]: e.target.checked }))}
+                    />
+                    <span>{(boolValues[p.name] ?? false) ? 'true' : 'false'}</span>
+                  </label>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version, tokensCss }: Props) {
+export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version }: Props) {
   const router = useRouter();
   const CODE_HEIGHT_STEP = 200;
   const CODE_HEIGHT_MIN = 160;
@@ -441,7 +445,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Interactive Sandbox</h2>
         {detectedType === 'button' ? (
-          <ButtonSandbox name={name} css={css} tokensCss={tokensCss} tsx={tsx} />
+          <ButtonSandbox name={name} css={css} tsx={tsx} />
         ) : (
           <div className={styles.sandboxBg}>
             <div className={styles.sandboxCanvas}>
@@ -538,34 +542,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
         </div>
       </section>
 
-      {/* ── Props Table ── */}
-      {props.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionLabel}>Component API (Props)</h2>
-          <div className={styles.tableWrapper}>
-            <table className={styles.propsTable}>
-              <thead>
-                <tr>
-                  <th>Property</th>
-                  <th>Type</th>
-                  <th>Default</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {props.map((p) => (
-                  <tr key={p.name}>
-                    <td className={styles.propName}>{p.name}</td>
-                    <td className={styles.propType}>{p.type}</td>
-                    <td className={styles.propDefault}>{p.default}</td>
-                    <td className={styles.propDesc}>{p.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      {/* Props Table은 ButtonSandbox에 통합됨 */}
 
       {/* ── Usage Guidelines ── */}
       {usage && (

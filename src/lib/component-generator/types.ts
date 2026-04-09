@@ -1,31 +1,26 @@
 /**
  * Component Generator — 타입 정의
- * 플러그인이 전송하는 실제 payload 구조 기반
+ *
+ * PluginPayload: 플러그인 raw 데이터 (legacy 필드 제거)
+ * NormalizedPayload: normalize 출력 (optional 제거)
+ * PipelineResult: runPipeline 반환값
  */
 
 // ── 플러그인 payload ────────────────────────────────────────────────
 
-export interface PluginComponentPayload {
+export interface PluginPayload {
   name: string
   meta: {
     nodeId: string
     nodeName: string
     nodeType: string
-    masterId: string | null
-    masterName: string | null
     figmaFileId: string
     figmaFileKey?: string
+    masterId: string | null
+    masterName: string | null
   }
   /** 루트 노드 CSS 속성 */
   styles: Record<string, string>
-  /** 인라인 스타일 HTML */
-  html: string
-  /** 클래스 기반 HTML */
-  htmlClass: string
-  /** 클래스 기반 CSS (Figma CSS 변수 포함) */
-  htmlCss: string
-  /** 인라인 스타일 JSX */
-  jsx: string
   /** 플러그인이 감지한 컴포넌트 타입 */
   detectedType: string
   texts: {
@@ -34,24 +29,30 @@ export interface PluginComponentPayload {
     actions: string[]
     all: string[]
   }
-  /** 하위 요소별 스타일 { "Header row": {...}, "Body row": {...} } */
+  /** 하위 요소별 스타일 */
   childStyles: Record<string, Record<string, string>>
   /** Radix 기반 props 제안 */
   radixProps: Record<string, string>
-  /**
-   * COMPONENT_SET의 실제 variant 옵션
-   * { size: ['xsmall','small','medium','large','xlarge'], variant: ['Primary','Default',...] }
-   */
+  /** COMPONENT_SET의 실제 variant 옵션 */
   variantOptions?: Record<string, string[]>
-  /**
-   * COMPONENT_SET 자식 각각의 스타일
-   * [{ properties: { size:'xlarge', variant:'Primary', state:'rest' }, styles: {...}, childStyles: {...} }]
-   */
-  variants?: Array<{
-    properties: Record<string, string>
-    styles: Record<string, string>
-    childStyles: Record<string, Record<string, string>>
-  }>
+  /** COMPONENT_SET 자식 각각의 스타일 */
+  variants?: VariantEntry[]
+}
+
+export interface VariantEntry {
+  properties: Record<string, string>
+  styles: Record<string, string>
+  childStyles: Record<string, Record<string, string>>
+}
+
+// ── 정규화된 payload ────────────────────────────────────────────────
+
+export interface NormalizedPayload extends Omit<PluginPayload, 'variantOptions' | 'variants'> {
+  /** 확정된 PascalCase 컴포넌트명 */
+  name: string
+  /** optional 제거 — 없으면 빈 객체/배열 */
+  variantOptions: Record<string, string[]>
+  variants: VariantEntry[]
 }
 
 // ── 생성 결과 ────────────────────────────────────────────────────────
@@ -66,31 +67,40 @@ export interface GeneratorOutput {
   tsx: string
   /** 생성된 CSS Module 코드 (tokens.css 변수 활용) */
   css: string
-  /** 생성 과정에서 발견된 경고 (토큰 미매핑, 누락 상태 등) */
+  /** 생성 과정에서 발견된 경고 */
   warnings: GeneratorWarning[]
 }
 
 export type WarningCode =
-  | 'UNMAPPED_COLOR'        // hex 값이 디자인 토큰으로 매핑되지 않음
-  | 'MISSING_STATE'         // 필수 state(hover/press/disabled)가 variants에 없음
-  | 'MISSING_SIZE'          // variantOptions에 있는 size가 variants 데이터에 없음
-  | 'NO_VARIANTS_DATA'      // variants 배열이 비어 있어 rootStyles로 폴백
-  | 'MISSING_COLOR'         // rest 상태에 background-color 없음
-  | 'BLOCK_STYLE_MISMATCH'  // block=true/false 변형 간 스타일 불일치
-  | 'UNKNOWN_STATE'         // STATE_CSS_MAP에 정의되지 않은 state → 폴백 셀렉터 사용
+  | 'UNMAPPED_COLOR'
+  | 'MISSING_STATE'
+  | 'MISSING_SIZE'
+  | 'NO_VARIANTS_DATA'
+  | 'MISSING_COLOR'
+  | 'BLOCK_STYLE_MISMATCH'
+  | 'UNKNOWN_STATE'
+  | 'GENERIC_FALLBACK'
 
 export interface GeneratorWarning {
   code: WarningCode
   message: string
-  /** 관련 값 (예: 매핑 안 된 hex, 누락 state 이름) */
   value?: string
 }
 
-export interface EngineResult {
+// ── 파이프라인 결과 ──────────────────────────────────────────────────
+
+export interface PipelineResult {
   success: boolean
   output: GeneratorOutput | null
   warnings: string[]
-  error?: string
-  /** 보정된 detectedType (layout→button 등). DB 저장 시 이 값 사용 */
   resolvedType: string
+  error?: string
 }
+
+// ── Legacy 호환 (마이그레이션 완료 전) ──────────────────────────────
+
+/** @deprecated runPipeline의 PipelineResult 사용 */
+export type EngineResult = PipelineResult
+
+/** @deprecated PluginPayload 사용 */
+export type PluginComponentPayload = PluginPayload

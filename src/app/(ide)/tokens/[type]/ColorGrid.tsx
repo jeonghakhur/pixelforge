@@ -248,7 +248,7 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
                         {/* 스와치 */}
                         <div
                           className={styles.colorCardSwatch}
-                          style={{ backgroundColor: `var(${cssVar}, ${hasAlpha ? rgbaStr : color.hex})` }}
+                          style={{ backgroundColor: hasAlpha ? rgbaStr : color.hex }}
                         >
                           {token.mode && (
                             <span

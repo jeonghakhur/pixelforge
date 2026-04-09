@@ -1,568 +1,584 @@
-# Design: Component Generator 시스템
+## Executive Summary
 
-_플러그인에서 받은 Figma 노드 정보를 React 컴포넌트로 자동 생성_
-
----
-
-## 📌 Overview
-
-| 항목 | 내용 |
+| 관점 | 내용 |
 |------|------|
-| Feature | component-generator |
-| Goal | Figma 플러그인이 추출한 COMPONENT_SET 노드 → 완전한 React TSX 생성 |
-| Core Value | 모든 variant 조합을 커버하는 "즉시 사용 가능한" 컴포넌트 자동화 |
-| Owner | PixelForge App Backend |
-| Updated | 2026-04-03 (실제 플러그인 출력 기반으로 재설계) |
+| Problem | button.ts 644줄 단일 파일, 진입점 2개에서 수동 normalize, Button 외 미지원 |
+| Solution | shared 유틸 추출 → button/generic 제너레이터 분리 → pipeline 단일 진입점 |
+| Function UX Effect | `.node.json` 임포트 시 모든 컴포넌트 타입에서 TSX+CSS 자동 생성 |
+| Core Value | 전용 제너레이터 점진 추가 구조. 기존 Button 출력 품질 100% 유지 |
 
 ---
 
-## 🎯 Goals
+# Design: Component Generator 파이프라인 재설계
 
-1. **완전한 variant 커버**: 플러그인이 제공하는 모든 variant 조합 스타일 반영
-2. **상태 처리**: state(rest/hover/press/disabled) → CSS pseudo-class / data-attribute
-3. **block 레이아웃**: block=true → `width: 100%`, block=false → inline-flex
-4. **자식 요소 매핑**: childStyles(아이콘, 텍스트) → 각 자식 컴포넌트 스타일 적용
-5. **토큰 역매핑**: 플러그인의 hex 값 → 프로젝트 CSS 변수(설계 토큰)로 치환
+**Plan 참조**: `docs/01-plan/features/component-generator.plan.md`
+**작성**: 2026-04-07
 
 ---
 
-## 📐 Data Structure
-
-### 1️⃣ 플러그인이 전송하는 실제 구조
-
-> 기준 파일: `SizeXlargeStateRestBlockTrue.node.json`
-
-```typescript
-// 플러그인 → 앱으로 전송되는 최상위 구조
-interface PluginNodePayload {
-  meta: NodeMeta;
-  data: ComponentData;
-}
-
-interface NodeMeta {
-  nodeId: string;           // "501:1588"
-  nodeName: string;         // "size=xlarge, state=rest, block=true"
-  nodeType: 'COMPONENT' | 'COMPONENT_SET' | 'FRAME' | 'GROUP';
-  masterId: string | null;
-  masterName: string | null;
-  figmaFileId: string;
-}
-
-interface ComponentData {
-  name: string;             // "Primary" — COMPONENT_SET 이름
-  meta: NodeMeta;
-
-  // 선택된 특정 variant의 flat CSS 스타일
-  styles: CSSStyleMap;
-
-  // 플러그인이 미리 생성한 코드 (참고용, 최종 생성 코드와 다름)
-  html: string;
-  htmlClass: string;
-  htmlCss: string;
-  jsx: string;              // 단일 variant 기준 JSX (상태 없음)
-
-  detectedType: string;     // "button" | "input" | "dialog" | "card" | ...
-
-  texts: {
-    title: string;          // "Button"
-    description: string;
-    actions: string[];
-    all: string[];
-  };
-
-  // 자식 요소별 스타일 (키: Figma 레이어 이름)
-  childStyles: Record<string, CSSStyleMap>;
-  // 예: { "search": {}, "Button": { "background-color": "var(--colors-gray-white)" }, "arrow-right": {} }
-
-  // Radix UI props 제안 (참고용)
-  radixProps: Record<string, string>;
-  // 예: { "color": "blue", "size": "xlarge" }
-
-  // variant 차원별 가능한 값 목록
-  variantOptions: Record<string, string[]>;
-  // 예: { "size": ["xlarge","large","medium","small","xsmall"], "state": ["rest","hover","press","disabled"], "block": ["false","true"] }
-
-  // 모든 variant 조합의 스타일 (size × state × block)
-  variants: VariantData[];
-
-  // 원본 Figma API 노드 데이터
-  fullNode: FigmaFullNode;
-}
-
-// flat CSS 스타일 맵 (플러그인이 케밥-케이스로 전달)
-interface CSSStyleMap {
-  'background-color'?: string;  // hex 값: "#188fff" (토큰 미바인딩 시)
-  'border-radius'?: string;     // "8px"
-  'display'?: string;           // "flex"
-  'gap'?: string;               // "8px"
-  'padding'?: string;           // "16px 24px 16px 24px"
-  'opacity'?: string;           // "0.6" (disabled 상태)
-  'width'?: string;             // "240px"
-  'height'?: string;            // "56px"
-  [key: string]: string | undefined;
-}
-
-// 하나의 variant 조합 데이터
-interface VariantData {
-  properties: Record<string, string>;
-  // 예: { "size": "xlarge", "state": "rest", "block": "true" }
-  styles: CSSStyleMap;
-  childStyles: Record<string, CSSStyleMap>;
-}
-```
-
-### 2️⃣ 실제 variant 데이터 분석 (Button 예시)
-
-**size별 레이아웃 규칙**
-| size | padding | gap | border-radius | 특이사항 |
-|------|---------|-----|---------------|---------|
-| xsmall | 6px 8px | 4px | 4px | — |
-| small | 6px 12px | 4px | 4px | — |
-| medium | 10px 16px | 4px | 4px | — |
-| large | 12px 20px | 8px | 8px | — |
-| xlarge | 16px 24px | 8px | 8px | 기준 variant |
-
-**state별 색상 규칙**
-| state | background-color | 텍스트 opacity |
-|-------|-----------------|--------------|
-| rest | #188fff | 1 |
-| hover | #1e81f0 | 1 |
-| press | #205dca | 1 |
-| disabled | #5fb1ff | 0.6 |
-
-**block 규칙**
-| block | 효과 |
-|-------|------|
-| true | `width: 100%` (full-width) |
-| false | 내용에 맞게 줄어듦 (inline-flex) |
-
-### 3️⃣ 생성될 컴포넌트 구조
-
-```typescript
-interface GeneratedComponent {
-  id: string;               // UUID
-  projectId: string;
-  name: string;             // "Button"
-  detectedType: string;     // "button"
-
-  // 생성된 TSX 코드
-  code: {
-    tsx: string;            // 전체 컴포넌트 소스
-    propsInterface: string; // Props 인터페이스만 분리
-    imports: string[];
-  };
-
-  // variant 메타
-  variantOptions: Record<string, string[]>;
-
-  // 분석 결과
-  analysis: {
-    tokensUsed: string[];         // 매핑된 CSS 변수 목록
-    unmappedColors: string[];     // 토큰 미매핑 hex 값
-    childElements: ChildElement[];
-  };
-
-  version: number;
-  hash: string;             // 노드 정보 SHA-256
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ChildElement {
-  figmaName: string;        // "search", "Button", "arrow-right"
-  type: 'icon' | 'text' | 'group';
-  defaultVisible: boolean;
-  propName: string;         // React prop으로 노출될 이름: "icon", "children", "trailingIcon"
-}
-```
-
----
-
-## 🏗️ Architecture
-
-### 디렉토리 구조
+## 1. 디렉토리 구조
 
 ```
 src/lib/component-generator/
-├── index.ts                      # 메인 엔진 진입점
-├── types.ts                      # PluginNodePayload, GeneratedComponent 등
-├── engine.ts                     # 생성 파이프라인 오케스트레이터
-├── parsers/
-│   ├── variant-parser.ts         # variantOptions + variants 배열 파싱
-│   ├── child-parser.ts           # childStyles → ChildElement 추출
-│   └── style-normalizer.ts       # CSSStyleMap → 앱 CSS 변수 치환
+├── index.ts                  # public API: runPipeline, types re-export
+├── types.ts                  # PluginPayload (legacy 제거), NormalizedPayload, GeneratorOutput
+├── pipeline.ts               # 단일 진입점: normalize → detect → generate
+├── normalize.ts              # normalize-payload.ts 이전 + NormalizedPayload 반환
+├── detect.ts                 # resolveType, resolveElement
+├── css-var-mapper.ts         # 유지 (mapCssValue, mapRadiusValue)
 ├── generators/
-│   ├── factory.ts                # detectedType → 해당 Generator 선택
-│   ├── button.ts                 # Button 생성 규칙 (size/state/block 처리)
-│   ├── input.ts
-│   ├── dialog.ts
-│   └── base.ts                   # 공통 생성 유틸
-├── mappers/
-│   └── token-mapper.ts           # hex → CSS 변수 역매핑 테이블
-├── validators/
-│   ├── convention.ts             # 컨벤션 검증 (이름, 구조)
-│   └── completeness.ts           # 필수 필드 존재 여부
-└── utils/
-    ├── code-formatter.ts
-    └── hash.ts
-```
-
-### 생성 파이프라인
-
-```
-1. 플러그인 → POST /api/sync/components
-   { nodes: PluginNodePayload[] }
-
-2. 파싱 단계
-   ├─ variant-parser: variantOptions + variants → VariantMatrix
-   ├─ child-parser: childStyles → ChildElement[]
-   └─ style-normalizer: hex → var(--*) 역매핑
-
-3. 검증 단계
-   ├─ convention: 이름 규칙 (PascalCase)
-   └─ completeness: 필수 variant 조합 존재 여부
-
-4. 생성 단계
-   ├─ factory.ts: detectedType → 해당 Generator
-   ├─ Props 인터페이스 생성 (variantOptions 기반)
-   ├─ variant 스타일 맵 생성 (모든 조합)
-   ├─ 자식 요소 렌더링 로직 생성
-   └─ JSX 조합
-
-5. 저장
-   ├─ components 테이블 insert/update
-   ├─ component_versions 이력
-   └─ hash 중복 체크
-
-6. 응답
-   { components: GeneratedComponent[], warnings: [] }
+│   ├── registry.ts           # { button: generateButton } + fallback
+│   ├── shared/
+│   │   ├── dimensions.ts     # classifyDimensions
+│   │   ├── state-css.ts      # STATE_CSS_MAP, buildStateCSS, buildMultiSchemeCSS
+│   │   ├── size-css.ts       # buildSizeCSSRules, buildIconOnlyCSSRules
+│   │   └── tsx-builder.ts    # buildTsx (공통 TSX 코드 생성)
+│   ├── button/
+│   │   ├── index.ts          # generateButton (~80줄, 조합만)
+│   │   └── extract.ts        # extractChildTextColor, extractDisabledOpacity 등
+│   └── generic.ts            # 범용 폴백 제너레이터
+└── a11y/
+    └── patterns.ts           # getButtonA11yAttributes (상수 제거)
 ```
 
 ---
 
-## 🔌 API Design
+## 2. types.ts 재설계
 
-### POST /api/sync/components
-
-**Request**
-```json
-{
-  "projectId": "proj_xxx",
-  "nodes": [
-    {
-      "meta": {
-        "nodeId": "501:1588",
-        "nodeName": "size=xlarge, state=rest, block=true",
-        "nodeType": "COMPONENT",
-        "masterId": null,
-        "masterName": null,
-        "figmaFileId": "fileKey123"
-      },
-      "data": {
-        "name": "Primary",
-        "detectedType": "button",
-        "styles": {
-          "background-color": "#188fff",
-          "border-radius": "8px",
-          "padding": "16px 24px 16px 24px",
-          "gap": "8px"
-        },
-        "childStyles": {
-          "Button": { "background-color": "var(--colors-gray-white)" },
-          "search": {},
-          "arrow-right": {}
-        },
-        "variantOptions": {
-          "size": ["xlarge", "large", "medium", "small", "xsmall"],
-          "state": ["rest", "hover", "press", "disabled"],
-          "block": ["false", "true"]
-        },
-        "variants": [ /* ... 40개 조합 ... */ ],
-        "texts": { "title": "Button", "description": "", "actions": [], "all": ["Button"] }
-      }
-    }
-  ]
-}
-```
-
-**Response (성공)**
-```json
-{
-  "success": true,
-  "components": [
-    {
-      "id": "comp_xxx",
-      "name": "Button",
-      "detectedType": "button",
-      "code": {
-        "tsx": "export interface ButtonProps { ... }\nexport function Button(...) { ... }",
-        "propsInterface": "export interface ButtonProps { size?: 'xlarge' | 'large' | 'medium' | 'small' | 'xsmall'; state?: 'rest' | 'hover' | 'press' | 'disabled'; block?: boolean; ... }",
-        "imports": ["import React from 'react';"]
-      },
-      "variantOptions": {
-        "size": ["xlarge", "large", "medium", "small", "xsmall"],
-        "state": ["rest", "hover", "press", "disabled"],
-        "block": ["false", "true"]
-      },
-      "analysis": {
-        "tokensUsed": ["--colors-gray-white"],
-        "unmappedColors": ["#188fff", "#1e81f0", "#205dca", "#5fb1ff"],
-        "childElements": [
-          { "figmaName": "search", "type": "icon", "defaultVisible": false, "propName": "leadingIcon" },
-          { "figmaName": "Button", "type": "text", "defaultVisible": true, "propName": "children" },
-          { "figmaName": "arrow-right", "type": "icon", "defaultVisible": false, "propName": "trailingIcon" }
-        ]
-      },
-      "version": 1,
-      "hash": "abc123..."
-    }
-  ],
-  "warnings": [
-    {
-      "nodeId": "501:1588",
-      "type": "unmapped_color",
-      "message": "4개 hex 색상이 디자인 토큰과 매핑되지 않았습니다: #188fff, #1e81f0, #205dca, #5fb1ff"
-    }
-  ]
-}
-```
-
----
-
-## 📝 Generator Implementation Pattern
-
-### Button Generator (실제 데이터 기반)
+### 2-1. PluginPayload (legacy 필드 제거)
 
 ```typescript
-// generators/button.ts
-
-export function generateButton(data: ComponentData): string {
-  const { variantOptions, variants, childStyles, texts } = data;
-
-  // 1. variant 스타일 맵 구성
-  const styleMap = buildStyleMap(variants);
-
-  // 2. 자식 요소 파싱
-  const hasLeadingIcon = 'search' in childStyles;
-  const hasTrailingIcon = 'arrow-right' in childStyles;
-  const textLabel = texts.title || 'Button';
-
-  // 3. Props 인터페이스
-  const propsInterface = `
-export interface ButtonProps {
-  size?: ${variantOptions.size.map(s => `'${s}'`).join(' | ')};
-  state?: ${variantOptions.state.map(s => `'${s}'`).join(' | ')};
-  block?: boolean;
-  children?: React.ReactNode;
-  ${hasLeadingIcon ? "leadingIcon?: React.ReactNode;" : ""}
-  ${hasTrailingIcon ? "trailingIcon?: React.ReactNode;" : ""}
-  onClick?: () => void;
-  className?: string;
-}`.trim();
-
-  // 4. JSX 생성
-  return `
-${propsInterface}
-
-export function Button({
-  size = 'medium',
-  block = false,
-  children = '${textLabel}',
-  ${hasLeadingIcon ? "leadingIcon," : ""}
-  ${hasTrailingIcon ? "trailingIcon," : ""}
-  onClick,
-  className,
-  disabled,
-  ...props
-}: ButtonProps & { disabled?: boolean }) {
-  return (
-    <button
-      style={{
-        ...BUTTON_SIZE_STYLES[size],
-        ...(block ? { width: '100%' } : {}),
-      }}
-      data-state={disabled ? 'disabled' : undefined}
-      disabled={disabled}
-      onClick={onClick}
-      className={className}
-      {...props}
-    >
-      ${hasLeadingIcon ? "{leadingIcon && <span className=\"btn-icon btn-icon--lead\">{leadingIcon}</span>}" : ""}
-      <span style={{ color: 'var(--colors-gray-white)' }}>{children}</span>
-      ${hasTrailingIcon ? "{trailingIcon && <span className=\"btn-icon btn-icon--trail\">{trailingIcon}</span>}" : ""}
-    </button>
-  );
-}
-
-// variant 스타일 상수 (token-mapper가 hex → var(--*) 치환 후 주입)
-const BUTTON_SIZE_STYLES = ${JSON.stringify(
-    buildSizeStyles(variants),
-    null,
-    2
-  )};
-`.trim();
-}
-
-// variants 배열에서 size별 대표 스타일(rest 상태) 추출
-function buildSizeStyles(variants: VariantData[]): Record<string, object> {
-  const sizes: Record<string, object> = {};
-  for (const v of variants) {
-    if (v.properties.state === 'rest' && v.properties.block === 'false') {
-      sizes[v.properties.size] = normalizeCSSMap(v.styles);
-    }
+export interface PluginPayload {
+  name: string
+  meta: {
+    nodeId: string
+    nodeName: string
+    nodeType: string
+    figmaFileId: string
+    figmaFileKey?: string
+    masterId: string | null
+    masterName: string | null
   }
-  return sizes;
+  styles: Record<string, string>
+  childStyles: Record<string, Record<string, string>>
+  detectedType: string
+  texts: { title: string; description: string; actions: string[]; all: string[] }
+  radixProps: Record<string, string>
+  variantOptions?: Record<string, string[]>
+  variants?: VariantEntry[]
+}
+
+export interface VariantEntry {
+  properties: Record<string, string>
+  styles: Record<string, string>
+  childStyles: Record<string, Record<string, string>>
 }
 ```
 
-### token-mapper (hex → CSS 변수 역매핑)
+**제거**: `html`, `htmlClass`, `htmlCss`, `jsx`
+**추가**: `VariantEntry`를 독립 타입으로 export
+
+### 2-2. NormalizedPayload (normalize 출력)
 
 ```typescript
-// mappers/token-mapper.ts
-
-// 프로젝트 디자인 토큰과 hex 값 매핑 테이블
-// tokens.css 또는 DB tokens 테이블에서 동적 로드
-const HEX_TO_TOKEN: Record<string, string> = {
-  '#188fff': 'var(--color-brand-primary)',
-  '#1e81f0': 'var(--color-brand-primary-hover)',
-  '#205dca': 'var(--color-brand-primary-press)',
-  '#5fb1ff': 'var(--color-brand-primary-disabled)',
-  '#ffffff': 'var(--colors-gray-white)',
-};
-
-export function mapHexToToken(hex: string): string {
-  return HEX_TO_TOKEN[hex.toLowerCase()] ?? hex;
-}
-
-export function normalizeCSSMap(styles: CSSStyleMap): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(styles)) {
-    if (!value) continue;
-    const camelKey = key.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    result[camelKey] = key === 'background-color' ? mapHexToToken(value) : value;
-  }
-  return result;
-}
-```
-
----
-
-## 🗄️ Database Schema
-
-```sql
-CREATE TABLE components (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
-
-  -- 식별
-  name TEXT NOT NULL,                    -- "Button"
-  detected_type TEXT NOT NULL,           -- "button"
-  figma_node_id TEXT,                    -- "501:1588"
-  figma_file_id TEXT,
-
-  -- 생성된 코드
-  tsx_code TEXT NOT NULL,
-  props_interface TEXT NOT NULL,
-  imports TEXT NOT NULL,                 -- JSON array
-
-  -- variant 메타
-  variant_options TEXT NOT NULL,         -- JSON: { size: [...], state: [...] }
-
-  -- 분석
-  tokens_used TEXT,                      -- JSON array
-  unmapped_colors TEXT,                  -- JSON array (경고용)
-  child_elements TEXT,                   -- JSON array
-
-  -- 버전 관리
-  version INTEGER DEFAULT 1,
-  hash TEXT,                             -- SHA-256 of fullNode
-
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-
-  UNIQUE(project_id, name, version)
-);
-
-CREATE TABLE component_versions (
-  id TEXT PRIMARY KEY,
-  component_id TEXT NOT NULL REFERENCES components(id),
-  version INTEGER NOT NULL,
-  tsx_code TEXT NOT NULL,
-  hash TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  UNIQUE(component_id, version)
-);
-```
-
-> **Note**: better-sqlite3 기반이므로 UUID → TEXT, JSONB → TEXT (JSON.stringify), TIMESTAMP → TEXT
-
----
-
-## ✅ Validation Rules
-
-```typescript
-// validators/convention.ts
-
-const RULES = {
-  // 컴포넌트 이름: PascalCase
-  componentName: /^[A-Z][a-zA-Z0-9]*$/,
-
-  // detectedType 허용 목록
-  allowedTypes: ['button', 'input', 'dialog', 'card', 'select', 'checkbox', 'radio', 'badge', 'tag'],
-
-  // 필수 variant 차원 (버튼의 경우)
-  button: {
-    requiredDimensions: ['size', 'state'],
-    requiredStates: ['rest', 'hover', 'press', 'disabled'],
-  },
-};
-
-// validators/completeness.ts
-// 모든 requiredStates가 variants 배열에 존재하는지 확인
-export function validateVariantCompleteness(
-  detectedType: string,
+export interface NormalizedPayload extends Omit<PluginPayload, 'variantOptions' | 'variants'> {
+  /** 확정된 PascalCase 컴포넌트명 */
+  name: string
+  /** optional 제거 — 없으면 빈 객체/배열 */
   variantOptions: Record<string, string[]>
-): ValidationResult { ... }
+  variants: VariantEntry[]
+}
+```
+
+### 2-3. PipelineResult (engine의 EngineResult 교체)
+
+```typescript
+export interface PipelineResult {
+  success: boolean
+  output: GeneratorOutput | null
+  warnings: string[]
+  resolvedType: string
+  error?: string
+}
+```
+
+### 2-4. GeneratorOutput, WarningCode (유지 + 추가)
+
+```typescript
+export type WarningCode =
+  | 'UNMAPPED_COLOR'
+  | 'MISSING_STATE'
+  | 'MISSING_SIZE'
+  | 'NO_VARIANTS_DATA'
+  | 'MISSING_COLOR'
+  | 'BLOCK_STYLE_MISMATCH'
+  | 'UNKNOWN_STATE'
+  | 'GENERIC_FALLBACK'    // 신규: 전용 제너레이터 없음
 ```
 
 ---
 
-## 🚀 Implementation Phases
+## 3. pipeline.ts 상세 설계
 
-### Phase 1: 파서 + 기본 생성 (우선)
-- [ ] `PluginNodePayload` 타입 정의 (실제 JSON 기반)
-- [ ] `variant-parser.ts`: variants 배열 → VariantMatrix
-- [ ] `child-parser.ts`: childStyles → ChildElement[]
-- [ ] `style-normalizer.ts`: CSSStyleMap → camelCase + hex 치환
-- [ ] `token-mapper.ts`: hex ↔ CSS 변수 양방향 테이블
-- [ ] `button.ts` generator: 40개 variant 커버 TSX 생성
-- [ ] POST /api/sync/components 엔드포인트
+```typescript
+import { normalize } from './normalize'
+import { resolveType, resolveElement } from './detect'
+import { getGenerator } from './generators/registry'
+import { generateGeneric } from './generators/generic'
+import type { PipelineResult } from './types'
 
-### Phase 2: 추가 컴포넌트 + 저장
-- [ ] Input, Select, Dialog generator
-- [ ] DB 스키마 + Drizzle 마이그레이션
-- [ ] 버전 관리 + hash 중복 체크
-- [ ] 미매핑 컬러 경고 시스템
+export function runPipeline(raw: Record<string, unknown>): PipelineResult {
+  // 1. 정규화
+  const payload = normalize(raw)
 
-### Phase 3: UI + 검증
-- [ ] 생성 결과 미리보기 (Interactive Sandbox 연동)
-- [ ] convention / completeness 검증
-- [ ] E2E 테스트
+  // 2. 타입 감지
+  const resolvedType = resolveType(payload)
+
+  // 3. 제너레이터 선택 (전용 > 폴백)
+  const generator = getGenerator(resolvedType)
+  const useGeneric = !generator
+  const gen = generator ?? generateGeneric
+
+  // 4. HTML 요소 결정
+  const element = resolveElement(resolvedType, payload.name)
+
+  // 5. 생성
+  try {
+    const output = gen(payload, { element })
+    if (useGeneric) {
+      output.warnings.push({
+        code: 'GENERIC_FALLBACK',
+        message: `'${payload.name}': 전용 제너레이터 없음, 범용 폴백 사용`,
+      })
+    }
+    const warnings = output.warnings.map(
+      w => `[${w.code}] ${w.message}${w.value ? ` (${w.value})` : ''}`
+    )
+    return { success: true, output, warnings, resolvedType }
+  } catch (err) {
+    return {
+      success: false,
+      output: null,
+      warnings: [],
+      resolvedType,
+      error: `'${payload.name}' 생성 중 오류: ${err instanceof Error ? err.message : String(err)}`,
+    }
+  }
+}
+```
 
 ---
 
-## 📋 Acceptance Criteria
+## 4. normalize.ts 상세 설계
 
-- [ ] `PluginNodePayload` 인터페이스가 실제 플러그인 출력과 일치
-- [ ] 40개 variant 조합을 모두 커버하는 Button TSX 생성
-- [ ] `block=true` → `width: 100%`, `block=false` → auto
-- [ ] `state=disabled` → `disabled` prop + opacity 처리
-- [ ] 자식 요소(leadingIcon, children, trailingIcon) 선택적 렌더링
-- [ ] 미매핑 hex → `warnings` 배열에 포함
-- [ ] DB 저장 + 버전 이력
-- [ ] 빌드/lint 통과
+기존 `normalize-payload.ts` 로직 이전. 변경사항:
+
+```typescript
+import type { NormalizedPayload } from './types'
+
+export function normalize(raw: Record<string, unknown>): NormalizedPayload {
+  // 기존 normalizePluginPayload 로직 유지
+  // 차이점:
+  // 1. 반환 타입이 NormalizedPayload (optional 제거)
+  // 2. variantOptions: raw.variantOptions ?? {}
+  // 3. variants: raw.variants ?? []
+  // 4. html/htmlClass/htmlCss/jsx 필드 무시 (spread하지 않음)
+}
+```
+
+핵심 로직(이름 추출, radixProps 정규화, nodeName 파싱)은 **그대로 유지**.
 
 ---
 
-**작성**: 2026-04-03  
-**상태**: Revised (실제 플러그인 JSON 출력 기반 재설계)
+## 5. detect.ts 상세 설계
+
+```typescript
+/** detectedType 보정 */
+export function resolveType(payload: NormalizedPayload): string {
+  const { detectedType, name } = payload
+  const lowerName = name.toLowerCase()
+
+  if (/button/i.test(name))               return 'button'
+  if (/badge|chip|tag/i.test(name))        return 'badge'
+  if (/input|field|textarea/i.test(name))  return 'input'
+  if (/card|panel/i.test(name))            return 'card'
+  if (/modal|dialog/i.test(name))          return 'modal'
+  if (/tab/i.test(name))                   return 'tabs'
+
+  return detectedType
+}
+
+type HtmlElement = 'button' | 'span' | 'input' | 'article' | 'a' | 'div'
+
+/** 컴포넌트 타입 → HTML 요소 */
+export function resolveElement(resolvedType: string, name: string): HtmlElement {
+  switch (resolvedType) {
+    case 'button':  return 'button'
+    case 'badge':   return 'span'
+    case 'input':   return 'input'
+    case 'card':    return 'article'
+    default:        return 'div'
+  }
+}
+```
+
+---
+
+## 6. shared/ 유틸 분리 — button.ts에서 추출
+
+### 6-1. shared/dimensions.ts
+
+```typescript
+// button.ts 1~35줄에서 추출
+export interface DimensionKeys {
+  stateKey:       string | undefined
+  sizeKey:        string | undefined
+  blockKey:       string | undefined
+  iconOnlyKey:    string | undefined
+  appearanceKeys: string[]
+}
+
+export function classifyDimensions(
+  variantOptions: Record<string, string[]>
+): DimensionKeys
+```
+
+### 6-2. shared/state-css.ts
+
+```typescript
+// button.ts 37~348줄에서 추출
+export interface StateCssMapping { selector: string; extra?: string }
+export const STATE_CSS_MAP: Record<string, StateCssMapping>
+
+export function isBaseState(state: string): boolean
+
+export interface StateStyle {
+  bg: string | null; color: string | null
+  border: string | null; opacity: string | null
+}
+
+export function buildStateCSS(
+  stateMap: Map<string, StateStyle>,
+  selectorPrefix: string,
+  warnings: GeneratorWarning[],
+  name: string,
+): string
+
+export function buildMultiSchemeCSS(
+  appearanceKey: string,
+  schemes: AppearanceScheme[],
+  warnings: GeneratorWarning[],
+  name: string,
+): string
+```
+
+### 6-3. shared/size-css.ts
+
+```typescript
+// button.ts 350~437줄에서 추출
+export function buildSizeCSSRules(
+  variants: VariantEntry[],
+  sizeKey: string,
+  allSizes: string[],
+  stateKey?: string,
+  blockKey?: string,
+  iconOnlyKey?: string,
+  warnings?: GeneratorWarning[],
+): string
+
+export function buildIconOnlyCSSRules(
+  variants: VariantEntry[],
+  iconOnlyKey: string,
+  sizeKey?: string,
+  stateKey?: string,
+): string
+```
+
+### 6-4. shared/tsx-builder.ts
+
+```typescript
+import type { NormalizedPayload, DimensionKeys } from '../types'
+
+export interface TsxBuildOptions {
+  element: string                    // 'button' | 'div' | 'span' ...
+  elementPropsType: string           // 'ButtonHTMLAttributes<HTMLButtonElement>'
+}
+
+/**
+ * 범용 TSX 코드 생성
+ * button.ts 558~603줄의 TSX 생성 로직을 일반화
+ */
+export function buildTsx(
+  payload: NormalizedPayload,
+  dims: DimensionKeys,
+  options: TsxBuildOptions,
+): string
+```
+
+현재 button.ts의 TSX 생성 로직과 동일한 패턴:
+- `forwardRef` + `data-*` attribute
+- appearance/size/block/iconOnly/loading prop 자동 생성
+- `aria-disabled`, `aria-busy` 자동 삽입
+
+---
+
+## 7. generators/button/ 분리
+
+### 7-1. button/extract.ts
+
+```typescript
+// button.ts 76~202줄에서 추출 (버튼 전용 추출 로직)
+export function extractChildTextColor(
+  childStyles: Record<string, Record<string, string>>
+): string | null
+
+export function extractDisabledOpacity(
+  childStyles: Record<string, Record<string, string>>,
+  rootStyles: Record<string, string>,
+): string | null
+
+export function toStateStyle(v: VariantEntry): StateStyle
+export function toDisabledStateStyle(v: VariantEntry): StateStyle
+export function deduplicateByBlock(...): void
+
+export function extractStateStyles(
+  variants: VariantEntry[],
+  stateKey: string,
+  warnings: GeneratorWarning[],
+  blockKey?: string,
+  iconOnlyKey?: string,
+): Map<string, StateStyle>
+
+export function extractAppearanceSchemes(
+  variants: VariantEntry[],
+  appearanceKey: string,
+  stateKey: string,
+  warnings: GeneratorWarning[],
+  blockKey?: string,
+  iconOnlyKey?: string,
+): AppearanceScheme[]
+```
+
+### 7-2. button/index.ts (~80줄)
+
+```typescript
+import type { NormalizedPayload, GeneratorOutput } from '../../types'
+import type { GeneratorContext } from '../registry'
+import { classifyDimensions } from '../shared/dimensions'
+import { buildMultiSchemeCSS, buildSingleSchemeCSS } from '../shared/state-css'
+import { buildSizeCSSRules, buildIconOnlyCSSRules } from '../shared/size-css'
+import { buildTsx } from '../shared/tsx-builder'
+import { extractStateStyles, extractAppearanceSchemes, deduplicateByBlock } from './extract'
+
+export function generateButton(
+  payload: NormalizedPayload,
+  ctx: GeneratorContext,
+): GeneratorOutput {
+  const { variantOptions, variants } = payload
+  const dims = classifyDimensions(variantOptions)
+  const warnings = []
+
+  // 1. block 일관성 검증
+  if (dims.blockKey) deduplicateByBlock(variants, dims.blockKey, warnings)
+
+  // 2. 색상 스킴 CSS
+  const colorSchemeCSS = /* dims 기반 분기 — 기존 로직 */
+
+  // 3. size/block/iconOnly CSS
+  const sizeCSS = /* buildSizeCSSRules */
+  const blockCSS = /* 조건부 */
+  const iconOnlyCSS = /* buildIconOnlyCSSRules */
+
+  // 4. TSX
+  const tsx = buildTsx(payload, dims, {
+    element: 'button',
+    elementPropsType: 'ButtonHTMLAttributes<HTMLButtonElement>',
+  })
+
+  // 5. CSS 조합
+  const css = /* base + colorScheme + size + block + iconOnly */
+
+  return { name: payload.name, category: 'action', tsx, css, warnings }
+}
+```
+
+---
+
+## 8. generators/generic.ts — 범용 폴백
+
+```typescript
+import type { NormalizedPayload, GeneratorOutput } from '../types'
+import type { GeneratorContext } from './registry'
+import { classifyDimensions } from './shared/dimensions'
+import { buildMultiSchemeCSS } from './shared/state-css'
+import { buildSizeCSSRules } from './shared/size-css'
+import { buildTsx } from './shared/tsx-builder'
+
+/** 버튼 전용 추출 로직 없이 shared 유틸만으로 생성 */
+export function generateGeneric(
+  payload: NormalizedPayload,
+  ctx: GeneratorContext,
+): GeneratorOutput {
+  const dims = classifyDimensions(payload.variantOptions)
+  const warnings = []
+
+  // CSS: shared 유틸로 state/size/appearance 자동 생성
+  // TSX: buildTsx로 data-* attribute 자동 생성
+  // base CSS: element에 따라 최소 기본값만 (cursor:pointer 등 제외)
+}
+```
+
+**generic과 button의 차이:**
+
+| 항목 | button | generic |
+|------|--------|---------|
+| base CSS | `cursor:pointer`, `font-weight:500` | `display:inline-flex`, `align-items:center`만 |
+| childTextColor | `extractChildTextColor` 호출 | 미사용 (root styles만) |
+| block 검증 | `deduplicateByBlock` | 미수행 |
+| category | `'action'` 고정 | name 기반 추론 |
+
+---
+
+## 9. generators/registry.ts
+
+```typescript
+import type { NormalizedPayload, GeneratorOutput } from '../types'
+
+export interface GeneratorContext {
+  element: string
+}
+
+type GeneratorFn = (
+  payload: NormalizedPayload,
+  ctx: GeneratorContext,
+) => GeneratorOutput
+
+const GENERATORS: Record<string, GeneratorFn> = {
+  button: (await import('./button')).generateButton,
+}
+
+export function getGenerator(resolvedType: string): GeneratorFn | null {
+  return GENERATORS[resolvedType] ?? null
+}
+```
+
+새 전용 제너레이터 추가 시 여기에 한 줄만 추가.
+
+---
+
+## 10. 진입점 업데이트
+
+### 10-1. index.ts (public API)
+
+```typescript
+export { runPipeline } from './pipeline'
+export type { PluginPayload, NormalizedPayload, GeneratorOutput, PipelineResult } from './types'
+```
+
+### 10-2. actions/components.ts — importComponentFromJson
+
+```diff
+- const { normalizePluginPayload } = await import('@/lib/component-generator/normalize-payload');
+- const normalized = normalizePluginPayload(d);
+- const { runComponentEngine } = await import('@/lib/component-generator');
+- const result = runComponentEngine(normalized);
++ const { runPipeline } = await import('@/lib/component-generator');
++ const result = runPipeline(d);
+```
+
+### 10-3. route.ts — POST /api/sync/components
+
+```diff
+- import { runComponentEngine } from '@/lib/component-generator';
+- import { normalizePluginPayload } from '@/lib/component-generator/normalize-payload';
+- const data = normalizePluginPayload(body.data as unknown as Record<string, unknown>);
+- const result = runComponentEngine(data);
++ import { runPipeline } from '@/lib/component-generator';
++ const result = runPipeline(body.data as Record<string, unknown>);
+```
+
+### 10-4. scripts/test-import.ts
+
+```diff
+- import { normalizePluginPayload } from '@/lib/component-generator/normalize-payload';
+- import { runComponentEngine } from '@/lib/component-generator';
+- const normalized = normalizePluginPayload(payload);
+- const result = runComponentEngine(normalized);
++ import { runPipeline } from '@/lib/component-generator';
++ const result = runPipeline(payload);
+```
+
+---
+
+## 11. CSS 변수 매핑 — 현행 유지
+
+플러그인 데이터 분석 결과, **이미 clean semantic 변수명** 사용 중:
+
+```
+var(--bg-brand-solid)          ✅ clean
+var(--bg-primary)              ✅ clean
+var(--border-primary)          ✅ clean
+var(--text-brand-secondary)    ✅ clean
+var(--colors-base-white)       ⚠️ 유일한 long-form (1개)
+border-radius: 8px             → mapRadiusValue → var(--radius-md)
+```
+
+**변경 불필요:**
+- `css-var-mapper.ts`의 `mapCssValue`, `mapRadiusValue` 현행 유지
+- `SEMANTIC_MAP` 확장은 향후 플러그인 데이터 변화 시 대응
+
+---
+
+## 12. 삭제 대상
+
+| 파일 | 시점 | 이유 |
+|------|------|------|
+| `engine.ts` | pipeline.ts 완성 후 | 교체됨 |
+| `normalize-payload.ts` | normalize.ts 완성 후 | 이전됨 |
+| `generators/button.ts` | button/ 분리 완성 후 | 분리됨 |
+| `a11y/button.ts` | a11y/patterns.ts 완성 후 | 상수 제거됨 |
+
+**삭제 순서**: 모든 진입점이 `runPipeline` 사용 확인 → 구 파일 삭제 → build 검증
+
+---
+
+## 13. 구현 순서 (Phase별)
+
+### Phase 1: shared 유틸 추출 (기존 코드 분리만, 동작 변경 없음)
+1. `generators/shared/dimensions.ts` — classifyDimensions 추출
+2. `generators/shared/state-css.ts` — STATE_CSS_MAP, buildStateCSS, buildMultiSchemeCSS 추출
+3. `generators/shared/size-css.ts` — buildSizeCSSRules, buildIconOnlyCSSRules 추출
+4. `generators/button.ts`에서 shared import로 교체 → build 검증
+
+### Phase 2: button 분리 + TSX 빌더
+5. `generators/button/extract.ts` — 버튼 전용 추출 로직
+6. `generators/shared/tsx-builder.ts` — TSX 생성 일반화
+7. `generators/button/index.ts` — 조합
+8. `generators/button.ts` 교체 → build 검증
+
+### Phase 3: 파이프라인 + 범용 폴백
+9. `types.ts` 재작성 (legacy 제거)
+10. `normalize.ts` 작성
+11. `detect.ts` 작성
+12. `generators/registry.ts` 작성
+13. `generators/generic.ts` 작성
+14. `pipeline.ts` 작성
+15. `index.ts` 교체
+16. 진입점 업데이트 (route.ts, actions, scripts)
+17. build 검증
+
+### Phase 4: 정리
+18. 구 파일 삭제 (engine.ts, normalize-payload.ts, generators/button.ts)
+19. `a11y/patterns.ts` 정리 (하드코딩 상수 제거)
+20. 최종 build + lint 검증
+
+---
+
+## 14. 검증 기준
+
+- [ ] Phase 1 완료 후: `Button.node.json` → 기존과 동일한 TSX+CSS 출력
+- [ ] Phase 2 완료 후: button/index.ts가 shared 유틸 사용, 동일 출력
+- [ ] Phase 3 완료 후: `runPipeline(buttonData)` → 기존과 동일 출력
+- [ ] Phase 3 완료 후: `runPipeline(unknownData)` → 폴백으로 TSX+CSS 생성 (에러 없음)
+- [ ] Phase 4 완료 후: `npm run build` 성공, `npm run lint` 통과
+- [ ] 모든 진입점에서 `normalizePluginPayload` 직접 호출 없음

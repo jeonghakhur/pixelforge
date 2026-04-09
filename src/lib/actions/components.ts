@@ -2,7 +2,6 @@
 
 import { db } from '@/lib/db';
 import { components, componentFiles, componentNodeSnapshots, tokens, projects, histories } from '@/lib/db/schema';
-import { generateComponents, buildTokenContext } from '@/lib/generators/react';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { eq, asc, desc } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -22,89 +21,6 @@ export interface ComponentRow {
   detectedType?: string | null;
   radixProps?: string | null;
   version?: number | null;
-}
-
-// ===========================
-// 생성
-// ===========================
-export async function generateComponentsAction(
-  componentIds: string[],
-): Promise<{ error: string | null; generated: string[] }> {
-  if (componentIds.length === 0) {
-    return { error: '생성할 컴포넌트를 선택해주세요.', generated: [] };
-  }
-
-  const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
-  if (!project) {
-    return {
-      error: 'Figma 토큰을 먼저 추출해주세요. 프로젝트 정보가 없습니다.',
-      generated: [],
-    };
-  }
-
-  const allTokens = db.select({
-    type: tokens.type,
-    name: tokens.name,
-    value: tokens.value,
-  }).from(tokens).where(eq(tokens.projectId, project.id)).all();
-
-  const ctx = buildTokenContext(allTokens);
-  const generated = generateComponents(componentIds, ctx);
-
-  const names: string[] = [];
-
-  for (const comp of generated) {
-    const existing = db.select({ id: components.id })
-      .from(components)
-      .where(eq(components.name, comp.name))
-      .get();
-
-    if (existing) {
-      db.update(components)
-        .set({
-          tsx: comp.tsx,
-          scss: comp.scss,
-          description: comp.description,
-          updatedAt: new Date(),
-        })
-        .where(eq(components.id, existing.id))
-        .run();
-    } else {
-      const maxOrder = db.select({ menuOrder: components.menuOrder })
-        .from(components)
-        .orderBy(asc(components.menuOrder))
-        .all();
-      const nextOrder = maxOrder.length > 0
-        ? Math.max(...maxOrder.map((r) => r.menuOrder)) + 1
-        : 0;
-
-      db.insert(components).values({
-        id: generateId(),
-        projectId: project.id,
-        name: comp.name,
-        category: comp.category,
-        tsx: comp.tsx,
-        scss: comp.scss,
-        description: comp.description,
-        menuOrder: nextOrder,
-        isVisible: true,
-      }).run();
-    }
-
-    names.push(comp.name);
-  }
-
-  if (names.length > 0) {
-    db.insert(histories).values({
-      id: generateId(),
-      projectId: project.id,
-      action: 'generate_component',
-      summary: `컴포넌트 생성: ${names.join(', ')}`,
-      metadata: JSON.stringify({ components: names }),
-    }).run();
-  }
-
-  return { error: null, generated: names };
 }
 
 // ===========================
@@ -208,17 +124,14 @@ export async function importComponentFromJson(
   const project = db.select({ id: projects.id }).from(projects).orderBy(desc(projects.updatedAt)).limit(1).get();
   if (!project) return { error: 'Figma 토큰을 먼저 추출해주세요. 프로젝트 정보가 없습니다.', component: null };
 
-  // 플러그인 페이로드 정규화 (이름 추출, radixProps 변환)
-  const { normalizePluginPayload } = await import('@/lib/component-generator/normalize-payload');
-  const normalized = normalizePluginPayload(d);
-  const componentName = normalized.name;
+  // 파이프라인: normalize → detect → generate
+  const { runPipeline } = await import('@/lib/component-generator');
+  const result = runPipeline(d);
+  const componentName = result.output?.name ?? d.name as string;
 
   // 이름 중복 확인 — 있으면 버전 업
   const existing = db.select({ id: components.id, version: components.version })
     .from(components).where(eq(components.name, componentName)).get();
-
-  const { runComponentEngine } = await import('@/lib/component-generator');
-  const result = runComponentEngine(normalized);
 
   const rawPayload = JSON.stringify(d);
   const contentHash = crypto.createHash('sha256').update(rawPayload).digest('hex');
@@ -234,7 +147,7 @@ export async function importComponentFromJson(
       tsx: result.output?.tsx ?? null,
       scss: result.output?.css ?? null,
       detectedType: result.resolvedType,
-      radixProps: JSON.stringify(normalized.radixProps ?? {}),
+      radixProps: JSON.stringify((d as Record<string, unknown>).radixProps ?? {}),
       contentHash,
       version,
       updatedAt: now,
@@ -256,7 +169,7 @@ export async function importComponentFromJson(
       scss: result.output?.css ?? null,
       nodePayload: rawPayload,
       detectedType: result.resolvedType,
-      radixProps: JSON.stringify(normalized.radixProps ?? {}),
+      radixProps: JSON.stringify((d as Record<string, unknown>).radixProps ?? {}),
       contentHash,
       version,
       menuOrder: nextOrder,

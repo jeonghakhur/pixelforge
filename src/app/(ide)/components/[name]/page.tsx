@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getComponentByName, getSandboxTokensCss } from '@/lib/actions/components';
+import { getComponentByName } from '@/lib/actions/components';
 import ComponentGuideClient from './ComponentGuideClient';
 
 interface ComponentPageProps {
@@ -11,8 +11,6 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
   const row = await getComponentByName(name);
   if (!row) notFound();
 
-  const tokensCss = await getSandboxTokensCss() || null;
-
   return (
     <ComponentGuideClient
       id={row.id}
@@ -23,7 +21,6 @@ export default async function ComponentPage({ params }: ComponentPageProps) {
       css={row.css ?? null}
       radixProps={row.radixProps ?? null}
       version={row.version ?? 1}
-      tokensCss={tokensCss}
     />
   );
 }

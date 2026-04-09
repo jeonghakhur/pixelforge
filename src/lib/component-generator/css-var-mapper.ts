@@ -56,29 +56,133 @@ export function mapCssValue(value: string): string {
   });
 }
 
-// border-radius px → 프로젝트 토큰 변수
-// tokens.css에 정의된 --radius-* 값 기준
-const PX_TO_RADIUS: Record<string, string> = {
-  // Untitled UI 시맨틱 토큰
-  '0px':    'var(--radius-none)',
-  '2px':    'var(--radius-xxs)',
-  '4px':    'var(--radius-xs)',
-  '6px':    'var(--radius-sm)',
-  '8px':    'var(--radius-md)',
-  '10px':   'var(--radius-lg)',
-  '12px':   'var(--radius-xl)',
-  '16px':   'var(--radius-2xl)',
-  '20px':   'var(--radius-3xl)',
-  '24px':   'var(--radius-4xl)',
-  '9999px': 'var(--radius-full)',
+// border-radius px → 프로젝트 토큰 변수 (tokens.css에서 동적 파싱)
+
+function buildRadiusMap(): Record<string, string> {
+  const tokensPaths = [
+    join(process.cwd(), 'public', 'tokens.css'),
+    join(process.cwd(), 'tokens.css'),
+  ]
+  const tokensPath = tokensPaths.find(p => existsSync(p))
+  if (!tokensPath) return {}
+
+  const css = readFileSync(tokensPath, 'utf8')
+
+  // primitive: --radius-md: 8px
+  const primitiveMap = new Map<string, string>()
+  const primRe = /--radius-([\w-]+):\s*(\d+(?:\.\d+)?px)\s*;/g
+  for (const match of css.matchAll(primRe)) {
+    primitiveMap.set(`radius-${match[1]}`, match[2])
+  }
+
+  // semantic alias: --radius-md: var(--radius-2)
+  const aliasRe = /--radius-([\w-]+):\s*var\(--radius-([\w-]+)\)\s*;/g
+  const aliasMap = new Map<string, string>()
+  for (const match of css.matchAll(aliasRe)) {
+    const semanticName = match[1]
+    const refName = `radius-${match[2]}`
+    const px = primitiveMap.get(refName)
+    if (px) aliasMap.set(px, `radius-${semanticName}`)
+  }
+
+  // 9999px → radius-full (특수 케이스)
+  for (const [name, px] of primitiveMap) {
+    if (px === '9999px' && !aliasMap.has(px)) {
+      aliasMap.set(px, name)
+    }
+  }
+
+  const result: Record<string, string> = {}
+  for (const [name, px] of primitiveMap) {
+    const varName = aliasMap.has(px) ? aliasMap.get(px)! : name
+    if (!result[px]) result[px] = `var(--${varName}, ${px})`
+  }
+
+  return result
+}
+
+let _radiusMap: Record<string, string> | null = null
+
+function getRadiusMap(): Record<string, string> {
+  if (!_radiusMap) _radiusMap = buildRadiusMap()
+  return _radiusMap
 }
 
 /**
- * border-radius 값 px → 토큰 변수 매핑
- * "8px" → "var(--radius-8)", 매핑 없으면 원래 값 반환
+ * border-radius 값 px → 토큰 변수 매핑 (fallback 포함)
+ * "8px" → "var(--radius-md, 8px)", 매핑 없으면 원래 값 반환
  */
 export function mapRadiusValue(value: string): string {
-  return PX_TO_RADIUS[value.trim()] ?? value
+  return getRadiusMap()[value.trim()] ?? value
+}
+
+// spacing px → 프로젝트 토큰 변수 (tokens.css에서 동적 파싱)
+
+import { readFileSync, existsSync } from 'fs'
+import { join } from 'path'
+
+/**
+ * tokens.css에서 --spacing-* 변수를 파싱하여 px → var() 역매핑을 생성한다.
+ *
+ * 시맨틱 변수(alias)가 있으면 시맨틱 이름을 우선 사용한다.
+ * 예: --spacing-md: var(--spacing-2) → 8px는 var(--spacing-md)
+ *
+ * tokens.css가 없거나 spacing 변수가 없으면 빈 맵 반환 → px 그대로 출력.
+ */
+function buildSpacingMap(): Record<string, string> {
+  const tokensPaths = [
+    join(process.cwd(), 'public', 'tokens.css'),
+    join(process.cwd(), 'tokens.css'),
+  ]
+  const tokensPath = tokensPaths.find(p => existsSync(p))
+  if (!tokensPath) return {}
+
+  const css = readFileSync(tokensPath, 'utf8')
+
+  // 1단계: primitive 변수 파싱 (--spacing-2: 8px → { 'spacing-2': '8px' })
+  const primitiveMap = new Map<string, string>()
+  const primRe = /--spacing-([\w-]+):\s*(\d+(?:\.\d+)?px)\s*;/g
+  for (const match of css.matchAll(primRe)) {
+    primitiveMap.set(`spacing-${match[1]}`, match[2])
+  }
+
+  // 2단계: semantic alias 파싱 (--spacing-md: var(--spacing-2) → { 'spacing-md': 'spacing-2' })
+  const aliasRe = /--spacing-([\w-]+):\s*var\(--spacing-([\w-]+)\)\s*;/g
+  const aliasMap = new Map<string, string>() // px → semantic var name
+  for (const match of css.matchAll(aliasRe)) {
+    const semanticName = match[1]
+    const refName = `spacing-${match[2]}`
+    const px = primitiveMap.get(refName)
+    if (px) {
+      aliasMap.set(px, `var(--spacing-${semanticName})`)
+    }
+  }
+
+  // 3단계: px → var() 맵 생성 (semantic 우선, 없으면 primitive, fallback 포함)
+  const result: Record<string, string> = {}
+  for (const [name, px] of primitiveMap) {
+    const varName = aliasMap.has(px)
+      ? aliasMap.get(px)!.replace(/^var\(--/, '').replace(/\)$/, '')
+      : name
+    if (!result[px]) result[px] = `var(--${varName}, ${px})`
+  }
+
+  return result
+}
+
+let _spacingMap: Record<string, string> | null = null
+
+function getSpacingMap(): Record<string, string> {
+  if (!_spacingMap) _spacingMap = buildSpacingMap()
+  return _spacingMap
+}
+
+/**
+ * spacing 값 px → 토큰 변수 매핑
+ * "8px" → "var(--spacing-md)", 매핑 없으면 원래 px 값 반환
+ */
+export function mapSpacingValue(value: string): string {
+  return getSpacingMap()[value.trim()] ?? value
 }
 
 /**

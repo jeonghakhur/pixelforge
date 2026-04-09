@@ -1,7 +1,13 @@
-export { runComponentEngine } from './engine';
+export { runPipeline } from './pipeline'
 export type {
-  PluginComponentPayload,
+  PluginPayload,
+  NormalizedPayload,
   GeneratorOutput,
-  EngineResult,
+  PipelineResult,
   ComponentCategory,
-} from './types';
+  PluginComponentPayload,
+  EngineResult,
+} from './types'
+
+/** @deprecated runPipeline 사용 */
+export { runPipeline as runComponentEngine } from './pipeline'
