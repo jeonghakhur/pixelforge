@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'data.name and data.meta.nodeId are required' }, { status: 400, headers: CORS_HEADERS });
   }
 
-  const resolvedFileKey = figmaFileKey || dataMeta.figmaFileKey || dataMeta.figmaFileId || 'local-plugin';
+  const resolvedFileKey = figmaFileKey || dataMeta.figmaFileKey || 'local-plugin';
   const project = await ensureProject(resolvedFileKey, figmaFileName || resolvedFileKey);
   const projectId = project.id;
 

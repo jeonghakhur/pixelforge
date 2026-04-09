@@ -21,6 +21,7 @@ type VariantEntry = {
  * "10px 16px 10px 16px" → "10px 16px"
  */
 function compactShorthand(value: string): string {
+  if (value.includes('var(')) return value
   const parts = value.split(/\s+/)
   if (parts.length !== 4) return value
   const [top, right, bottom, left] = parts

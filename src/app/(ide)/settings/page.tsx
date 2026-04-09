@@ -18,6 +18,7 @@ import { getSnapshotListAction, rollbackSnapshotAction, deleteAllTokensAction, t
 import { addUser, deleteUser, getUsers, changePassword } from '@/lib/actions/auth';
 import { addUserSchema, changePasswordSchema, type AddUserForm, type ChangePasswordForm } from '@/lib/auth/schema';
 import { useUIStore } from '@/stores/useUIStore';
+import GeneratorTab from './GeneratorTab';
 import styles from './page.module.scss';
 
 const tokenSchema = z.object({
@@ -42,7 +43,7 @@ const figmaUrlSchema = z.object({
 
 type FigmaUrlForm = z.infer<typeof figmaUrlSchema>;
 
-type SettingsTab = 'general' | 'account' | 'team' | 'figma';
+type SettingsTab = 'general' | 'account' | 'team' | 'figma' | 'generator';
 
 interface ApiKeyRow {
   id: string;
@@ -90,7 +91,7 @@ export default function SettingsPage() {
   const [figmaUrlSaved, setFigmaUrlSaved] = useState(false);
   const [figmaUrlError, setFigmaUrlError] = useState<string | null>(null);
 
-  const validTab = ['general', 'account', 'team', 'figma'].includes(activeTab) ? activeTab : 'general';
+  const validTab = ['general', 'account', 'team', 'figma', 'generator'].includes(activeTab) ? activeTab : 'general';
   const [users, setUsers] = useState<UserRow[]>([]);
   const [addUserError, setAddUserError] = useState<string | null>(null);
   const [changePwSuccess, setChangePwSuccess] = useState(false);
@@ -863,6 +864,13 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {validTab === 'generator' && (
+        <div className={styles.tabContent}>
+          <GeneratorTab />
+        </div>
+      )}
+
       <ConfirmDialog
         isOpen={!!confirmSnapshot}
         onClose={() => setConfirmSnapshot(null)}

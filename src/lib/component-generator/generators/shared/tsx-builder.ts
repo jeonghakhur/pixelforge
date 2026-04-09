@@ -15,12 +15,41 @@ export interface TsxBuildOptions {
   elementPropsType: string
   /** 제네릭 파라미터 (꺾쇠 포함) */
   elementPropsGeneric: string
+  /** childStyles에서 파싱한 내부 구조 정보 */
+  innerStructure?: InnerStructure
+}
+
+/** childStyles 기반 컴포넌트 내부 구조 */
+export interface InnerStructure {
+  hasIconSlot: boolean
+  hasTextWrapper: boolean
 }
 
 interface TsxBuildInput {
   name: string
   variantOptions: Record<string, string[]>
   variants: Array<{ properties: Record<string, string> }>
+}
+
+// ── childStyles 구조 파서 ────────────────────────────────────────────────
+
+const ICON_SLOT_PATTERNS = /^(placeholder|icon-?slot|icon-?leading|icon-?trailing)/i
+const TEXT_WRAPPER_PATTERNS = /^(text\s*padding|text\s*wrapper|label\s*padding)/i
+
+/** childStyles 키에서 내부 구조를 감지한다 */
+export function parseInnerStructure(
+  childStyles: Record<string, Record<string, string>>,
+): InnerStructure {
+  let hasIconSlot = false
+  let hasTextWrapper = false
+
+  for (const key of Object.keys(childStyles)) {
+    const topLevel = key.split('>')[0].trim()
+    if (ICON_SLOT_PATTERNS.test(topLevel)) hasIconSlot = true
+    if (TEXT_WRAPPER_PATTERNS.test(topLevel)) hasTextWrapper = true
+  }
+
+  return { hasIconSlot, hasTextWrapper }
 }
 
 function capitalizeFirst(str: string): string {
@@ -98,6 +127,15 @@ export function buildTsx(
   const iconOnlyDefault   = hasIconOnly ? `\n      iconOnly = false,` : ''
   const iconOnlyAttr      = hasIconOnly ? `\n      data-icon-only={iconOnly ? '' : undefined}` : ''
 
+  // ── 내부 구조 (icon slot + text wrapper) ──────────────────────────────
+  const inner = options.innerStructure ?? { hasIconSlot: false, hasTextWrapper: false }
+  const iconSlotProp = inner.hasIconSlot
+    ? `\n  iconLeading?: ReactNode;\n  iconTrailing?: ReactNode;`
+    : ''
+  const iconSlotDefault = inner.hasIconSlot
+    ? `\n      iconLeading,\n      iconTrailing,`
+    : ''
+
   // ── element별 분기 ────────────────────────────────────────────────────
   const isButton = element === 'button'
   const typeAttr = isButton ? `\n      type={type}` : ''
@@ -113,7 +151,7 @@ import styles from './${name}.module.css';
 ${appearanceTypeDef}${stateTypeDef}export type ${name}Size = ${sizeUnion};
 
 export interface ${name}Props extends ${fullPropsType} {${appearanceProp}
-  size?: ${name}Size;${stateProp}${blockProp}${iconOnlyProp}
+  size?: ${name}Size;${stateProp}${blockProp}${iconOnlyProp}${iconSlotProp}
   children?: ReactNode;
 }
 
@@ -126,7 +164,7 @@ export interface ${name}Props extends ${fullPropsType} {${appearanceProp}
 export const ${name} = forwardRef<${refType}, ${name}Props>(
   (
     {${appearanceDefault}
-      size = '${defaultSize}',${stateDefault}${blockDefault}${iconOnlyDefault}${typeProp}
+      size = '${defaultSize}',${stateDefault}${blockDefault}${iconOnlyDefault}${iconSlotDefault}${typeProp}
       disabled,
       onClick,
       children,
@@ -148,7 +186,15 @@ export const ${name} = forwardRef<${refType}, ${name}Props>(
         className={\`\${styles.root}\${className ? \` \${className}\` : ''}\`}
         {...props}
       >
+${inner.hasIconSlot && inner.hasTextWrapper
+  ? `        {iconLeading && <span className={styles.iconSlot}>{iconLeading}</span>}
+        <span className={styles.textWrapper}>{children}</span>
+        {iconTrailing && <span className={styles.iconSlot}>{iconTrailing}</span>}`
+  : inner.hasIconSlot
+  ? `        {iconLeading && <span className={styles.iconSlot}>{iconLeading}</span>}
         {children}
+        {iconTrailing && <span className={styles.iconSlot}>{iconTrailing}</span>}`
+  : '        {children}'}
       </${element}>
     );
   },

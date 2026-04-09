@@ -87,7 +87,7 @@ export function normalize(raw: Record<string, unknown>): NormalizedPayload {
   // 4. NormalizedPayload 구성 (legacy 필드 제외)
   return {
     name:           realName,
-    meta:           (raw.meta ?? { nodeId: '', nodeName: '', nodeType: '', figmaFileId: '', masterId: null, masterName: null }) as NormalizedPayload['meta'],
+    meta:           (raw.meta ?? { nodeId: '', nodeName: '', nodeType: '', masterId: null, masterName: null }) as NormalizedPayload['meta'],
     styles:         (raw.styles as Record<string, string>) ?? {},
     detectedType:   (raw.detectedType as string) ?? 'layout',
     texts:          (raw.texts as NormalizedPayload['texts']) ?? { title: '', description: '', actions: [], all: [] },

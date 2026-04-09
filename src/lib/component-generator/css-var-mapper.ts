@@ -97,6 +97,7 @@ function getRadiusMap(): Record<string, string> {
  * "8px" → "var(--radius-md, 8px)", 매핑 없으면 원래 값 반환
  */
 export function mapRadiusValue(value: string): string {
+  if (value.includes('var(')) return value
   return getRadiusMap()[value.trim()] ?? value
 }
 
@@ -167,6 +168,7 @@ function getSpacingMap(): Record<string, string> {
  * "8px" → "var(--spacing-md)", 매핑 없으면 원래 px 값 반환
  */
 export function mapSpacingValue(value: string): string {
+  if (value.includes('var(')) return value
   return getSpacingMap()[value.trim()] ?? value
 }
 
@@ -232,9 +234,9 @@ function getTypographyMaps(): TypographyMaps {
  * "16px" → "var(--font-size-text-md, 1rem)", 매핑 없으면 rem 변환만
  */
 export function mapFontSizeValue(value: string): string {
+  if (value.includes('var(')) return value
   const mapped = getTypographyMaps().fontSize[value.trim()]
   if (mapped) return mapped
-  // 토큰 없어도 rem 변환
   const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/)
   return match ? `${parseFloat(match[1]) / 16}rem` : value
 }
@@ -244,6 +246,7 @@ export function mapFontSizeValue(value: string): string {
  * "24px" → "var(--font-line-height-text-md, 1.5rem)", 매핑 없으면 rem 변환만
  */
 export function mapLineHeightValue(value: string): string {
+  if (value.includes('var(')) return value
   const mapped = getTypographyMaps().lineHeight[value.trim()]
   if (mapped) return mapped
   const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/)
@@ -255,6 +258,7 @@ export function mapLineHeightValue(value: string): string {
  * "600" → "var(--font-weight-semibold, 600)", 매핑 없으면 원래 값
  */
 export function mapFontWeightValue(value: string): string {
+  if (value.includes('var(')) return value
   return getTypographyMaps().fontWeight[value.trim()] ?? value
 }
 

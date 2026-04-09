@@ -189,6 +189,26 @@ function parseElementType(tsx: string): string {
   return TAG_MAP[raw] ?? 'div';
 }
 
+/**
+ * CSS에서 inner structure 클래스(.iconSlot, .textWrapper)를 감지하여
+ * iframe HTML 내부 구조를 생성한다.
+ */
+function buildInnerHtml(css: string, text: string): string {
+  const hasIconSlot = css.includes('.iconSlot');
+  const hasTextWrapper = css.includes('.textWrapper');
+
+  if (hasIconSlot || hasTextWrapper) {
+    const iconPlaceholder = '<span class="iconSlot"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" opacity="0.6"/></svg></span>';
+    const parts: string[] = [];
+    if (hasIconSlot) parts.push(iconPlaceholder);
+    parts.push(hasTextWrapper ? `<span class="textWrapper">${text}</span>` : text);
+    if (hasIconSlot) parts.push(iconPlaceholder);
+    return parts.join('');
+  }
+
+  return text;
+}
+
 function ComponentSandbox({ name, css, tsx }: {
   name: string;
   css: string | null;
@@ -262,7 +282,9 @@ function ComponentSandbox({ name, css, tsx }: {
   </style>
 </head>
 <body>
-  <${element}${element === 'button' ? ' type="button"' : ''} class="root" ${attrs}>${childrenText || name}</${element}>
+  ${['input', 'img', 'hr', 'br'].includes(element)
+      ? `<${element} class="root" ${attrs} />`
+      : `<${element}${element === 'button' ? ' type="button"' : ''} class="root" ${attrs}>${buildInnerHtml(css ?? '', childrenText || name)}</${element}>`}
 </body>
 </html>`;
   }, [css, dataAttrs, childrenText, name, resolvedTheme, element]);
@@ -574,7 +596,7 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
         </div>
       </section>
 
-      {/* Props Table은 ButtonSandbox에 통합됨 */}
+      {/* Props Table은 ComponentSandbox에 통합됨 */}
 
       {/* ── Usage Guidelines ── */}
       {usage && (

@@ -14,7 +14,6 @@ export interface PluginPayload {
     nodeId: string
     nodeName: string
     nodeType: string
-    figmaFileId: string
     figmaFileKey?: string
     masterId: string | null
     masterName: string | null
@@ -41,6 +40,9 @@ export interface PluginPayload {
 
 export interface VariantEntry {
   properties: Record<string, string>
+  /** 렌더링 크기 (px) */
+  width?: number
+  height?: number
   styles: Record<string, string>
   childStyles: Record<string, Record<string, string>>
 }

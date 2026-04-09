@@ -1,0 +1,154 @@
+@use '../../../styles/variables' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+}
+
+.card {
+  padding: map-get($spacers, 5);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.cardTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+}
+
+.cardDesc {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: map-get($spacers, 4);
+}
+
+// ── KV Table ──
+
+.kvTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    padding: map-get($spacers, 2) map-get($spacers, 3);
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: $font-weight-bold;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-color);
+
+    &:last-child { width: 36px; }
+  }
+
+  td {
+    padding: map-get($spacers, 2) map-get($spacers, 3);
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    color: var(--text-secondary);
+
+    code {
+      font-family: var(--font-mono);
+      font-size: $font-size-sm;
+      color: var(--text-primary);
+    }
+  }
+
+  tr:last-child td { border-bottom: none; }
+}
+
+.kvInput {
+  width: 100%;
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+
+  &::placeholder { color: var(--text-muted); }
+  &:focus { outline: none; border-color: var(--accent); }
+}
+
+.removeBtn,
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+
+  &:hover { color: var(--text-primary); background: var(--glass-bg); }
+}
+
+.removeBtn:hover { color: var(--danger, #fe8983); }
+
+// ── Tags ──
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+}
+
+.tagRemove {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+
+  &:hover { color: var(--danger, #fe8983); }
+}
+
+.tagInput {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .kvInput { width: 120px; }
+}
+
+.savedMsg {
+  font-size: $font-size-sm;
+  color: var(--success);
+  text-align: right;
+  margin: -(map-get($spacers, 3)) 0 0;
+}

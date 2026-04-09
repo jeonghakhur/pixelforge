@@ -12,7 +12,8 @@ import { buildSingleSchemeCSS, buildMultiSchemeCSS, isDisabledState, isLoadingSt
 import { mapValue, warnUnmappedHex } from '../shared/state-css'
 import { mapFontWeightValue } from '../../css-var-mapper'
 import { buildSizeCSSRules, buildIconOnlyCSSRules } from '../shared/size-css'
-import { buildTsx } from '../shared/tsx-builder'
+import { buildTsx, parseInnerStructure } from '../shared/tsx-builder'
+import { mapSpacingValue } from '../../css-var-mapper'
 import {
   extractStateStyles,
   extractAppearanceSchemes,
@@ -20,6 +21,60 @@ import {
 } from './extract'
 
 import type { NormalizedPayload, GeneratorOutput } from '../../types'
+import type { InnerStructure } from '../shared/tsx-builder'
+
+// ── 내부 요소 CSS 생성 ──────────────────────────────────────────────────
+
+const ICON_SLOT_PATTERNS = /^(placeholder|icon-?slot|icon-?leading|icon-?trailing)/i
+const TEXT_WRAPPER_PATTERNS = /^(text\s*padding|text\s*wrapper|label\s*padding)/i
+
+function buildInnerElementsCSS(
+  childStyles: Record<string, Record<string, string>>,
+  inner: InnerStructure,
+): string {
+  const rules: string[] = []
+
+  if (inner.hasIconSlot) {
+    // placeholder/icon-slot 최상위의 스타일 추출
+    for (const [key, cs] of Object.entries(childStyles)) {
+      if (!key.includes('>') && ICON_SLOT_PATTERNS.test(key)) {
+        const lines: string[] = ['  display: flex;', '  align-items: center;']
+        if (cs.opacity) lines.push(`  opacity: ${cs.opacity};`)
+        rules.push(`.iconSlot {\n${lines.join('\n')}\n}`)
+        break
+      }
+    }
+  }
+
+  if (inner.hasTextWrapper) {
+    for (const [key, cs] of Object.entries(childStyles)) {
+      if (!key.includes('>') && TEXT_WRAPPER_PATTERNS.test(key)) {
+        const lines: string[] = []
+        if (cs.display) lines.push(`  display: ${cs.display};`)
+        if (cs.padding) {
+          // 먼저 px 축약 후 토큰 매핑
+          const raw = cs.padding.split(/\s+/)
+          // 0px 2px 0px 2px → 0 2px
+          let compact: string
+          if (raw.length === 4 && raw[0] === raw[2] && raw[1] === raw[3]) {
+            compact = raw[0] === raw[1]
+              ? mapSpacingValue(raw[0])
+              : `${raw[0] === '0px' ? '0' : mapSpacingValue(raw[0])} ${mapSpacingValue(raw[1])}`
+          } else {
+            compact = raw.map(v => v === '0px' ? '0' : mapSpacingValue(v)).join(' ')
+          }
+          lines.push(`  padding: ${compact};`)
+        }
+        if (cs['align-items']) lines.push(`  align-items: ${cs['align-items']};`)
+        if (cs['justify-content']) lines.push(`  justify-content: ${cs['justify-content']};`)
+        if (lines.length) rules.push(`.textWrapper {\n${lines.join('\n')}\n}`)
+        break
+      }
+    }
+  }
+
+  return rules.length > 0 ? `/* ── Inner elements ── */\n${rules.join('\n\n')}` : ''
+}
 
 export function generateButton(
   payload: NormalizedPayload,
@@ -98,11 +153,18 @@ export function generateButton(
     return 'var(--font-weight-medium, 500)'
   })()
 
+  // ── 내부 구조 파싱 (icon slot + text wrapper) ────────────────────────
+  const innerStructure = parseInnerStructure(payload.childStyles)
+
+  // 내부 요소 CSS 생성
+  const innerCSS = buildInnerElementsCSS(payload.childStyles, innerStructure)
+
   // ── TSX ────────────────────────────────────────────────────────────────
   const tsx = buildTsx(payload, dims, {
     element: ctx.element,
     elementPropsType: 'ButtonHTMLAttributes',
     elementPropsGeneric: '<HTMLButtonElement>',
+    innerStructure,
   })
 
   // ── CSS 조합 ──────────────────────────────────────────────────────────
@@ -160,6 +222,7 @@ ${noPaddingCSS ? `\n${noPaddingCSS}` : ''}
 ${blockCSS ? `\n/* ── Block ── */\n${blockCSS}` : ''}
 ${iconOnlyCSS ? `\n/* ── Icon Only ── */\n${iconOnlyCSS}` : ''}
 ${stateCSS ? `\n${stateCSS}` : ''}
+${innerCSS ? `\n${innerCSS}` : ''}
 `
 
   return { name, category: 'action', tsx, css, warnings }
