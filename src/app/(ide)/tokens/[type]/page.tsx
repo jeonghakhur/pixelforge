@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import fs from 'fs';
 import path from 'path';
-import { getTokensByType } from '@/lib/actions/tokens';
+import { getTokensByType, getTokensByCollection, getSpacingPrimitives } from '@/lib/actions/tokens';
 import { resolveAliasColors } from '@/lib/tokens/resolve-alias';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 import { generateCssCode } from '@/lib/tokens/css-generator';
@@ -32,7 +32,26 @@ export default async function TokenPage({ params }: TokenPageProps) {
     cssPrefix: type,
   };
 
-  const tokenRows = await getTokensByType(type);
+  // width/container는 DB에서 type='spacing'으로 저장되어 있어 collection_name 기반 조회
+  const COLLECTION_MAP: Record<string, string> = {
+    width: '4. Widths',
+    container: '5. Containers',
+  };
+
+  let tokenRows = await getTokensByType(type);
+  let primitives: Awaited<ReturnType<typeof getSpacingPrimitives>> = [];
+
+  if (COLLECTION_MAP[type]) {
+    // collection 기반 조회 + 참조 primitive
+    tokenRows = await getTokensByCollection(COLLECTION_MAP[type]);
+    primitives = await getSpacingPrimitives();
+  } else if (type === 'spacing') {
+    // spacing 페이지: _Primitives + 3. Spacing만 (width/container 제외)
+    tokenRows = tokenRows.filter(
+      (t) => t.collectionName === '_Primitives' || t.collectionName === '3. Spacing',
+    );
+  }
+
   const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
 
   let fullCss = '';
@@ -73,11 +92,11 @@ export default async function TokenPage({ params }: TokenPageProps) {
             {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
             {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
-            {type === 'spacing'                          && <SpacingList tokens={tokenRows} />}
-            {(type === 'container' || type === 'width')  && <SpacingList tokens={tokenRows} />}
+            {(type === 'spacing' || type === 'layout-spacing') && <SpacingList tokens={tokenRows} />}
+            {(type === 'container' || type === 'width')  && <SpacingList tokens={tokenRows} primitives={primitives} />}
             {type === 'radius'                           && <RadiusList tokens={tokenRows} />}
             {type === 'shadow'                           && <ShadowList tokens={tokenRows} />}
-            {!['color', 'typography', 'text-style', 'heading', 'spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
+            {!['color', 'typography', 'text-style', 'heading', 'spacing', 'layout-spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
               <GenericTokenList tokens={tokenRows} />
             )}
           </div>

@@ -5,9 +5,10 @@
     "scripts",
     "tokens",
     "actions",
-    "layout"
+    "layout",
+    "generator-config-sandbox"
   ],
-  "primaryFeature": "scripts",
+  "primaryFeature": "generator-config-sandbox",
   "features": {
     "scripts": {
       "phase": "do",
@@ -60,6 +61,22 @@
         "lastUpdated": "2026-03-31T09:42:15.330Z"
       },
       "lastFile": "/Users/jeonghakhur/work/person/pixelforge/src/components/layout/TabBar.tsx"
+    }
+  },
+    "generator-config-sandbox": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {
+        "plan": "docs/01-plan/features/generator-config-sandbox.plan.md",
+        "design": "docs/02-design/features/generator-config-sandbox.design.md"
+      },
+      "timestamps": {
+        "started": "2026-04-09T00:00:00.000Z",
+        "lastUpdated": "2026-04-09T00:00:00.000Z"
+      }
     }
   },
   "pipeline": {

@@ -5,7 +5,7 @@
  */
 
 import type { GeneratorWarning } from '../../types'
-import { mapCssValue, mapRadiusValue, mapSpacingValue } from '../../css-var-mapper'
+import { mapCssValue, mapRadiusValue, mapSpacingValue, mapFontSizeValue, mapLineHeightValue } from '../../css-var-mapper'
 import { isBaseState, mapValue } from './state-css'
 
 type VariantEntry = {
@@ -32,14 +32,6 @@ function compactShorthand(value: string): string {
   return value
 }
 
-/** px → rem 변환 (base 16px). "14px" → "0.875rem", 비 px 값은 그대로 반환 */
-function pxToRem(value: string): string {
-  const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/)
-  if (!match) return value
-  const px = parseFloat(match[1])
-  const rem = px / 16
-  return `${rem}rem`
-}
 
 /** padding/gap 등 spacing 값의 각 토큰을 spacing 변수로 매핑 */
 function mapSpacingShorthand(value: string): string {
@@ -94,8 +86,8 @@ export function buildSizeCSSRules(
     // childStyles에서 font-size/line-height 추출 (Text 노드)
     const textStyle = findTextChildStyle(v.childStyles)
     if (textStyle) {
-      if (textStyle['font-size']) lines.push(`  font-size: ${pxToRem(textStyle['font-size'])};`)
-      if (textStyle['line-height']) lines.push(`  line-height: ${pxToRem(textStyle['line-height'])};`)
+      if (textStyle['font-size']) lines.push(`  font-size: ${mapFontSizeValue(textStyle['font-size'])};`)
+      if (textStyle['line-height']) lines.push(`  line-height: ${mapLineHeightValue(textStyle['line-height'])};`)
     }
 
     if (lines.length) sizeMap.set(size, `.root[data-size='${size}'] {\n${lines.join('\n')}\n}`)
@@ -145,7 +137,7 @@ export function buildIconOnlyCSSRules(
     if (!padding) continue
 
     if (size) {
-      sizeMap.set(size, `.root[data-icon-only][data-size='${size}'] {\n  padding: ${mapSpacingShorthand(compactShorthand(mapValue(padding)))};\n  gap: 0;\n}`)
+      sizeMap.set(size, `.root[data-icon-only][data-size='${size}'] {\n  padding: ${mapSpacingShorthand(compactShorthand(mapValue(padding)))};\n}`)
     }
   }
 

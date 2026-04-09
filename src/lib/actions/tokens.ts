@@ -78,6 +78,57 @@ export async function getTokensByType(type: string): Promise<TokenRow[]> {
     .all();
 }
 
+/** spacing/layout-spacing 타입의 _Primitives 컬렉션 토큰 전체 조회 */
+export async function getSpacingPrimitives(): Promise<TokenRow[]> {
+  const project = getActiveProject();
+  if (!project) return [];
+  return db.select({
+    id: tokens.id,
+    name: tokens.name,
+    type: tokens.type,
+    value: tokens.value,
+    raw: tokens.raw,
+    source: tokens.source,
+    mode: tokens.mode,
+    collectionName: tokens.collectionName,
+    alias: tokens.alias,
+    sortOrder: tokens.sortOrder,
+  })
+    .from(tokens)
+    .where(and(
+      eq(tokens.projectId, project.id),
+      eq(tokens.collectionName, '_Primitives'),
+      sql`${tokens.type} IN ('spacing', 'layout-spacing')`,
+    ))
+    .orderBy(tokens.sortOrder)
+    .all();
+}
+
+/** collection_name 기준으로 spacing 계열 토큰 조회 */
+export async function getTokensByCollection(collectionName: string): Promise<TokenRow[]> {
+  const project = getActiveProject();
+  if (!project) return [];
+  return db.select({
+    id: tokens.id,
+    name: tokens.name,
+    type: tokens.type,
+    value: tokens.value,
+    raw: tokens.raw,
+    source: tokens.source,
+    mode: tokens.mode,
+    collectionName: tokens.collectionName,
+    alias: tokens.alias,
+    sortOrder: tokens.sortOrder,
+  })
+    .from(tokens)
+    .where(and(
+      eq(tokens.projectId, project.id),
+      eq(tokens.collectionName, collectionName),
+    ))
+    .orderBy(tokens.sortOrder)
+    .all();
+}
+
 export async function getAllTokensAction(): Promise<TokenRow[]> {
   const project = getActiveProject();
   if (!project) return [];
@@ -958,6 +1009,10 @@ export async function rollbackSnapshotAction(
 
   // 5. CSS 재생성
   try {
+    const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+    const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
+    initGeneratorConfig(await getGeneratorConfig());
+
     const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
     const allTokenRows = await db
       .select()

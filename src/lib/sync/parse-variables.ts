@@ -42,10 +42,25 @@ interface FigmaCollection {
 }
 
 // 플러그인이 보내는 스타일 포맷 (Variables 없을 때 폴백)
+interface GradientStop {
+  color: FigmaColor;
+  position: number;
+  boundVariables?: Record<string, unknown>;
+}
+
+interface PluginPaint {
+  type: string;         // 'SOLID' | 'GRADIENT_LINEAR' | 'GRADIENT_RADIAL' | ...
+  visible?: boolean;
+  color?: FigmaColor;
+  opacity?: number;
+  gradientStops?: GradientStop[];
+  gradientTransform?: number[][];
+}
+
 interface PluginStyleColor {
   id: string;
   name: string;
-  paints: Array<{ type: string; color?: FigmaColor; opacity?: number }>;
+  paints: PluginPaint[];
 }
 
 interface PluginTextStyle {
@@ -221,6 +236,61 @@ function formatLetterSpacing(
 }
 
 // ───────────────────────────────────────────────────────
+// Gradient 변환 유틸
+// ───────────────────────────────────────────────────────
+
+/**
+ * Figma gradientTransform(2x3 affine matrix) → CSS angle(deg)
+ * matrix: [[a, b, tx], [c, d, ty]]
+ * gradient 방향 벡터: (b, d) → CSS 각도 = atan2(b, d) + 반전
+ */
+function gradientTransformToAngle(matrix: number[][]): number {
+  if (!matrix || matrix.length < 2) return 180;
+  const [, b] = matrix[0];
+  const [, d] = matrix[1];
+  // Figma의 gradient 벡터를 CSS 각도로 변환
+  // CSS: 0deg = to top, 90deg = to right, 180deg = to bottom
+  const radians = Math.atan2(b, d);
+  const degrees = Math.round(radians * (180 / Math.PI) + 180) % 360;
+  return degrees;
+}
+
+/** Figma RGBA(0~1) → CSS rgba() 문자열 */
+function colorToRgba(c: FigmaColor): string {
+  const r = Math.round(c.r * 255);
+  const g = Math.round(c.g * 255);
+  const b = Math.round(c.b * 255);
+  const a = c.a ?? 1;
+  if (a >= 0.999) return `rgb(${r},${g},${b})`;
+  return `rgba(${r},${g},${b},${Math.round(a * 100) / 100})`;
+}
+
+/** Gradient paint → CSS gradient 문자열 */
+function paintToGradient(paint: PluginPaint): string | null {
+  if (!paint.gradientStops || paint.gradientStops.length === 0) return null;
+
+  const stops = paint.gradientStops
+    .map((s) => `${colorToRgba(s.color)} ${Math.round(s.position * 100)}%`)
+    .join(', ');
+
+  if (paint.type === 'GRADIENT_LINEAR') {
+    const angle = gradientTransformToAngle(paint.gradientTransform ?? []);
+    return `linear-gradient(${angle}deg, ${stops})`;
+  }
+  if (paint.type === 'GRADIENT_RADIAL') {
+    return `radial-gradient(${stops})`;
+  }
+  if (paint.type === 'GRADIENT_ANGULAR') {
+    return `conic-gradient(${stops})`;
+  }
+  if (paint.type === 'GRADIENT_DIAMOND') {
+    // CSS에 diamond gradient 없음 → radial로 폴백
+    return `radial-gradient(${stops})`;
+  }
+  return null;
+}
+
+// ───────────────────────────────────────────────────────
 // 메인 파서 (플러그인 sync + JSON 임포트 공통)
 // ───────────────────────────────────────────────────────
 export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedToken[] {
@@ -326,23 +396,49 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
   // styles 섹션의 sortOrder 기준점 (variables 다음 순서)
   let styleOrder = uniqueVars.length;
 
-  // styles.colors 폴백 — variables에 색상이 없을 때
-  const hasColors = result.some((t) => t.type === 'color');
-  if (!hasColors && payload.styles?.colors) {
+  // styles.colors — solid 색상 폴백 + gradient 추출
+  if (payload.styles?.colors) {
+    const hasColors = result.some((t) => t.type === 'color');
+
     for (const style of payload.styles.colors) {
-      const paint = style.paints.find((p) => p.type === 'SOLID' && p.color);
-      if (!paint?.color) continue;
-      const hex = rgbaToHex({ ...paint.color, a: paint.opacity ?? 1 });
-      result.push({
-        type: 'color',
-        name: style.name,
-        value: hex,
-        raw: hex,
-        mode: null,
-        collectionName: null,
-        alias: null,
-        sortOrder: styleOrder++,
-      });
+      const visiblePaints = style.paints.filter((p) => p.visible !== false);
+
+      // Gradient paint → gradient 타입 토큰
+      const gradientPaint = visiblePaints.find((p) => p.type.startsWith('GRADIENT_'));
+      if (gradientPaint) {
+        const cssGradient = paintToGradient(gradientPaint);
+        if (cssGradient) {
+          result.push({
+            type: 'gradient',
+            name: style.name,
+            value: cssGradient,
+            raw: cssGradient,
+            mode: null,
+            collectionName: null,
+            alias: null,
+            sortOrder: styleOrder++,
+          });
+          continue;
+        }
+      }
+
+      // Solid paint → color 타입 (variables에 색상 없을 때 폴백)
+      if (!hasColors) {
+        const solidPaint = visiblePaints.find((p) => p.type === 'SOLID' && p.color);
+        if (solidPaint?.color) {
+          const hex = rgbaToHex({ ...solidPaint.color, a: solidPaint.opacity ?? 1 });
+          result.push({
+            type: 'color',
+            name: style.name,
+            value: hex,
+            raw: hex,
+            mode: null,
+            collectionName: null,
+            alias: null,
+            sortOrder: styleOrder++,
+          });
+        }
+      }
     }
   }
 
@@ -399,8 +495,8 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
 
     const visibleEffects = es.effects.filter((e) => e.visible !== false);
 
-    // BACKGROUND_BLUR → blur 타입 (color 없음)
-    const blurLayers = visibleEffects.filter((e) => e.type === 'BACKGROUND_BLUR');
+    // BACKGROUND_BLUR / LAYER_BLUR → blur 타입
+    const blurLayers = visibleEffects.filter((e) => e.type === 'BACKGROUND_BLUR' || e.type === 'LAYER_BLUR');
     if (blurLayers.length > 0) {
       result.push({
         type: 'blur',

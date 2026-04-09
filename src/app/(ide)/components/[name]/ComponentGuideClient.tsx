@@ -17,6 +17,7 @@ interface Props {
   css: string | null;
   radixProps: string | null;
   version: number;
+  missingVars?: string[];
 }
 
 type CodeTab = 'tsx' | 'css';
@@ -176,11 +177,25 @@ function useHighlightedCode(code: string, lang: 'tsx' | 'css') {
 
 // ── Sandbox ──────────────────────────────────────────────────────────────────
 
-function ButtonSandbox({ name, css, tsx }: {
+/** TSX의 forwardRef<HTML*Element> 에서 HTML 태그를 추출 */
+function parseElementType(tsx: string): string {
+  const match = tsx.match(/forwardRef<HTML(\w+)Element/);
+  if (!match) return 'div';
+  const raw = match[1].toLowerCase();
+  const TAG_MAP: Record<string, string> = {
+    div: 'div', button: 'button', input: 'input',
+    anchor: 'a', span: 'span', heading: 'h2',
+  };
+  return TAG_MAP[raw] ?? 'div';
+}
+
+function ComponentSandbox({ name, css, tsx }: {
   name: string;
   css: string | null;
   tsx: string | null;
 }) {
+  const element = parseElementType(tsx ?? '');
+
   // TSX에서 모든 props를 동적 파싱
   const sandboxProps = parseSandboxProps(tsx ?? '');
 
@@ -247,10 +262,10 @@ function ButtonSandbox({ name, css, tsx }: {
   </style>
 </head>
 <body>
-  <button type="button" class="root" ${attrs}>${childrenText || name}</button>
+  <${element}${element === 'button' ? ' type="button"' : ''} class="root" ${attrs}>${childrenText || name}</${element}>
 </body>
 </html>`;
-  }, [css, dataAttrs, childrenText, name, resolvedTheme]);
+  }, [css, dataAttrs, childrenText, name, resolvedTheme, element]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -368,7 +383,7 @@ function ButtonSandbox({ name, css, tsx }: {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version }: Props) {
+export default function ComponentGuideClient({ id, name, category, detectedType, tsx, css, radixProps, version, missingVars = [] }: Props) {
   const router = useRouter();
   const CODE_HEIGHT_STEP = 200;
   const CODE_HEIGHT_MIN = 160;
@@ -401,7 +416,6 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
     const contentHeight = el.scrollHeight;
     setCodeHeight(Math.min(CODE_HEIGHT_DEFAULT, contentHeight));
   }, [highlightedHtml, currentCode]);
-  const props = buildPropsFromTsx(tsx ?? '', detectedType ?? '');
   const usage = USAGE_BY_TYPE[detectedType ?? ''];
 
   const handleCopy = async () => {
@@ -441,16 +455,34 @@ export default function ComponentGuideClient({ id, name, category, detectedType,
         </p>
       </header>
 
+      {/* ── Diagnostics ── */}
+      {missingVars.length > 0 && (
+        <section className={styles.diagnostics}>
+          <div className={styles.diagnosticsHeader}>
+            <Icon icon="solar:danger-triangle-linear" width={16} height={16} />
+            <span>CSS Variable Diagnostics — {missingVars.length} missing</span>
+          </div>
+          <ul className={styles.diagnosticsList}>
+            {missingVars.map((v) => (
+              <li key={v}>
+                <code>{v}</code>
+                <span>tokens.css에 정의되지 않음</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* ── Interactive Sandbox ── */}
       <section className={styles.section}>
         <h2 className={styles.sectionLabel}>Interactive Sandbox</h2>
-        {detectedType === 'button' ? (
-          <ButtonSandbox name={name} css={css} tsx={tsx} />
+        {(css || tsx) ? (
+          <ComponentSandbox name={name} css={css} tsx={tsx} />
         ) : (
           <div className={styles.sandboxBg}>
             <div className={styles.sandboxCanvas}>
               <p className={styles.sandboxPlaceholder}>
-                Sandbox preview not yet available for <code>{detectedType}</code>
+                컴포넌트 데이터가 없습니다 — 플러그인에서 데이터를 전송해주세요.
               </p>
             </div>
           </div>

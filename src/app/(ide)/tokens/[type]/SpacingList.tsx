@@ -25,101 +25,104 @@ function displayName(fullName: string): string {
   return slash >= 0 ? fullName.slice(slash + 1) : fullName;
 }
 
-/** alias 필드(var(--spacing-8) 형태)에서 참조하는 primitive 이름을 찾아 반환 */
-function resolveAliasLabel(
-  alias: string | null,
-  primitiveMap: Map<string, TokenRow>,
-): string | null {
-  if (!alias) return null;
-  // value가 var(--spacing-X) 형태 → X를 추출해서 primitive 매핑
-  const varMatch = alias.match(/^VariableID:(.+)$/);
-  if (varMatch) {
-    // alias 가 VariableID 형태인 경우는 primitive와 직접 매핑 불가 → value 기반 매핑
-    return null;
-  }
-  return null;
-}
-
-/** value 문자열(var(--spacing-8) 등)에서 primitive 참조명 추출 */
 function extractAliasRef(value: string): string | null {
   const m = value.match(/^var\(--(.+)\)$/);
   return m ? m[1] : null;
 }
 
-/* ── 그룹핑 ───────────────────────────────────────── */
-
-interface SpacingCollection {
-  name: string;
-  label: string;
-  description: string;
-  tokens: TokenRow[];
+/** primitive name → var key: "0․5 (2px)" → "spacing-0-5" */
+function primitiveVarKey(name: string): string {
+  const short = displayName(name).replace(/\s*\(.*\)/, '').replace(/[․.]/g, '-');
+  return `spacing-${short}`;
 }
 
-const COLLECTION_ORDER: Record<string, number> = {
-  '_Primitives': 0,
-  '3. Spacing': 1,
-  '4. Widths': 2,
-  '5. Containers': 3,
-};
+/* ── 참조 primitive 필터 ─────────────────────────── */
 
-const COLLECTION_LABELS: Record<string, string> = {
-  '_Primitives': 'Primitives',
-  '3. Spacing': 'Spacing',
-  '4. Widths': 'Widths',
-  '5. Containers': 'Containers',
-};
-
-const COLLECTION_DESCRIPTIONS: Record<string, string> = {
-  '_Primitives': '기본 수치 스페이싱 스케일입니다. 하나의 스페이싱 단위는 4px에 해당합니다.',
-  '3. Spacing': '시맨틱 스페이싱 토큰은 Primitive 값을 참조하여 일관된 간격 시스템을 제공합니다.',
-  '4. Widths': '컨텐츠 영역과 컴포넌트의 너비를 정의하는 토큰입니다.',
-  '5. Containers': '컨테이너 패딩과 최대 너비 전용 변수입니다.',
-};
-
-function groupByCollection(tokens: TokenRow[]): SpacingCollection[] {
-  const map = new Map<string, TokenRow[]>();
-
-  for (const token of tokens) {
-    const key = token.collectionName || '_Primitives';
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(token);
+function filterReferencedPrimitives(
+  semanticTokens: TokenRow[],
+  allPrimitives: TokenRow[],
+): TokenRow[] {
+  const refs = new Set<string>();
+  for (const t of semanticTokens) {
+    const ref = extractAliasRef(t.value);
+    if (ref) refs.add(ref);
   }
+  if (refs.size === 0) return [];
+  return allPrimitives
+    .filter((p) => refs.has(primitiveVarKey(p.name)))
+    .sort((a, b) => extractPxValue(a) - extractPxValue(b));
+}
 
-  return [...map.entries()]
-    .sort(([a], [b]) => (COLLECTION_ORDER[a] ?? 99) - (COLLECTION_ORDER[b] ?? 99))
-    .map(([name, list]) => ({
-      name,
-      label: COLLECTION_LABELS[name] ?? name,
-      description: COLLECTION_DESCRIPTIONS[name] ?? '',
-      tokens: [...list].sort((a, b) => extractPxValue(a) - extractPxValue(b)),
-    }));
+function buildPrimitiveMap(tokens: TokenRow[]): Map<string, TokenRow> {
+  const map = new Map<string, TokenRow>();
+  for (const t of tokens) {
+    if (t.collectionName === '_Primitives') {
+      map.set(primitiveVarKey(t.name), t);
+    }
+  }
+  return map;
 }
 
 /* ── 컴포넌트 ─────────────────────────────────────── */
 
-export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] }) {
+interface SpacingListProps {
+  tokens: TokenRow[];
+  /** 외부에서 주입하는 전체 spacing primitive (width/container 페이지용) */
+  primitives?: TokenRow[];
+}
+
+export default function SpacingList({ tokens: initial, primitives: externalPrimitives }: SpacingListProps) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokens, setTokens] = useState<TokenRow[]>(initial);
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const collections = useMemo(() => groupByCollection(tokens), [tokens]);
+  // 자체 _Primitives (spacing 페이지)
+  const ownPrimitives = useMemo(
+    () => tokens
+      .filter((t) => t.collectionName === '_Primitives')
+      .sort((a, b) => extractPxValue(a) - extractPxValue(b)),
+    [tokens],
+  );
 
-  /** primitive name → token 매핑 (alias 해석용) */
-  const primitiveByVar = useMemo(() => {
-    const map = new Map<string, TokenRow>();
-    for (const token of tokens) {
-      if ((token.collectionName || '_Primitives') === '_Primitives') {
-        // var name: spacing-0, spacing-0-5, spacing-1 ...
-        const name = displayName(token.name);
-        // "0 (0px)" → "0", "0․5 (2px)" → "0-5"
-        const clean = name.replace(/\s*\(.*\)/, '').replace(/[․.]/g, '-');
-        map.set(`spacing-${clean}`, token);
-      }
+  // 시맨틱 토큰 (primitive 제외)
+  const semanticTokens = useMemo(
+    () => tokens
+      .filter((t) => t.collectionName !== '_Primitives')
+      .sort((a, b) => extractPxValue(a) - extractPxValue(b)),
+    [tokens],
+  );
+
+  // 외부 primitive가 있으면(width/container) → 참조되는 것만 필터
+  // 없으면(spacing) → 자체 _Primitives 사용
+  const displayPrimitives = useMemo(() => {
+    if (externalPrimitives && externalPrimitives.length > 0) {
+      return filterReferencedPrimitives(semanticTokens, externalPrimitives);
     }
-    return map;
-  }, [tokens]);
+    return ownPrimitives;
+  }, [externalPrimitives, semanticTokens, ownPrimitives]);
+
+  // primitive map (alias 해석용) — 자체 + 외부 합산
+  const primitiveMap = useMemo(() => {
+    const all = [...ownPrimitives, ...(externalPrimitives ?? [])];
+    return buildPrimitiveMap(
+      all.map((t) => ({ ...t, collectionName: '_Primitives' })),
+    );
+  }, [ownPrimitives, externalPrimitives]);
+
+  // Scale 바 공통 max — 표시되는 모든 토큰의 실제 px 기준
+  const globalMaxPx = useMemo(() => {
+    const allPx = [
+      ...displayPrimitives.map(extractPxValue),
+      ...semanticTokens.map((t) => {
+        const ref = extractAliasRef(t.value);
+        const prim = ref ? primitiveMap.get(ref) : null;
+        return prim ? extractPxValue(prim) : extractPxValue(t);
+      }),
+    ];
+    return Math.max(...allPx, 1);
+  }, [displayPrimitives, semanticTokens, primitiveMap]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -142,110 +145,138 @@ export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] })
   return (
     <>
       <div className={styles.spacingCollections}>
-        {collections.map((collection) => {
-          const isPrimitive = collection.name === '_Primitives';
-          const maxVal = Math.max(...collection.tokens.map(extractPxValue), 1);
-
-          return (
-            <section key={collection.name} className={styles.spacingSection}>
-              {/* 섹션 헤더 */}
-              <div className={styles.spacingSectionHeader}>
-                <div className={styles.spacingSectionHeaderLeft}>
-                  <h3 className={styles.spacingSectionTitle}>{collection.label}</h3>
-                  <span className={styles.spacingSectionCount}>{collection.tokens.length}</span>
-                  {isPrimitive && (
-                    <span className={styles.baseUnitBadge}>Base: 4px</span>
-                  )}
-                </div>
+        {/* ── Primitives (상단) ── */}
+        {displayPrimitives.length > 0 && (
+          <section className={styles.spacingSection}>
+            <div className={styles.spacingSectionHeader}>
+              <div className={styles.spacingSectionHeaderLeft}>
+                <h3 className={styles.spacingSectionTitle}>Primitives</h3>
+                <span className={styles.spacingSectionCount}>{displayPrimitives.length}</span>
+                <span className={styles.baseUnitBadge}>Base: 4px</span>
               </div>
+            </div>
 
-              {collection.description && (
-                <p className={styles.spacingSectionDesc}>{collection.description}</p>
-              )}
+            <div className={`${styles.spacingTableHeader} ${styles.spacingTablePrimitive}`}>
+              <span>Name</span>
+              <span>Rem</span>
+              <span>Pixels</span>
+              <span>Scale</span>
+              <span />
+            </div>
 
-              {/* 테이블 헤더 */}
-              <div className={`${styles.spacingTableHeader} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
-                <span className={styles.spacingColName}>Name</span>
-                {!isPrimitive && <span className={styles.spacingColAlias}>Reference</span>}
-                <span className={styles.spacingColRem}>Rem</span>
-                <span className={styles.spacingColPx}>Pixels</span>
-                <span className={styles.spacingColBar}>Scale</span>
-                <span className={styles.spacingColActions} />
-              </div>
+            <div className={`${styles.spacingTableBody} ${styles.spacingTablePrimitive}`}>
+              {displayPrimitives.map((token) => {
+                const px = extractPxValue(token);
+                const rem = px / 16;
+                const remStr = rem % 1 === 0 ? `${rem}` : rem.toFixed(2).replace(/0+$/, '');
+                const barPct = (px / globalMaxPx) * 100;
+                const isCopied = copiedId === token.id;
 
-              {/* 토큰 행 */}
-              <div className={`${styles.spacingTableBody} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
-                {collection.tokens.map((token) => {
-                  const px = extractPxValue(token);
-                  const rem = px / 16;
-                  const remStr = rem % 1 === 0 ? `${rem}` : rem.toFixed(2).replace(/0+$/, '');
-                  const barPct = maxVal > 0 ? (px / maxVal) * 100 : 0;
-                  const aliasRef = extractAliasRef(token.value);
-                  const resolvedPrimitive = aliasRef ? primitiveByVar.get(aliasRef) : null;
-                  const resolvedPx = resolvedPrimitive ? extractPxValue(resolvedPrimitive) : null;
-                  const isCopied = copiedId === token.id;
-
-                  return (
-                    <div key={token.id} className={`${styles.spacingTableRow} ${isPrimitive ? styles.spacingTablePrimitive : ''}`}>
-                      <div className={styles.spacingColName}>
-                        <span className={styles.spacingTokenName}>{displayName(token.name)}</span>
-                      </div>
-
-                      {!isPrimitive && (
-                        <div className={styles.spacingColAlias}>
-                          {aliasRef && (
-                            <span className={styles.spacingAliasRef} title={`var(--${aliasRef})`}>
-                              <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.spacingAliasIcon} />
-                              {aliasRef}
-                              {resolvedPx !== null && (
-                                <span className={styles.spacingAliasResolved}>({resolvedPx}px)</span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <span className={styles.spacingColRem}>{remStr}rem</span>
-                      <span className={styles.spacingColPx}>{px}px</span>
-
-                      <div className={styles.spacingColBar}>
-                        <div className={styles.spacingTrack}>
-                          <div
-                            className={styles.spacingFill}
-                            style={{ width: `${barPct}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className={styles.spacingColActions}>
-                        <button
-                          type="button"
-                          className={styles.actionBtn}
-                          onClick={() => handleCopy(`var(--pf-${token.type}-${displayName(token.name).replace(/[^\w-]/g, '-').toLowerCase()})`, token.id)}
-                          aria-label="CSS 변수 복사"
-                        >
-                          <Icon
-                            icon={isCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'}
-                            width={13}
-                            height={13}
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.actionBtn} ${styles.actionBtnDelete}`}
-                          onClick={() => setDeleteTarget(token)}
-                          aria-label="삭제"
-                        >
-                          <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
-                        </button>
+                return (
+                  <div key={token.id} className={`${styles.spacingTableRow} ${styles.spacingTablePrimitive}`}>
+                    <div className={styles.spacingColName}>
+                      <span className={styles.spacingTokenName}>{displayName(token.name)}</span>
+                    </div>
+                    <span className={styles.spacingColRem}>{remStr}rem</span>
+                    <span className={styles.spacingColPx}>{px}px</span>
+                    <div className={styles.spacingColBar}>
+                      <div className={styles.spacingTrack}>
+                        <div className={styles.spacingFill} style={{ width: `${barPct}%` }} />
                       </div>
                     </div>
-                  );
-                })}
+                    <div className={styles.spacingColActions}>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => handleCopy(`var(--${primitiveVarKey(token.name)})`, token.id)}
+                        aria-label="CSS 변수 복사"
+                      >
+                        <Icon icon={isCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'} width={13} height={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Semantic Tokens (하단) ── */}
+        {semanticTokens.length > 0 && (
+          <section className={styles.spacingSection}>
+            <div className={styles.spacingSectionHeader}>
+              <div className={styles.spacingSectionHeaderLeft}>
+                <h3 className={styles.spacingSectionTitle}>Tokens</h3>
+                <span className={styles.spacingSectionCount}>{semanticTokens.length}</span>
               </div>
-            </section>
-          );
-        })}
+            </div>
+
+            <div className={styles.spacingTableHeader}>
+              <span>Name</span>
+              <span>Reference</span>
+              <span>Rem</span>
+              <span>Pixels</span>
+              <span>Scale</span>
+              <span />
+            </div>
+
+            <div className={styles.spacingTableBody}>
+              {semanticTokens.map((token) => {
+                const aliasRef = extractAliasRef(token.value);
+                const prim = aliasRef ? primitiveMap.get(aliasRef) : null;
+                const px = prim ? extractPxValue(prim) : extractPxValue(token);
+                const rem = px / 16;
+                const remStr = rem % 1 === 0 ? `${rem}` : rem.toFixed(2).replace(/0+$/, '');
+                const barPct = (px / globalMaxPx) * 100;
+                const isCopied = copiedId === token.id;
+
+                return (
+                  <div key={token.id} className={styles.spacingTableRow}>
+                    <div className={styles.spacingColName}>
+                      <span className={styles.spacingTokenName}>{displayName(token.name)}</span>
+                    </div>
+                    <div className={styles.spacingColAlias}>
+                      {aliasRef && (
+                        <span className={styles.spacingAliasRef} title={`var(--${aliasRef})`}>
+                          <Icon icon="solar:arrow-right-linear" width={10} height={10} className={styles.spacingAliasIcon} />
+                          {aliasRef}
+                          {prim && (
+                            <span className={styles.spacingAliasResolved}>({extractPxValue(prim)}px)</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <span className={styles.spacingColRem}>{remStr}rem</span>
+                    <span className={styles.spacingColPx}>{px}px</span>
+                    <div className={styles.spacingColBar}>
+                      <div className={styles.spacingTrack}>
+                        <div className={styles.spacingFill} style={{ width: `${barPct}%` }} />
+                      </div>
+                    </div>
+                    <div className={styles.spacingColActions}>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => handleCopy(`var(--pf-${token.name.replace(/[^\w-]/g, '-').toLowerCase()})`, token.id)}
+                        aria-label="CSS 변수 복사"
+                      >
+                        <Icon icon={isCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'} width={13} height={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.actionBtnDelete}`}
+                        onClick={() => setDeleteTarget(token)}
+                        aria-label="삭제"
+                      >
+                        <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       <ConfirmDialog
@@ -253,7 +284,7 @@ export default function SpacingList({ tokens: initial }: { tokens: TokenRow[] })
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
         title="토큰 삭제"
-        message={`'${deleteTarget?.name}' 간격 토큰을 삭제합니다. 이 작업은 되돌릴 수 없습니다.`}
+        message={`'${deleteTarget?.name}' 토큰을 삭제합니다.`}
         confirmLabel="삭제"
         loading={deleting}
       />

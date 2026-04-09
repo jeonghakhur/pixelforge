@@ -45,6 +45,12 @@ export function isDisabledState(state: string): boolean {
   return DISABLED_STATE_PATTERNS.test(state)
 }
 
+const LOADING_STATE_PATTERNS = /^(loading|progress|pending|busy)$/i
+
+export function isLoadingState(state: string): boolean {
+  return LOADING_STATE_PATTERNS.test(state)
+}
+
 // ── CSS 값 변환 헬퍼 ──────────────────────────────────────────────────────
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
@@ -163,7 +169,7 @@ export function buildMultiSchemeCSS(
     const sel = `.root[data-${appearanceKey.toLowerCase().replace(/\s+/g, '-')}='${attrVal}']`
     const ctx = `${name}[${appearanceValue}]`
 
-    const css = buildStateCSS(states, sel, warnings, ctx, noPadding ? ['padding: 0;', 'border-radius: 0;'] : undefined)
+    const css = buildStateCSS(states, sel, warnings, ctx)
     if (css) rules.push(css)
   }
 

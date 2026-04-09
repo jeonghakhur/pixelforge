@@ -82,8 +82,61 @@ export async function getSandboxTokensCss(): Promise<string> {
 
   if (rows.length === 0) return '';
 
+  const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+  const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
+  initGeneratorConfig(await getGeneratorConfig());
+
   const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
   return generateAllCssCode(rows as Parameters<typeof generateAllCssCode>[0]);
+}
+
+// ===========================
+// CSS 변수 검증
+// ===========================
+export async function validateComponentCssVars(
+  css: string | null,
+): Promise<string[]> {
+  if (!css) return [];
+
+  const projectId = getActiveProjectId();
+  if (!projectId) return [];
+
+  // 생성된 CSS에서 var(--*) 참조 추출
+  const varRefs = new Set<string>();
+  const varRe = /var\(--([a-zA-Z0-9_-]+)\)/g;
+  let m;
+  while ((m = varRe.exec(css)) !== null) {
+    varRefs.add(m[1]);
+  }
+  if (varRefs.size === 0) return [];
+
+  // tokens.css 생성하여 정의된 변수 목록 추출
+  const tokenRows = db.select({ type: tokens.type, name: tokens.name, value: tokens.value, raw: tokens.raw })
+    .from(tokens)
+    .where(eq(tokens.projectId, projectId))
+    .all();
+
+  if (tokenRows.length === 0) return [];
+
+  const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
+  const tokensCss = generateAllCssCode(tokenRows as Parameters<typeof generateAllCssCode>[0]);
+
+  // tokens.css에서 선언된 변수명 추출
+  const definedVars = new Set<string>();
+  const defRe = /--([\w-]+)\s*:/g;
+  while ((m = defRe.exec(tokensCss)) !== null) {
+    definedVars.add(m[1]);
+  }
+
+  // 누락 변수 찾기
+  const missing: string[] = [];
+  for (const ref of varRefs) {
+    if (!definedVars.has(ref)) {
+      missing.push(`--${ref}`);
+    }
+  }
+
+  return missing;
 }
 
 // ===========================
@@ -125,6 +178,11 @@ export async function importComponentFromJson(
   if (!project) return { error: 'Figma 토큰을 먼저 추출해주세요. 프로젝트 정보가 없습니다.', component: null };
 
   // 파이프라인: normalize → detect → generate
+  const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+  const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
+  const genConfig = await getGeneratorConfig();
+  initGeneratorConfig(genConfig);
+
   const { runPipeline } = await import('@/lib/component-generator');
   const result = runPipeline(d);
   const componentName = result.output?.name ?? d.name as string;

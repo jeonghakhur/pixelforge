@@ -9,6 +9,8 @@ export const TYPE_PREFIX: Record<string, string> = {
   'text-style':     'text',
   heading:          'heading',
   shadow:           'shadow',
+  gradient:         'gradient',
+  blur:             'blur',
   container:        'container',
   width:            'width',
   font:             'font-family',
@@ -22,10 +24,11 @@ export const TYPE_PREFIX: Record<string, string> = {
  * - border-border-primary     → border-primary   (동일 단어 반복)
  * - brand-600                 → brand-600        (변경 없음)
  */
-const COLOR_ABBREV: Record<string, string> = {
-  background: 'bg',
-  foreground: 'fg',
-};
+import { getGeneratorConfigSync } from '@/lib/generator-config-cache';
+
+function getColorAbbrev(): Record<string, string> {
+  return getGeneratorConfigSync().colorAbbrev;
+}
 
 export function deduplicateColorSlug(slug: string): string {
   let s = slug;
@@ -34,7 +37,7 @@ export function deduplicateColorSlug(slug: string): string {
     if (dashIdx < 0) break;
     const seg = s.slice(0, dashIdx);
     const rest = s.slice(dashIdx + 1);
-    const abbrev = COLOR_ABBREV[seg] ?? seg;
+    const abbrev = getColorAbbrev()[seg] ?? seg;
     if (rest.startsWith(`${seg}-`) || rest.startsWith(`${abbrev}-`)) {
       s = rest;
     } else {
@@ -53,6 +56,8 @@ const TYPE_LABEL: Record<string, string> = {
   'text-style':     'Text Style',
   heading:          'Heading',
   shadow:           'Shadow',
+  gradient:         'Gradient',
+  blur:             'Blur',
   container:        'Container',
   width:            'Width',
   font:             'Font',
@@ -67,7 +72,22 @@ function isDarkMode(mode: string | null): boolean {
 
 export function toVarName(tokenName: string, prefix: string): string {
   if (prefix) {
-    // prefix가 있는 타입 (spacing, radius 등): 중복 선두 제거 후 prefix 붙임
+    // Shadow/Gradient 타입: Figma 변수명(마지막 세그먼트)을 그대로 CSS 변수명으로 사용
+    // 플러그인이 컴포넌트에서 동일한 이름으로 참조하므로 prefix 추가 불필요
+    //   "Shadows/shadow-xs"                              → --shadow-xs
+    //   "Focus rings/focus-ring-shadow-xs-skeuomorphic"  → --focus-ring-shadow-xs-skeuomorphic
+    //   "Gradient/skeuemorphic-gradient-border"          → --skeuemorphic-gradient-border
+    if (getGeneratorConfigSync().styleTypePassthrough.includes(prefix)) {
+      const lastSegment = tokenName.split('/').pop() ?? tokenName;
+      return `--${lastSegment
+        .replace(/[·․]/g, '-')
+        .replace(/\s+/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase()}`;
+    }
+
+    // 기타 prefix 타입 (spacing, radius 등): 중복 선두 제거 후 prefix 붙임
     let slug = tokenName
       .replace(/\([^)]*\)/g, '')
       .replace(/[·․]/g, '-')       // U+00B7 middle dot + U+2024 one dot leader → dash
@@ -117,7 +137,7 @@ export function toVarName(tokenName: string, prefix: string): string {
   const restSlug = rest.join('-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
 
   if (restSlug) {
-    const abbrev = COLOR_ABBREV[second] ?? second;
+    const abbrev = getColorAbbrev()[second] ?? second;
     if (restSlug.startsWith(`${second}-`) || restSlug.startsWith(`${abbrev}-`)) {
       // Semantic: 중복 세그먼트 dedup, colors- prefix 없음
       return `--${deduplicateColorSlug(`${second}-${restSlug}`)}`;
@@ -126,7 +146,7 @@ export function toVarName(tokenName: string, prefix: string): string {
     // Effects, Alpha 등 특수 경로는 prefix 없이
     const lastPart = rest[rest.length - 1] ?? '';
     const fullSlug = `${second}-${restSlug}`;
-    const isPalette = (/^\d+$/.test(lastPart) || ['white', 'black', 'transparent'].includes(lastPart))
+    const isPalette = (/^\d+$/.test(lastPart) || getGeneratorConfigSync().paletteKeywords.includes(lastPart))
       && !fullSlug.includes('alpha') && !fullSlug.includes('effect');
     if (isPalette) {
       return `--colors-${second}-${restSlug}`;
@@ -185,7 +205,7 @@ export function colorSlugToVarName(slug: string): string {
 
   const second = s.slice(0, dashIdx);
   const rest = s.slice(dashIdx + 1);
-  const abbrev = COLOR_ABBREV[second] ?? second;
+  const abbrev = getColorAbbrev()[second] ?? second;
 
   if (rest.startsWith(`${second}-`) || rest.startsWith(`${abbrev}-`)) {
     return deduplicateColorSlug(s); // Semantic
@@ -193,7 +213,7 @@ export function colorSlugToVarName(slug: string): string {
   // Primitive 팔레트만 colors- prefix
   const lastDash = rest.lastIndexOf('-');
   const lastPart = lastDash >= 0 ? rest.slice(lastDash + 1) : rest;
-  const isPalette = /^\d+$/.test(lastPart) || ['white', 'black', 'transparent'].includes(lastPart);
+  const isPalette = /^\d+$/.test(lastPart) || getGeneratorConfigSync().paletteKeywords.includes(lastPart);
   return isPalette ? `colors-${s}` : s;
 }
 
@@ -413,6 +433,20 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
       continue;
     }
 
+    // Gradient: use raw CSS gradient string
+    if (token.type === 'gradient') {
+      if (!map.has(group)) map.set(group, []);
+      map.get(group)!.push({ varName, value: token.raw ?? token.value });
+      continue;
+    }
+
+    // Blur: use raw CSS blur value
+    if (token.type === 'blur') {
+      if (!map.has(group)) map.set(group, []);
+      map.get(group)!.push({ varName, value: token.raw ?? token.value });
+      continue;
+    }
+
     // Font family: use raw value wrapped in quotes
     if (prefix === 'font-family') {
       if (!map.has(group)) map.set(group, []);
@@ -461,20 +495,27 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
  *   focus-rings-focus-ring   → focus-ring         (prefix: shadow → 그룹 이름 제거)
  */
 function deduplicateSlugSegments(slug: string, prefix: string): string {
-  // 1. 복수형 그룹 이름 제거: shadows-, backdrop-blurs-, focus-rings-, avatars-
-  const groupRe = /^[a-z]+-(?:s|es|rs|blurs)-/;
   let s = slug;
-  // 반복 세그먼트 제거: "shadows-" (prefix의 복수), "focus-rings-"
   const segments = s.split('-');
-  // 첫 세그먼트가 prefix의 복수형이면 제거
+
+  // 1. 복수형 그룹 이름 제거: shadows- (prefix 복수형)
   if (segments[0] === prefix + 's' || segments[0] + 's' === prefix) {
     s = segments.slice(1).join('-');
   }
-  // "backdrop-blurs" → 2-word 그룹명 제거
+
+  // 2. 2-word 그룹명 제거
   if (s.startsWith('backdrop-blurs-')) s = s.slice('backdrop-blurs-'.length);
   if (s.startsWith('focus-rings-')) s = s.slice('focus-rings-'.length);
   if (s.startsWith('avatars-')) s = s.slice('avatars-'.length);
   if (s.startsWith('portfolio-mockups-')) s = s.slice('portfolio-mockups-'.length);
+
+  // 3. 그룹명 제거 후 slug가 prefix-로 시작하면 한번 더 제거
+  //    예: shadows-shadow-xs → (1)에서 shadow-xs → prefix "shadow" + "-xs"
+  //    toVarName이 --prefix-slug 형태로 조합하므로 중복 방지
+  while (s.startsWith(`${prefix}-`)) {
+    s = s.slice(prefix.length + 1);
+  }
+
   return s;
 }
 

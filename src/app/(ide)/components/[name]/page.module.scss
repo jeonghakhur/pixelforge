@@ -99,6 +99,53 @@
   margin: 0 0 map-get($spacers, 4);
 }
 
+// ── Diagnostics ─────────────────────────────────────────────────────────
+.diagnostics {
+  margin-bottom: map-get($spacers, 5);
+  background: rgba(254, 137, 131, 0.06);
+  border: 1px solid rgba(254, 137, 131, 0.2);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.diagnosticsHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: #fe8983;
+  background: rgba(254, 137, 131, 0.06);
+  border-bottom: 1px solid rgba(254, 137, 131, 0.12);
+}
+
+.diagnosticsList {
+  list-style: none;
+  margin: 0;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: map-get($spacers, 3);
+    font-size: $font-size-sm;
+    color: var(--text-secondary);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: $font-size-sm;
+    color: #fe8983;
+    background: rgba(254, 137, 131, 0.08);
+    padding: 1px 6px;
+    border-radius: $border-radius-sm;
+  }
+}
+
 // ── Sandbox ─────────────────────────────────────────────────────────────
 .sandboxBg {
   background: var(--bg-elevated);

@@ -8,8 +8,9 @@
 import type { GeneratorWarning } from '../../types'
 import type { GeneratorContext } from '../registry'
 import { classifyDimensions } from '../shared/dimensions'
-import { buildSingleSchemeCSS, buildMultiSchemeCSS } from '../shared/state-css'
+import { buildSingleSchemeCSS, buildMultiSchemeCSS, isDisabledState, isLoadingState } from '../shared/state-css'
 import { mapValue, warnUnmappedHex } from '../shared/state-css'
+import { mapFontWeightValue } from '../../css-var-mapper'
 import { buildSizeCSSRules, buildIconOnlyCSSRules } from '../shared/size-css'
 import { buildTsx } from '../shared/tsx-builder'
 import {
@@ -45,6 +46,7 @@ export function generateButton(
   const appearanceKey    = dims.appearanceKeys[0]
   const appearanceValues = appearanceKey ? variantOptions[appearanceKey] : []
   let colorSchemeCSS = ''
+  let noPaddingSelectors: string[] = []
 
   if (!hasData) {
     const bg = rootStyles['background-color']
@@ -61,6 +63,14 @@ export function generateButton(
   } else if (dims.stateKey && appearanceKey) {
     const schemes = extractAppearanceSchemes(variants, appearanceKey, dims.stateKey, warnings, dims.blockKey, dims.iconOnlyKey)
     colorSchemeCSS = buildMultiSchemeCSS(appearanceKey, schemes, warnings, name)
+
+    // padding이 없는 hierarchy(Link 계열) — size CSS 뒤에 오버라이드
+    noPaddingSelectors = schemes
+      .filter(s => s.noPadding)
+      .map(s => {
+        const attrVal = s.appearanceValue.toLowerCase().replace(/\s+/g, '-')
+        return `.root[data-${appearanceKey.toLowerCase().replace(/\s+/g, '-')}='${attrVal}']`
+      })
   }
 
   // ── Size / Block / Icon Only CSS ─────────────────────────────────────
@@ -80,12 +90,12 @@ export function generateButton(
 
   const baseGap = rootStyles.gap ? mapValue(rootStyles.gap) : null
 
-  // childStyles에서 font-weight 추출 (base CSS용)
+  // childStyles에서 font-weight 추출 → 토큰 역매핑
   const baseFontWeight = (() => {
     for (const [key, cs] of Object.entries(payload.childStyles)) {
-      if (key.toLowerCase().includes('text') && cs['font-weight']) return cs['font-weight']
+      if (key.toLowerCase().includes('text') && cs['font-weight']) return mapFontWeightValue(cs['font-weight'])
     }
-    return '500'
+    return 'var(--font-weight-medium, 500)'
   })()
 
   // ── TSX ────────────────────────────────────────────────────────────────
@@ -100,6 +110,28 @@ export function generateButton(
     .map(([k, v]) => `${k}(${v.join('|')})`)
     .join(', ')
 
+  // noPadding hierarchy 오버라이드 (size 뒤에 배치하여 specificity 우선)
+  const noPaddingCSS = noPaddingSelectors.length > 0
+    ? `/* ── No-padding overrides (Link 계열) ── */\n${noPaddingSelectors.join(',\n')} {\n  padding: 0;\n  border-radius: 0;\n}`
+    : ''
+
+  // disabled/loading 공통 state 규칙 (state 이름을 variantOptions에서 동적 감지)
+  const stateRules: string[] = []
+  if (dims.stateKey) {
+    const stateValues = variantOptions[dims.stateKey] ?? []
+    for (const s of stateValues) {
+      const lower = s.toLowerCase()
+      if (isDisabledState(lower)) {
+        stateRules.push(`.root[data-state='${lower}'] {\n  cursor: not-allowed;\n  pointer-events: none;\n}`)
+      } else if (isLoadingState(lower)) {
+        stateRules.push(`.root[data-state='${lower}'] {\n  pointer-events: none;\n}`)
+      }
+    }
+  }
+  const stateCSS = stateRules.length > 0
+    ? `/* ── State ── */\n${stateRules.join('\n\n')}`
+    : ''
+
   const css = `/**
  * ${name}.module.css
  * source: ${hasData ? 'Figma COMPONENT_SET variants data' : 'payload.styles (variants 없음)'}
@@ -111,24 +143,23 @@ export function generateButton(
   display: inline-flex;
   align-items: center;
   justify-content: center;${baseGap ? `\n  gap: ${baseGap};` : ''}
+  background: none;
   border: none;
   cursor: pointer;
+  padding: 0;
   font-weight: ${baseFontWeight};
   white-space: nowrap;
   font-family: inherit;
   transition: opacity 150ms ease, transform 150ms ease, background 150ms ease;
 }
 
-.root:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-
 /* ── Color scheme ── */
 ${colorSchemeCSS}
 ${sizeCSS ? `\n/* ── Size variants ── */\n${sizeCSS}` : ''}
+${noPaddingCSS ? `\n${noPaddingCSS}` : ''}
 ${blockCSS ? `\n/* ── Block ── */\n${blockCSS}` : ''}
 ${iconOnlyCSS ? `\n/* ── Icon Only ── */\n${iconOnlyCSS}` : ''}
+${stateCSS ? `\n${stateCSS}` : ''}
 `
 
   return { name, category: 'action', tsx, css, warnings }
