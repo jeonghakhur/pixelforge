@@ -78,10 +78,34 @@ export function toVarName(tokenName: string, prefix: string): string {
     //   "Focus rings/focus-ring-shadow-xs-skeuomorphic"  → --focus-ring-shadow-xs-skeuomorphic
     //   "Gradient/skeuemorphic-gradient-border"          → --skeuemorphic-gradient-border
     if (getGeneratorConfigSync().styleTypePassthrough.includes(prefix)) {
-      const lastSegment = tokenName.split('/').pop() ?? tokenName;
+      const segments = tokenName.split('/');
+
+      if (prefix === 'gradient') {
+        // Gradient: 전체 경로 사용 (그룹명 포함으로 색상 컨텍스트 유지)
+        //   "Gradient/skeuemorphic-gradient-border"    → --skeuemorphic-gradient-border
+        //   "Gradient/Neutral/800 -> 600 (45deg)"      → --neutral-800-600-45deg
+        //   "Gradient/Brand/800 -> 600 (45deg)"        → --brand-800-600-45deg
+        //   "Gradient/01"                              → --gradient-01
+        if (segments.length > 1 && /^gradient$/i.test(segments[0])) segments.shift();
+        const fullPath = segments.join('-');
+        const cleaned = fullPath
+          .replace(/[·․]/g, '-')
+          .replace(/[>()<>.]/g, '-')
+          .replace(/\s+/g, '-')
+          .replace(/-{2,}/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .toLowerCase();
+        const needsPrefix = /^\d/.test(cleaned);
+        return needsPrefix ? `--${prefix}-${cleaned}` : `--${cleaned}`;
+      }
+
+      // Shadow/Blur: 마지막 세그먼트만 사용 (이름 자체가 고유)
+      //   "Shadows/shadow-xs"                              → --shadow-xs
+      //   "Focus rings/focus-ring-shadow-xs-skeuomorphic"  → --focus-ring-shadow-xs-skeuomorphic
+      const lastSegment = segments.pop() ?? tokenName;
       return `--${lastSegment
         .replace(/[·․]/g, '-')
-        .replace(/[>()<>]/g, '-')
+        .replace(/[>()<>.]/g, '-')
         .replace(/\s+/g, '-')
         .replace(/-{2,}/g, '-')
         .replace(/^-+|-+$/g, '')

@@ -137,6 +137,10 @@ export function buildStateCSS(
     }
     if (shouldEmit('boxShadow', style.boxShadow)) {
       lines.push(`  box-shadow: ${style.boxShadow};`)
+      // box-shadow 변경 시 base의 border-image가 border-radius를 무효화하므로 리셋
+      if (!isBase && baseStyle?.borderImage) {
+        lines.push(`  border-image: none;`)
+      }
     }
     if (style.opacity) lines.push(`  opacity: ${style.opacity};`)
 
