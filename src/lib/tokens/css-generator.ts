@@ -81,6 +81,7 @@ export function toVarName(tokenName: string, prefix: string): string {
       const lastSegment = tokenName.split('/').pop() ?? tokenName;
       return `--${lastSegment
         .replace(/[·․]/g, '-')
+        .replace(/[>()<>]/g, '-')
         .replace(/\s+/g, '-')
         .replace(/-{2,}/g, '-')
         .replace(/^-+|-+$/g, '')
