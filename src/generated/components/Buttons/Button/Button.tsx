@@ -57,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={`${styles.root}${className ? ` ${className}` : ''}`}
         {...props}
       >
-        {iconOnly ? (
+        {iconOnly && (iconLeading || iconTrailing) ? (
           <span className={styles.iconSlot}>{iconLeading ?? iconTrailing}</span>
         ) : (
           <>

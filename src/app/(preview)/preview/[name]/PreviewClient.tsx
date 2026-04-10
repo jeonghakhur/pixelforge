@@ -52,14 +52,26 @@ export default function PreviewClient({ componentName, importPath, initialProps,
   }, [])
 
   // render 시점에 string → React element 변환
-  // iconify 형식(예: solar:star-bold)만 <Icon />으로 변환, 그 외는 무시
+  // 1) iconify 형식(예: solar:star-bold) → <Icon />
+  // 2) HTML 태그 포함(예: <span>a</span>) → dangerouslySetInnerHTML wrapper
+  // 3) 일반 텍스트 → <span>text</span>
   const nodeProps: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(nodeStrings)) {
     const trimmed = val.trim()
+    if (!trimmed) continue
     if (/^[\w-]+:[\w-]+$/.test(trimmed)) {
       nodeProps[key] = createElement(Icon, { icon: trimmed, width: 20, height: 20 })
+    } else if (trimmed.includes('<')) {
+      nodeProps[key] = createElement('span', { dangerouslySetInnerHTML: { __html: trimmed } })
+    } else {
+      nodeProps[key] = createElement('span', null, trimmed)
     }
   }
 
-  return <Component {...props} {...nodeProps}>{children}</Component>
+  // children도 HTML 포함 시 dangerouslySetInnerHTML으로 렌더링
+  const resolvedChildren = children.trim().includes('<')
+    ? createElement('span', { dangerouslySetInnerHTML: { __html: children } })
+    : children
+
+  return <Component {...props} {...nodeProps}>{resolvedChildren}</Component>
 }

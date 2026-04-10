@@ -101,7 +101,8 @@ function buildInnerJsx(
     : textInner
 
   if (hasIconOnly) {
-    return `        {iconOnly ? (
+    // iconOnly는 아이콘이 있을 때만 동작 — 아이콘 없으면 일반 레이아웃으로 폴백
+    return `        {iconOnly && (${leading} || ${trailing}) ? (
           <span className={styles.iconSlot}>{${leading} ?? ${trailing}}</span>
         ) : (
           <>

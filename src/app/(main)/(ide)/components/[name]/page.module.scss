@@ -187,6 +187,31 @@
   &:focus { outline: none; border-color: var(--accent); }
 }
 
+.propInputInvalid {
+  border-color: rgba(254, 137, 131, 0.5);
+  &:focus { border-color: #fe8983; }
+}
+
+.nodeInputWrap {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+
+  .propInput { flex: 1; }
+}
+
+.iconPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-radius: $border-radius-sm;
+}
+
 .propToggle {
   display: flex;
   align-items: center;

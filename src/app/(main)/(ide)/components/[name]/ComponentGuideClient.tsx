@@ -377,21 +377,36 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
               </tr>
             ))}
 
-            {nodeProps.map((p) => (
-              <tr key={p.name}>
-                <td className={styles.propName}>{p.name}</td>
-                <td className={styles.propType}>ReactNode</td>
-                <td>
-                  <input
-                    type="text"
-                    value={nodeValues[p.name] ?? ''}
-                    onChange={(e) => setNodeValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
-                    className={styles.propInput}
-                    placeholder="solar:star-bold 또는 텍스트"
-                  />
-                </td>
-              </tr>
-            ))}
+            {nodeProps.map((p) => {
+              const val = nodeValues[p.name] ?? '';
+              const trimmed = val.trim();
+              const isIcon = /^[\w-]+:[\w-]+$/.test(trimmed);
+              const isHtml = trimmed.includes('<');
+              const isValid = isIcon || isHtml || !trimmed;
+              return (
+                <tr key={p.name}>
+                  <td className={styles.propName}>{p.name}</td>
+                  <td className={styles.propType}>ReactNode</td>
+                  <td>
+                    <div className={styles.nodeInputWrap}>
+                      <input
+                        type="text"
+                        value={val}
+                        onChange={(e) => setNodeValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                        className={`${styles.propInput} ${!isValid ? styles.propInputInvalid : ''}`}
+                        placeholder="solar:star-bold 또는 <span>텍스트</span>"
+                        spellCheck={false}
+                      />
+                      {isIcon && (
+                        <span className={styles.iconPreview}>
+                          <Icon icon={val.trim()} width={16} height={16} />
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
 
             {hasChildren && (
               <tr>

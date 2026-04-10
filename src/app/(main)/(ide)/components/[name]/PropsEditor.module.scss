@@ -147,7 +147,7 @@
 
 .propsHeader {
   display: grid;
-  grid-template-columns: 32px 56px 1fr 140px;
+  grid-template-columns: 32px 56px 1fr 110px 110px;
   gap: map-get($spacers, 2);
   padding: map-get($spacers, 2) map-get($spacers, 4);
   background: var(--bg-elevated);
@@ -165,7 +165,7 @@
 
 .propRow {
   display: grid;
-  grid-template-columns: 32px 56px 1fr 140px;
+  grid-template-columns: 32px 56px 1fr 110px 110px;
   gap: map-get($spacers, 2);
   align-items: center;
   padding: map-get($spacers, 2) map-get($spacers, 4);
@@ -235,14 +235,15 @@
 }
 
 .kind_union   { color: #a78bfa; }
-.kind_boolean { color: #67e8f9; }
+.kind_boolean { color: #22d3ee; }
 .kind_node    { color: #86efac; }
 .kind_string  { color: #fbbf24; }
 
 // ── 입력 필드 ────────────────────────────────────────────────────────────
 .nameFieldInput,
 .defaultInput,
-.defaultSelect {
+.defaultSelect,
+.tsTypeSelect {
   width: 100%;
   padding: 3px map-get($spacers, 2);
   font-family: var(--font-mono);
@@ -255,6 +256,17 @@
 
   &::placeholder { color: var(--text-muted); }
   &:focus { outline: none; border-color: var(--accent); }
+}
+
+.tsTypeSelect {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 20px;
+
+  option { background: var(--bg-elevated); }
 }
 
 .fieldDisabled {

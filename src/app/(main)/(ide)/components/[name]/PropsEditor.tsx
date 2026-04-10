@@ -112,11 +112,15 @@ export default function PropsEditor({
     .filter(base => base.kind !== 'union')
     .map(base => {
       const override = overrides.props.find(o => o.sourceName === base.name);
+      const baseTsType =
+        base.kind === 'node' ? 'ReactNode' : base.kind === 'boolean' ? 'boolean' : 'string';
       return {
         sourceName: base.name,
         name: override?.name ?? base.name,
         removed: override?.removed ?? false,
         defaultValue: override?.defaultValue ?? base.defaultValue,
+        tsType: override?.tsType ?? baseTsType,
+        baseTsType,
         kind: base.kind,
         values: base.values,
       };
@@ -140,11 +144,14 @@ export default function PropsEditor({
 
     // 변경 없으면 제거 (기본값 복원)
     const base = baseProps.find(p => p.name === sourceName);
+    const baseTsType = base
+      ? base.kind === 'node' ? 'ReactNode' : base.kind === 'boolean' ? 'boolean' : 'string'
+      : undefined;
     const isDefault =
       updated.name === sourceName &&
       !updated.removed &&
       (updated.defaultValue === undefined || updated.defaultValue === base?.defaultValue) &&
-      updated.tsType === undefined;
+      (updated.tsType === undefined || updated.tsType === baseTsType);
 
     setOverrides(prev => ({
       ...prev,
@@ -260,6 +267,7 @@ export default function PropsEditor({
           <span>포함</span>
           <span>타입</span>
           <span>이름</span>
+          <span>TS타입</span>
           <span>기본값</span>
         </div>
 
@@ -305,6 +313,25 @@ export default function PropsEditor({
                 <span className={styles.sourceNameBadge}>{p.sourceName}</span>
               )}
             </div>
+
+            {/* TS타입 */}
+            <select
+              className={`${styles.tsTypeSelect} ${p.removed ? styles.fieldDisabled : ''}`}
+              value={p.tsType}
+              disabled={p.removed}
+              onChange={e =>
+                updatePropOverride(p.sourceName, {
+                  tsType: e.target.value === p.baseTsType ? undefined : e.target.value,
+                  name: p.name,
+                })
+              }
+            >
+              <option value="boolean">boolean</option>
+              <option value="string">string</option>
+              <option value="number">number</option>
+              <option value="ReactNode">ReactNode</option>
+              <option value="string | number">string | number</option>
+            </select>
 
             {/* 기본값 */}
             {p.kind === 'boolean' ? (
