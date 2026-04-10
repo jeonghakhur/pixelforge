@@ -27,8 +27,8 @@ export default function PreviewClient({ componentName, importPath, initialProps,
   // 부모(sandbox)에서 postMessage로 props/theme 전달 받음 → iframe 리로드 없이 re-render
   const [props, setProps] = useState(initialProps)
   const [children, setChildren] = useState(initialChildren)
-  // node props: string → React element 변환 (iconify 패턴이면 <Icon />, 아니면 <span>)
-  const [nodeResolvedProps, setNodeResolvedProps] = useState<Record<string, unknown>>({})
+  // node props: 문자열로 저장 → render 시점에 React element 변환
+  const [nodeStrings, setNodeStrings] = useState<Record<string, string>>({})
 
   // 초기 테마 적용
   useEffect(() => {
@@ -44,24 +44,22 @@ export default function PreviewClient({ componentName, importPath, initialProps,
         document.documentElement.setAttribute('data-theme', e.data.theme)
       }
       if (e.data.nodeProps) {
-        const resolved: Record<string, unknown> = {}
-        for (const [key, val] of Object.entries(e.data.nodeProps as Record<string, string>)) {
-          const trimmed = val.trim()
-          if (!trimmed) {
-            resolved[key] = undefined
-          } else if (/^[\w-]+:[\w-]+$/.test(trimmed)) {
-            // iconify 형식 (예: solar:star-bold)
-            resolved[key] = createElement(Icon, { icon: trimmed, width: 20, height: 20 })
-          } else {
-            resolved[key] = createElement('span', null, trimmed)
-          }
-        }
-        setNodeResolvedProps(resolved)
+        setNodeStrings(e.data.nodeProps as Record<string, string>)
       }
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
-  return <Component {...props} {...nodeResolvedProps}>{children}</Component>
+  // render 시점에 string → React element 변환
+  // iconify 형식(예: solar:star-bold)만 <Icon />으로 변환, 그 외는 무시
+  const nodeProps: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(nodeStrings)) {
+    const trimmed = val.trim()
+    if (/^[\w-]+:[\w-]+$/.test(trimmed)) {
+      nodeProps[key] = createElement(Icon, { icon: trimmed, width: 20, height: 20 })
+    }
+  }
+
+  return <Component {...props} {...nodeProps}>{children}</Component>
 }

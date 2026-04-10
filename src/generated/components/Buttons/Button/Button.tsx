@@ -11,8 +11,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   state?: ButtonState;
   iconOnly?: boolean;
-  leftIcon?: ReactNode;
+  iconLeading?: ReactNode;
   iconTrailing?: ReactNode;
+  loadingText?: boolean;
   children?: ReactNode;
 }
 
@@ -27,8 +28,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = 'md',
       state = 'default',
       iconOnly = false,
-      leftIcon,
+      iconLeading,
       iconTrailing,
+      loadingText = true,
       type = 'button',
       disabled,
       onClick,
@@ -56,11 +58,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {iconOnly ? (
-          <span className={styles.iconSlot}>{leftIcon ?? iconTrailing}</span>
+          <span className={styles.iconSlot}>{iconLeading ?? iconTrailing}</span>
         ) : (
           <>
-            {leftIcon && <span className={styles.iconSlot}>{leftIcon}</span>}
-            <span className={styles.textWrapper}>{children}</span>
+            {iconLeading && <span className={styles.iconSlot}>{iconLeading}</span>}
+            <span className={styles.textWrapper}>{(!isLoading || loadingText) && children}</span>
             {iconTrailing && <span className={styles.iconSlot}>{iconTrailing}</span>}
           </>
         )}
