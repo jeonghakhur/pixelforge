@@ -46,6 +46,9 @@ next-env.d.ts
 # bkit internal files
 .bkit/
 
+# MCP local config (machine-specific absolute paths)
+.mcp.json
+
 # test
 /playwright-report/
 /test-results/
