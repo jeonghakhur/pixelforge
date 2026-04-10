@@ -18,12 +18,14 @@ function extractFigmaPath(nodePayload: string | null | undefined): string | null
 }
 
 /** query string을 컴포넌트 props로 파싱 */
+const RESERVED_KEYS = new Set(['children', 'theme'])
+
 function parseProps(
   searchParams: Record<string, string | string[] | undefined>,
 ): Record<string, unknown> {
   const props: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(searchParams)) {
-    if (key === 'children') continue
+    if (RESERVED_KEYS.has(key)) continue
     if (typeof value !== 'string') continue
     if (value === 'true') props[key] = true
     else if (value === 'false') props[key] = false
@@ -43,6 +45,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
   const importPath = figmaPath ?? name
   const props = parseProps(sp)
   const children = (sp.children as string | undefined) ?? name
+  const initialTheme = sp.theme === 'dark' ? 'dark' : 'light'
 
   return (
     <PreviewClient
@@ -50,6 +53,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
       importPath={importPath}
       initialProps={props}
       initialChildren={children}
+      initialTheme={initialTheme}
     />
   )
 }

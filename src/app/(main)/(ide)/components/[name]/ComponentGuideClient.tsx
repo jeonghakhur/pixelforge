@@ -44,7 +44,12 @@ interface BooleanPropDef {
   dataAttr: string;       // data-* 속성명
 }
 
-type SandboxPropDef = UnionPropDef | BooleanPropDef;
+interface NodePropDef {
+  kind: 'node';
+  name: string;           // prop 이름 (leftIcon, rightIcon 등)
+}
+
+type SandboxPropDef = UnionPropDef | BooleanPropDef | NodePropDef;
 
 /** TSX에서 export type → interface prop 매핑으로 union type props 추출 */
 function parseAllUnionTypes(tsx: string): Map<string, string[]> {
@@ -132,6 +137,17 @@ function parseSandboxProps(tsx: string): SandboxPropDef[] {
         dataAttr,
       });
     }
+  }
+
+  // node props: interface에서 ReactNode 타입 직접 파싱 (destructuring에 default 없으므로 위 루프에서 누락됨)
+  const seenNames = new Set(props.map(p => p.name));
+  const nodeRe = /^\s*(\w+)\??\s*:\s*ReactNode;/gm;
+  let mn;
+  while ((mn = nodeRe.exec(tsx)) !== null) {
+    const propName = mn[1];
+    if (propName === 'children' || seenNames.has(propName)) continue;
+    seenNames.add(propName);
+    props.push({ kind: 'node', name: propName });
   }
 
   return props;
@@ -236,6 +252,7 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
 
   const unionProps = sandboxProps.filter((p): p is UnionPropDef => p.kind === 'union');
   const boolProps  = sandboxProps.filter((p): p is BooleanPropDef => p.kind === 'boolean');
+  const nodeProps  = sandboxProps.filter((p): p is NodePropDef => p.kind === 'node');
 
   // state 관리: union props
   const initUnion: Record<string, string> = {};
@@ -246,6 +263,9 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
   const initBool: Record<string, boolean> = {};
   for (const p of boolProps) initBool[p.name] = p.defaultValue;
   const [boolValues, setBoolValues] = useState(initBool);
+
+  // state 관리: node props (iconify 이름 또는 텍스트)
+  const [nodeValues, setNodeValues] = useState<Record<string, string>>({});
 
   // state union에 disabled가 포함되면 별도 disabled prop 불필요
   const stateUnionProp = unionProps.find(p => p.name === 'state');
@@ -269,17 +289,21 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
     dataAttrs['data-disabled'] = selDisabled ? '' : undefined;
   }
 
+  // 부모 앱의 테마 동기화
+  const resolvedTheme = useUIStore((s) => s.resolvedTheme);
+
   // 초기 URL (iframe 최초 로드용) — 이후 props 변경은 postMessage로 전달
   const initialPreviewUrl = useMemo(() => {
     const params = new URLSearchParams();
     for (const p of unionProps) params.set(p.name, p.defaultValue);
     for (const p of boolProps) params.set(p.name, String(p.defaultValue));
     if (hasChildren) params.set('children', name);
+    params.set('theme', resolvedTheme);
     return `/preview/${encodeURIComponent(name)}?${params.toString()}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
-  // props 변경 시 iframe에 postMessage
+  // props/theme 변경 시 iframe에 postMessage
   const iframeRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -290,12 +314,17 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
     for (const p of boolProps) props[p.name] = boolValues[p.name] ?? p.defaultValue;
     if (!hasDisabledInState) props.disabled = selDisabled;
 
+    const nodePayload: Record<string, string> = {};
+    for (const p of nodeProps) nodePayload[p.name] = nodeValues[p.name] ?? '';
+
     iframe.contentWindow.postMessage({
       type: 'preview-props',
       props,
+      nodeProps: nodePayload,
       children: hasChildren ? (childrenText || name) : undefined,
+      theme: resolvedTheme,
     }, '*');
-  }, [unionProps, unionValues, boolProps, boolValues, hasDisabledInState, selDisabled, hasChildren, childrenText, name]);
+  }, [unionProps, unionValues, boolProps, boolValues, nodeProps, nodeValues, hasDisabledInState, selDisabled, hasChildren, childrenText, name, resolvedTheme]);
 
   return (
     <>
@@ -344,6 +373,22 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
                       <option key={v} value={v}>{v}</option>
                     ))}
                   </select>
+                </td>
+              </tr>
+            ))}
+
+            {nodeProps.map((p) => (
+              <tr key={p.name}>
+                <td className={styles.propName}>{p.name}</td>
+                <td className={styles.propType}>ReactNode</td>
+                <td>
+                  <input
+                    type="text"
+                    value={nodeValues[p.name] ?? ''}
+                    onChange={(e) => setNodeValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                    className={styles.propInput}
+                    placeholder="solar:star-bold 또는 텍스트"
+                  />
                 </td>
               </tr>
             ))}

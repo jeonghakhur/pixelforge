@@ -95,22 +95,7 @@ export default function PropsEditor({
 }: PropsEditorProps) {
   const router = useRouter();
 
-  const baseProps = useMemo(() => {
-    const fromTsx = parseEditorProps(tsx);
-
-    // 재생성 후 tsx에서 사라진 prop도 PropsEditor에 계속 표시
-    // (initialOverrides의 removed:true 항목에서 복원 → 체크박스로 되살릴 수 있도록)
-    const removedInOverrides = (initialOverrides?.props ?? []).filter(o => o.removed);
-    const ghostProps: EditorPropDef[] = removedInOverrides
-      .filter(o => !fromTsx.some(p => p.name === o.sourceName))
-      .map(o => ({
-        name: o.sourceName,
-        kind: (o.kind ?? 'boolean') as EditorPropDef['kind'],
-        defaultValue: o.defaultValue,
-      }));
-
-    return [...fromTsx, ...ghostProps];
-  }, [tsx, initialOverrides]);
+  const baseProps = useMemo(() => parseEditorProps(tsx), [tsx]);
 
   const [overrides, setOverrides] = useState<ComponentOverrides>(
     initialOverrides ?? { name: undefined, props: [] },
