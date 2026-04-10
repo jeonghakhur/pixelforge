@@ -1,0 +1,685 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.page {
+  width: 100%;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+// ===========================
+// Section title
+// ===========================
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.countBadge {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+}
+
+// ===========================
+// Drift Detection Section
+// ===========================
+.driftSection {
+  margin-bottom: map-get($spacers, 6);
+  padding-bottom: map-get($spacers, 6);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.driftDesc {
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  margin-bottom: map-get($spacers, 3);
+  max-width: 55ch;
+}
+
+.driftActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.driftTimestamp {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.driftError {
+  display: flex;
+  align-items: flex-start;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-radius: $border-radius;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  margin-bottom: map-get($spacers, 3);
+  line-height: $line-height-base;
+}
+
+// ===========================
+// Mode toggle (API vs Plugin JSON)
+// ===========================
+.modeToggle {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 3);
+}
+
+.modeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+}
+
+.modeBtnActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.modeTag {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0 5px;
+  border-radius: $border-radius-sm;
+  line-height: 1.5;
+}
+
+.formatTag {
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Drop zone
+// ===========================
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 5) map-get($spacers, 3);
+  border: 2px dashed var(--border-color);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  margin-bottom: map-get($spacers, 3);
+  transition: $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--text-secondary);
+  }
+}
+
+.dropText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.dropHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+// ===========================
+// Snapshot Timeline
+// ===========================
+.timeline {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.snapshotList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.snapshotCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 3);
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+  }
+}
+
+.snapshotHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+  margin-bottom: map-get($spacers, 1);
+}
+
+.snapshotVersion {
+  font-family: var(--font-mono);
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: var(--accent);
+}
+
+.snapshotDate {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.snapshotSource {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.snapshotMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.snapshotCounts {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.snapshotFigmaVer {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.snapshotDiffChips {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 1);
+}
+
+.chipAdded {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--success);
+  background: var(--success-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.chipRemoved {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--danger);
+  background: var(--danger-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.chipChanged {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--warning);
+  background: var(--warning-subtle);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+}
+
+.snapshotActions {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent-subtle);
+    background: var(--accent-subtle);
+  }
+}
+
+// ===========================
+// Compare Section
+// ===========================
+.compareSection {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 5);
+  flex-wrap: wrap;
+}
+
+.versionSelect {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.selectLabel {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.select {
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+  }
+}
+
+.arrow {
+  @include flex-center;
+  height: 34px;
+  color: var(--text-muted);
+}
+
+.noDiff {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: var(--success-subtle);
+  color: var(--success);
+  border-radius: $border-radius;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Empty state
+// ===========================
+.stage {
+  @include double-bezel;
+}
+
+.stageInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 8) map-get($spacers, 5);
+  @include flex-center;
+  min-height: 300px;
+}
+
+// ===========================
+// Status bar filter
+// ===========================
+.statusBar {
+  display: flex;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 3);
+  flex-wrap: wrap;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-pill;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-subtle);
+  }
+}
+
+.statusActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+// ===========================
+// Type filter bar
+// ===========================
+.typeFilterBar {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 4);
+  flex-wrap: wrap;
+}
+
+.typeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+  }
+}
+
+.typeChipActive {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border-color: var(--text-muted);
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Color swatch
+// ===========================
+.colorSwatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+// ===========================
+// Diff list
+// ===========================
+.diffList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 5);
+}
+
+.diffItem {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 3);
+  border-left: 3px solid transparent;
+  transition: $transition-fast;
+}
+
+.diff_changed { border-left-color: var(--warning); }
+.diff_added { border-left-color: var(--success); }
+.diff_removed { border-left-color: var(--danger); }
+
+.diffHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.diffName {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.diffType {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.diffBadge {
+  margin-left: auto;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+}
+
+.badge_changed { background: var(--warning-subtle); color: var(--warning); }
+.badge_added { background: var(--success-subtle); color: var(--success); }
+.badge_removed { background: var(--danger-subtle); color: var(--danger); }
+
+.diffValues {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-top: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.diffOldNew {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  min-width: 0;
+}
+
+.diffLabel {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.diffArrow {
+  @include flex-center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.diffOld,
+.diffNew {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diffCode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  padding: 4px 8px;
+  border-radius: $border-radius-sm;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: map-get($spacers, 3);
+}
+
+// ===========================
+// Snapshot detail panel
+// ===========================
+.detailPanel {
+  margin-top: map-get($spacers, 3);
+  padding-top: map-get($spacers, 3);
+  border-top: 1px solid var(--border-color);
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.detailTitle {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+}
+
+.detailCount {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 0 6px;
+  border-radius: $border-radius-pill;
+}
+
+.detailGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  background: var(--border-color);
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  background: var(--bg-body);
+  font-size: $font-size-sm;
+  min-height: 28px;
+}
+
+.detailName {
+  font-family: var(--font-mono);
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailType {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.detailValue {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: $border-radius-sm;
+  flex-shrink: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

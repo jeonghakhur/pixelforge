@@ -95,5 +95,6 @@ export function normalize(raw: Record<string, unknown>): NormalizedPayload {
     radixProps:     normalizedProps,
     variantOptions: (raw.variantOptions as Record<string, string[]>) ?? {},
     variants:       (raw.variants as NormalizedPayload['variants']) ?? [],
+    componentProperties: (raw.componentProperties as NormalizedPayload['componentProperties']) ?? undefined,
   }
 }

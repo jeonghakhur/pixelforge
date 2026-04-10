@@ -160,6 +160,7 @@ export function generateGeneric(
     element: ctx.element,
     elementPropsType: propsType.type,
     elementPropsGeneric: propsType.generic,
+    overrides: ctx.overrides,
   })
 
   // ── CSS 조합 ──────────────────────────────────────────────────────────

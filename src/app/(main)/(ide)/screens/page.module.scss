@@ -1,0 +1,1509 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.page {
+  width: 100%;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+// ===========================
+// 헤더
+// ===========================
+.header {
+  @include flex-between;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 5);
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+}
+
+.title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.syncBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  height: 34px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: $border-radius;
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--accent-dim);
+    border-color: rgba(59, 130, 246, 0.35);
+  }
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  height: 34px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  color: #fff;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--accent-hover, color-mix(in srgb, var(--accent) 85%, #000));
+  }
+}
+
+// ===========================
+// 통계 카드
+// ===========================
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.statCard {
+  @include double-bezel;
+}
+
+.statCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+}
+
+.statIconWrap {
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border-radius: $border-radius;
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.statIconWrapAccent  { background: var(--accent-subtle);   color: var(--accent);   }
+.statIconWrapSuccess { background: var(--success-subtle);  color: var(--success);  }
+.statIconWrapInfo    { background: var(--info-subtle);     color: var(--info);     }
+.statIconWrapMuted   { background: var(--bg-elevated);     color: var(--text-muted); }
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.statCount {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+// ===========================
+// 필터 바
+// ===========================
+.filterBar {
+  @include flex-between;
+  gap: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 3);
+  flex-wrap: wrap;
+}
+
+.filterLeft {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.statusChips {
+  display: flex;
+  gap: map-get($spacers, 1);
+}
+
+.statusChip {
+  height: 26px;
+  padding: 0 map-get($spacers, 2);
+  border-radius: $border-radius-pill;
+  border: 1px solid var(--border-color);
+  background: none;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--text-primary);
+  }
+}
+
+.statusChipActive {
+  background: var(--accent-subtle);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--accent);
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 8px;
+  color: var(--text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  height: 26px;
+  padding: 0 28px 0 26px;
+  border-radius: $border-radius-pill;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  width: 200px;
+  transition: $transition-fast;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    width: 240px;
+  }
+
+  &[type='search']::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.searchClear {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.filterRight {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.hiddenToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 map-get($spacers, 2);
+  border-radius: $border-radius-pill;
+  border: 1px solid var(--border-color);
+  background: none;
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--text-secondary);
+  }
+}
+
+.hiddenToggleActive {
+  background: var(--warning-subtle);
+  border-color: rgba(234, 179, 8, 0.3);
+  color: var(--warning);
+}
+
+// ===========================
+// 테이블 래퍼
+// ===========================
+.tableWrap {
+  @include double-bezel;
+}
+
+.tableInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+// ===========================
+// 화면 테이블
+// ===========================
+.screenTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+}
+
+.screenTable th {
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  text-align: left;
+  font-weight: $font-weight-medium;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.screenTable td {
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.screenTable tbody tr {
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-bg);
+  }
+
+  &:last-child td {
+    border-bottom: 0;
+  }
+}
+
+// 컬럼별
+.colName    { width: 16%; }
+.colRoute   { width: 13%; }
+.colAuthors { width: 13%; }
+.colStatus  { width: 11%; }
+.colUpdated { width: 9%;  }
+.colFigma   { width: 7%;  text-align: center; }
+.colQa      { width: 10%; }
+.colVisible { width: 6%;  text-align: center; }
+.colAction  { width: 9%;  text-align: right; }
+
+.screenName {
+  font-weight: $font-weight-semibold;
+}
+
+.screenNameLink {
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.screenDesc {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin-top: 2px;
+  @include text-truncate;
+  max-width: 200px;
+}
+
+.routeCode {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-radius: $border-radius-sm;
+  padding: 2px 6px;
+}
+
+.authorList {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.authorChip {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-radius: $border-radius-sm;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.authorMore {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.dateText {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+// 상태 배지
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: $border-radius-pill;
+  font-size: 0.7rem;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+}
+
+.statusWip      { background: var(--bg-elevated);    color: var(--text-muted);   }
+.statusDevDone  { background: var(--info-subtle);    color: var(--info);         }
+.statusQaReady  { background: var(--warning-subtle); color: var(--warning);      }
+.statusQaDone   { background: var(--success-subtle); color: var(--success);      }
+
+// Figma 썸네일
+.figmaThumb {
+  width: 28px;
+  height: 20px;
+  border-radius: $border-radius-sm;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  display: block;
+  margin: 0 auto;
+}
+
+.figmaEmpty {
+  @include flex-center;
+  width: 28px;
+  height: 20px;
+  border-radius: $border-radius-sm;
+  border: 1px dashed var(--border-color);
+  color: var(--text-muted);
+  margin: 0 auto;
+}
+
+.figmaRegistered {
+  @include flex-center;
+  width: 28px;
+  height: 20px;
+  border-radius: $border-radius-sm;
+  border: 1px solid var(--success);
+  color: var(--success);
+  margin: 0 auto;
+  background: var(--success-subtle);
+}
+
+// QA 점수
+.qaScore {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.qaBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.qaBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qaBarPass  { background: var(--success); }
+.qaBarWarn  { background: var(--warning); }
+.qaBarFail  { background: var(--danger);  }
+
+.qaNum {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  min-width: 30px;
+  text-align: right;
+}
+
+.qaPending {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.rowActionGroup {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.rowActionBtn {
+  @include flex-center;
+  width: 26px;
+  height: 26px;
+  border-radius: $border-radius-sm;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-subtle);
+    background: var(--bg-elevated);
+  }
+}
+
+.rowActionBtnDanger {
+  &:hover {
+    color: var(--danger, #dc3545);
+    border-color: rgba(220, 53, 69, 0.3);
+    background: rgba(220, 53, 69, 0.06);
+  }
+}
+
+// ===========================
+// Drawer 오버레이
+// ===========================
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+  z-index: 100;
+  animation: overlayIn 0.2s ease both;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// ===========================
+// Drawer 패널
+// ===========================
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  animation: drawerIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+@keyframes drawerIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+
+// 드래그 리사이즈 핸들
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 10;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // 2×3 그립 도트
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    box-shadow:
+      0px  -8px 0 var(--text-muted),
+      0px   8px 0 var(--text-muted),
+      4px  -8px 0 var(--text-muted),
+      4px   0px 0 var(--text-muted),
+      4px   8px 0 var(--text-muted);
+    opacity: 0.55;
+    transition: opacity 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+
+    &::after {
+      opacity: 1;
+      background: var(--accent);
+      box-shadow:
+        0px  -8px 0 var(--accent),
+        0px   8px 0 var(--accent),
+        4px  -8px 0 var(--accent),
+        4px   0px 0 var(--accent),
+        4px   8px 0 var(--accent);
+    }
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+}
+
+.drawerHeader {
+  @include flex-between;
+  padding: map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  gap: map-get($spacers, 2);
+}
+
+.drawerTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  min-width: 0;
+}
+
+.drawerTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  @include text-truncate;
+}
+
+.drawerHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  flex-shrink: 0;
+}
+
+.drawerCloseBtn {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: $border-radius;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+}
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+
+  // 스크롤바
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+}
+
+// ===========================
+// Drawer 메타 섹션
+// ===========================
+.drawerMeta {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.metaRow {
+  display: flex;
+  align-items: flex-start;
+  gap: map-get($spacers, 3);
+}
+
+.metaKey {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  min-width: 64px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.metaVal {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.metaRoute {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--accent);
+}
+
+// 노출 순위 입력
+.orderInputGroup {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+}
+
+.orderInput {
+  width: 72px;
+  height: 28px;
+  padding: 0 map-get($spacers, 2);
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  text-align: center;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* 스피너 화살표 숨김 */
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button { appearance: none; }
+  appearance: textfield;
+}
+
+.orderSaveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 map-get($spacers, 2);
+  background: var(--accent-subtle);
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+// 검수자 정보
+.reviewerInfo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.reviewerEmail {
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+}
+
+.reviewerDate {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+// 상태 드롭다운 — drawer용
+.statusSelect {
+  height: 28px;
+  padding: 0 map-get($spacers, 2);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+  }
+}
+
+// 테이블 인라인 상태 select — badge 모양
+.screenTable td .statusSelect {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: $border-radius-pill;
+  font-size: 0.7rem;
+  font-weight: $font-weight-medium;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 20px;
+
+  &.statusWip     { background-color: var(--bg-elevated);    color: var(--text-muted);  border-color: transparent; }
+  &.statusDevDone { background-color: var(--info-subtle);    color: var(--info);         border-color: transparent; }
+  &.statusQaReady { background-color: var(--warning-subtle); color: var(--warning);      border-color: transparent; }
+  &.statusQaDone  { background-color: var(--success-subtle); color: var(--success);      border-color: transparent; }
+
+  &:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+// 노출 토글 버튼
+.visibilityBtn {
+  @include flex-center;
+  width: 26px;
+  height: 26px;
+  border-radius: $border-radius-sm;
+  border: 1px solid var(--border-color);
+  background: none;
+  cursor: pointer;
+  transition: $transition-fast;
+  margin: 0 auto;
+}
+
+.visibilityBtnOn {
+  color: var(--success);
+  border-color: var(--success-subtle);
+  background: var(--success-subtle);
+
+  &:hover {
+    background: var(--danger-subtle);
+    border-color: var(--danger-subtle);
+    color: var(--danger);
+  }
+}
+
+.visibilityBtnOff {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+
+  &:hover {
+    background: var(--success-subtle);
+    border-color: var(--success-subtle);
+    color: var(--success);
+  }
+}
+
+// 숨김 행 시각적 구분
+.screenTable tbody tr[data-hidden='true'] {
+  opacity: 0.45;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+// ===========================
+// Figma 비교 섹션
+// ===========================
+.sectionTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 3);
+}
+
+.compareGridWide {
+  gap: map-get($spacers, 4);
+
+  .compareImgInner {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+.comparePanel {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.compareLabel {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.compareImgWrap {
+  @include double-bezel;
+}
+
+.compareImgInner {
+  background: var(--bg-elevated);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  @include flex-center;
+}
+
+.compareImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.comparePlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  color: var(--text-muted);
+  padding: map-get($spacers, 3);
+  text-align: center;
+}
+
+.comparePlaceholderText {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.captureBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--accent);
+  }
+}
+
+// Figma URL 입력
+.figmaUrlForm {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  width: 100%;
+  margin-top: map-get($spacers, 2);
+}
+
+.figmaUrlInput {
+  width: 100%;
+  height: 32px;
+  padding: 0 map-get($spacers, 2);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-family: $font-family-mono;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+    font-family: $font-family-base;
+  }
+}
+
+.figmaUrlActions {
+  display: flex;
+  gap: map-get($spacers, 2);
+}
+
+.figmaUrlCurrent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: map-get($spacers, 2);
+  padding: 0 2px;
+}
+
+.figmaUrlText {
+  flex: 1;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: $font-family-mono;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.figmaUrlEditBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--accent);
+  }
+}
+
+// ===========================
+// Playwright 섹션
+// ===========================
+.playwrightSection {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+}
+
+.scoreBig {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  min-width: 48px;
+}
+
+.scoreBarLg {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.scoreBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scorePass { background: var(--success); }
+.scoreWarn { background: var(--warning); }
+.scoreFail { background: var(--danger);  }
+
+.playwrightActions {
+  display: flex;
+  gap: map-get($spacers, 2);
+}
+
+.pwBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent-subtle);
+    color: var(--accent);
+  }
+}
+
+.pwPending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 4);
+  border: 1px dashed var(--border-color);
+  border-radius: $border-radius-lg;
+  color: var(--text-muted);
+}
+
+.pwPendingText {
+  font-size: $font-size-sm;
+}
+
+// ===========================
+// Git 수정 이력
+// ===========================
+.gitSection {
+  margin-top: map-get($spacers, 4);
+  padding-top: map-get($spacers, 4);
+  border-top: 1px solid var(--border-color);
+}
+
+.gitSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 3);
+}
+
+.gitLoading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  padding: map-get($spacers, 2) 0;
+}
+
+.gitEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 4);
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  border: 1px dashed var(--border-color);
+  border-radius: $border-radius-lg;
+}
+
+.gitTimeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 36px;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: var(--border-color);
+  }
+}
+
+.gitCommit {
+  display: flex;
+  gap: map-get($spacers, 3);
+  padding: 0 0 map-get($spacers, 3);
+  position: relative;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.gitDot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+
+  &[data-first='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  // wide 모드: 비교 선택됨
+  &[data-selected='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  }
+
+  // wide 모드: 현재 소스 보기 중
+  &[data-active='true'] {
+    background: rgba(56, 139, 253, 0.3);
+    border-color: rgba(56, 139, 253, 0.6);
+  }
+}
+
+.gitCommitBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.gitCommitMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.gitHash {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-radius: $border-radius-sm;
+  padding: 1px 5px;
+}
+
+.gitDate {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.gitAuthor {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.gitMessage {
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  margin: 0;
+  @include text-truncate;
+}
+
+// 커밋 선택 체크박스
+.commitCheckbox {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  z-index: 1;
+  position: relative;
+}
+
+// 커밋 선택 상태
+.gitCommitSelected {
+  .gitDot {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .gitCommitBtn {
+    background: var(--accent-subtle);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+}
+
+// 클릭 가능한 커밋 버튼
+.gitCommitBtn {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2);
+  text-align: left;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-color);
+  }
+}
+
+// 비교 선택 바
+.compareBar {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.compareBarLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.compareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 map-get($spacers, 3);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: $border-radius-sm;
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.compareClearBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border-radius: $border-radius-sm;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--danger);
+    border-color: var(--danger-subtle);
+    background: var(--danger-subtle);
+  }
+}
+
+// ===========================
+// Drawer 2-column (Wide 모드)
+// ===========================
+.drawerCols {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drawerLeft {
+  width: 380px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+}
+
+.drawerRight {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerRightEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #6e7681;
+  font-size: 13px;
+  background: #0d1117;
+}
+
+.drawerRightHint {
+  font-size: 12px;
+  color: #6e7681;
+  opacity: 0.6;
+}
+
+// ─── 커밋 활성 상태 (wide 모드에서 현재 소스 보기 중) ──
+.gitCommitActive {
+  .gitCommitBtn {
+    background: rgba(56, 139, 253, 0.06);
+    border-color: rgba(56, 139, 253, 0.2);
+  }
+}
+
+// dot을 체크박스 레이블로 감싸기 (wide 모드)
+.commitDotLabel {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+
+  &:hover .gitDot {
+    border-color: var(--accent);
+  }
+}
+
+.commitCheckboxHidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+// ===========================
+// 로딩 / 빈 상태
+// ===========================
+.loadingWrap {
+  @include flex-center;
+  padding: map-get($spacers, 8) 0;
+  color: var(--text-muted);
+}
+
+.emptyWrap {
+  @include flex-center;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 8) 0;
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+}
+
+// 동기화 결과 메시지
+.syncResult {
+  font-size: $font-size-sm;
+  color: var(--success);
+  animation: fadeInUp 0.3s ease both;
+}
+
+// ===========================
+// 애니메이션
+// ===========================
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

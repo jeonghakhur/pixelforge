@@ -6,7 +6,7 @@ import {
   importFromJsonAction,
   type PixelForgeJson,
 } from '@/lib/actions/import-json';
-import JsonAnalysisPanel from '@/app/(ide)/JsonAnalysisPanel';
+import JsonAnalysisPanel from '@/app/(main)/(ide)/JsonAnalysisPanel';
 import styles from './TokenImportTabs.module.scss';
 
 type InputTab = 'file' | 'paste';

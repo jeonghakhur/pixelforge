@@ -1,0 +1,584 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.page {
+  width: 100%;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header {
+  margin-bottom: map-get($spacers, 6);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin-top: map-get($spacers, 3);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: $font-size-lg;
+  max-width: 55ch;
+}
+
+// ===========================
+// Tab content
+// ===========================
+.tabContent {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.settingsCard {
+  margin-bottom: map-get($spacers, 5);
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.settingsLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: map-get($spacers, 3);
+  color: var(--text-muted);
+}
+
+.settingsTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.settingsDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+.currentToken {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  font-size: $font-size-sm;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  border-radius: $border-radius-pill;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.figmaUrlPreview {
+  @include text-truncate;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: $font-size-xs;
+  opacity: 0.9;
+}
+
+// ===========================
+// Forms
+// ===========================
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+}
+
+.inputRow {
+  display: flex;
+  gap: map-get($spacers, 2);
+
+  @include media-down(sm) {
+    flex-direction: column;
+  }
+}
+
+.inputWrapper {
+  flex: 1;
+}
+
+.input {
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  transition: $transition-fast;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+  }
+}
+
+.error {
+  margin-top: map-get($spacers, 2);
+  color: var(--danger);
+  font-size: $font-size-sm;
+}
+
+.success {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  margin-top: map-get($spacers, 2);
+  color: var(--accent);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+// ===========================
+// Team
+// ===========================
+.inviteForm {
+  margin-bottom: map-get($spacers, 2);
+}
+
+.emptyTeam {
+  padding: map-get($spacers, 5) 0;
+}
+
+.memberList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.memberItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border-radius: $border-radius;
+}
+
+.memberAvatar {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.memberName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  @include text-truncate;
+}
+
+.memberEmail {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  @include text-truncate;
+}
+
+.memberRole {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 8px;
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
+}
+
+.deleteBtn {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 1px;
+  }
+}
+
+// ===========================
+// Token Type Management
+// ===========================
+.tokenTypeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.tokenTypeItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  transition: $transition-fast;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.tokenTypeIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.tokenTypeLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.tokenTypeId {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  background: var(--bg-body);
+  padding: 2px map-get($spacers, 2);
+  border-radius: $border-radius-sm;
+}
+
+.tokenTypeDeleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: map-get($spacers, 1);
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 1px;
+  }
+}
+
+.tokenTypeEmpty {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  padding: map-get($spacers, 3) 0;
+  text-align: center;
+}
+
+.tokenTypeAddToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  background: none;
+  border: 1px dashed var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+  width: 100%;
+  justify-content: center;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.tokenTypeAddForm {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.tokenTypeAddGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 3);
+
+  @include media-down(sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tokenTypeCancelBtn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.formHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-weight: $font-weight-normal;
+}
+
+// ===========================
+// Danger Zone
+// ===========================
+.dangerZone {
+  border: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.3);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.dangerZoneHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: rgba(var(--danger-rgb, 220, 38, 38), 0.06);
+  border-bottom: 1px solid rgba(var(--danger-rgb, 220, 38, 38), 0.2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--danger);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dangerZoneRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 4);
+  padding: map-get($spacers, 4);
+
+  @include media-down(sm) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.dangerZoneTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.dangerZoneDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+// ── 스냅샷 이력 ──────────────────────────────────
+// ── 연동 현황 프로젝트 행 ─────────────────────────
+.syncProjectItem {
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: $border-radius;
+  overflow: hidden;
+}
+
+.syncProjectHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-elevated);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--bg-elevated-hover, rgba(255,255,255,0.06));
+  }
+}
+
+.syncProjectLeft {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+  flex: 1;
+  min-width: 0;
+}
+
+.syncProjectName {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.syncProjectTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.syncTypeItem {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.syncTypeLabel {
+  color: var(--text-muted);
+}
+
+.syncChevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform $transition-fast;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+// ── 스냅샷 이력 ──────────────────────────────────
+.snapshotList {
+  border-top: 1px solid var(--border);
+}
+
+.snapshotItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-base);
+
+  & + & {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.snapshotMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  flex: 1;
+  min-width: 0;
+}
+
+.snapshotVersion {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 8px;
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
+}
+
+.snapshotInfo {
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.snapshotTypes {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.snapshotDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: $border-radius-sm;
+  background: none;
+  font-size: $font-size-sm;
+  color: var(--danger, #f87171);
+  cursor: pointer;
+  transition: $transition-fast;
+  flex-shrink: 0;
+  margin-left: auto;
+
+  &:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: var(--danger, #f87171);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

@@ -34,6 +34,7 @@ function applyTheme(resolved: ResolvedTheme): void {
 interface SyncAlert {
   type: 'tokens' | 'component';
   name?: string;
+  rawName?: string;
   count?: number;
   version?: number;
   action?: 'create' | 'update';

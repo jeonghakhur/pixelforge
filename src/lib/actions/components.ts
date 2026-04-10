@@ -3,8 +3,13 @@
 import { db } from '@/lib/db';
 import { components, componentFiles, componentNodeSnapshots, tokens, projects, histories } from '@/lib/db/schema';
 import { getActiveProjectId } from '@/lib/db/active-project';
-import { eq, asc, desc } from 'drizzle-orm';
+import { eq, asc, desc, and, ne } from 'drizzle-orm';
 import crypto from 'crypto';
+import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
+import { writeComponentFiles } from '@/lib/component-generator/file-writer';
+import type { ComponentOverrides } from '@/lib/component-generator/props-override';
+import { componentOverridesSchema, validateUniqueNames } from '@/lib/component-generator/props-override';
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -21,7 +26,10 @@ export interface ComponentRow {
   detectedType?: string | null;
   radixProps?: string | null;
   version?: number | null;
+  nodePayload?: string | null;
+  propsOverrides?: string | null;
 }
+
 
 // ===========================
 // 조회
@@ -38,6 +46,8 @@ export async function getComponentByName(name: string): Promise<ComponentRow | n
     detectedType: components.detectedType,
     radixProps: components.radixProps,
     version: components.version,
+    nodePayload: components.nodePayload,
+    propsOverrides: components.propsOverrides,
   })
     .from(components)
     .where(eq(components.name, name))
@@ -61,6 +71,7 @@ export async function getComponentsByProject(): Promise<ComponentRow[]> {
     css: components.scss,
     description: components.description,
     menuOrder: components.menuOrder,
+    nodePayload: components.nodePayload,
   })
     .from(components)
     .where(eq(components.projectId, project.id))
@@ -143,9 +154,36 @@ export async function validateComponentCssVars(
 // 삭제
 // ===========================
 export async function deleteComponent(id: string): Promise<void> {
+  // 파일 삭제를 위해 Figma 원본 경로 조회
+  const row = db.select({ name: components.name, nodePayload: components.nodePayload })
+    .from(components).where(eq(components.id, id)).get();
+
   await db.delete(componentNodeSnapshots).where(eq(componentNodeSnapshots.componentId, id));
   await db.delete(componentFiles).where(eq(componentFiles.componentId, id));
   await db.delete(components).where(eq(components.id, id));
+
+  // 생성된 파일 삭제 (Figma 경로 우선, 없으면 DB name)
+  if (row) {
+    let figmaPath: string | null = null;
+    try {
+      const payload = JSON.parse(row.nodePayload ?? '{}') as { name?: string };
+      figmaPath = payload.name ?? null;
+    } catch { /* ignore */ }
+
+    const { deleteComponentFiles } = await import('@/lib/component-generator/file-writer');
+    deleteComponentFiles(figmaPath ?? row.name);
+  }
+}
+
+/**
+ * 컴포넌트 삭제 후 목록 페이지로 리다이렉트.
+ * 클라이언트에서 호출하면 server action이 redirect를 수행하여
+ * 현재 페이지 재검증으로 인한 404 깜빡임 없이 이동한다.
+ */
+export async function deleteComponentAndRedirect(id: string): Promise<never> {
+  await deleteComponent(id);
+  revalidatePath('/components');
+  redirect('/components');
 }
 
 // ===========================
@@ -183,8 +221,20 @@ export async function importComponentFromJson(
   const genConfig = await getGeneratorConfig();
   initGeneratorConfig(genConfig);
 
+  // Figma nodeId 기반으로 기존 컴포넌트 조회 (propsOverrides 보존용)
+  const dataMeta = d.meta as Record<string, unknown> | undefined;
+  const existingByNode = dataMeta?.nodeId
+    ? db.select({ id: components.id, propsOverrides: components.propsOverrides })
+        .from(components).where(eq(components.figmaNodeId, dataMeta.nodeId as string)).get()
+    : null;
+
+  // 기존 오버라이드 보존 — 재전송 시에도 편집 내용이 유지됨
+  const preservedOverrides = existingByNode?.propsOverrides
+    ? JSON.parse(existingByNode.propsOverrides) as ComponentOverrides
+    : undefined;
+
   const { runPipeline } = await import('@/lib/component-generator');
-  const result = runPipeline(d);
+  const result = runPipeline(d, { overrides: preservedOverrides });
   const componentName = result.output?.name ?? d.name as string;
 
   // 이름 중복 확인 — 있으면 버전 업
@@ -248,5 +298,129 @@ export async function importComponentFromJson(
     version: components.version,
   }).from(components).where(eq(components.id, componentId)).get();
 
+  // 파일 시스템에 TSX + CSS 파일 생성 (Figma 경로 구조 유지)
+  if (result.output?.tsx && result.output?.css) {
+    const figmaName = d.name as string;
+    writeComponentFiles(figmaName, result.output.tsx, result.output.css);
+  }
+
   return { error: null, component: row ?? null };
+}
+
+// ===========================
+// Props 오버라이드 저장
+// ===========================
+export async function updatePropsOverrides(
+  id: string,
+  overrides: ComponentOverrides,
+): Promise<{ error: string | null }> {
+  // Zod 검증
+  const parsed = componentOverridesSchema.safeParse(overrides);
+  if (!parsed.success) return { error: parsed.error.issues.map(e => e.message).join(', ') };
+
+  // prop 이름 중복 검증
+  if (!validateUniqueNames(overrides.props)) {
+    return { error: '같은 이름의 prop이 중복되어 있습니다' };
+  }
+
+  // 컴포넌트명 중복 검증
+  if (overrides.name) {
+    const duplicate = db
+      .select({ id: components.id })
+      .from(components)
+      .where(and(eq(components.name, overrides.name), ne(components.id, id)))
+      .get();
+    if (duplicate) return { error: `이름 '${overrides.name}'은 이미 사용 중입니다` };
+  }
+
+  db.update(components)
+    .set({ propsOverrides: JSON.stringify(overrides), updatedAt: new Date() })
+    .where(eq(components.id, id))
+    .run();
+
+  return { error: null };
+}
+
+// ===========================
+// 파일 재생성 (오버라이드 반영)
+// ===========================
+export async function regenerateComponentFiles(
+  id: string,
+): Promise<{ error: string | null; newName?: string }> {
+  const row = db
+    .select({
+      id: components.id,
+      name: components.name,
+      nodePayload: components.nodePayload,
+      propsOverrides: components.propsOverrides,
+    })
+    .from(components)
+    .where(eq(components.id, id))
+    .get();
+
+  if (!row?.nodePayload) return { error: '원본 데이터 없음' };
+
+  const overrides = row.propsOverrides
+    ? (JSON.parse(row.propsOverrides) as ComponentOverrides)
+    : undefined;
+
+  const oldName = row.name;
+  const newName = overrides?.name ?? oldName;
+  const nameChanged = oldName !== newName;
+
+  // 컴포넌트명 변경 시 중복 검증
+  if (nameChanged) {
+    const duplicate = db
+      .select({ id: components.id })
+      .from(components)
+      .where(and(eq(components.name, newName), ne(components.id, id)))
+      .get();
+    if (duplicate) return { error: `이름 '${newName}'은 이미 사용 중입니다` };
+  }
+
+  // 파이프라인 설정 로드
+  const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+  const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
+  initGeneratorConfig(await getGeneratorConfig());
+
+  const rawData = JSON.parse(row.nodePayload) as Record<string, unknown>;
+  const { runPipeline } = await import('@/lib/component-generator');
+  const result = runPipeline(rawData, { overrides });
+
+  if (!result.success || !result.output) {
+    return { error: result.error ?? '생성 실패' };
+  }
+
+  // DB 업데이트
+  db.update(components)
+    .set({
+      name: newName,
+      tsx: result.output.tsx,
+      scss: result.output.css,
+      updatedAt: new Date(),
+    })
+    .where(eq(components.id, id))
+    .run();
+
+  // 파일 시스템 업데이트
+  const figmaPath = (rawData.name as string) ?? newName;
+
+  if (nameChanged) {
+    // 이전 파일 삭제 후 새 파일 생성
+    const { deleteComponentFiles } = await import('@/lib/component-generator/file-writer');
+    // figmaPath의 마지막 세그먼트를 oldName으로 교체하여 이전 경로 추정
+    const segments = figmaPath.split('/');
+    segments[segments.length - 1] = oldName;
+    const oldFigmaPath = segments.join('/');
+    deleteComponentFiles(oldFigmaPath);
+
+    const newSegments = figmaPath.split('/');
+    newSegments[newSegments.length - 1] = newName;
+    const newFigmaPath = newSegments.join('/');
+    writeComponentFiles(newFigmaPath, result.output.tsx, result.output.css);
+  } else {
+    writeComponentFiles(figmaPath, result.output.tsx, result.output.css);
+  }
+
+  return { error: null, newName: nameChanged ? newName : undefined };
 }

@@ -10,6 +10,7 @@ import { runPipeline } from '@/lib/component-generator';
 import type { PluginPayload } from '@/lib/component-generator';
 import { notifySyncUpdated } from '@/lib/sync/sse-hub';
 import { setActiveProject } from '@/lib/actions/tokens';
+import { writeComponentFiles } from '@/lib/component-generator/file-writer';
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -88,8 +89,14 @@ export async function POST(req: Request) {
   }
 
   // 파이프라인: normalize → detect → generate
+  console.log('[component-sync] ─────────────────────────────');
+  console.log('[component-sync] rawName:', JSON.stringify(dataName));
+  console.log('[component-sync] nodeName:', JSON.stringify(dataMeta.nodeName));
   const result = runPipeline(rawData);
   const componentName = result.output?.name ?? dataName;
+  console.log('[component-sync] resolved:', componentName, '(DB name)');
+  console.log('[component-sync] figmaPath:', dataName, '(file path)');
+  console.log('[component-sync] ─────────────────────────────');
   const now = new Date();
   let componentId: string;
   let version: number;
@@ -150,6 +157,11 @@ export async function POST(req: Request) {
     figmaNodeData: rawPayload,
     trigger: existing ? 'update' : 'generate',
   }).run();
+
+  // 파일 시스템에 TSX + CSS 파일 생성 (Figma 경로 구조 유지)
+  if (result.output?.tsx && result.output?.css) {
+    writeComponentFiles(dataName, result.output.tsx, result.output.css);
+  }
 
   // 활동 이력
   if (result.output) {

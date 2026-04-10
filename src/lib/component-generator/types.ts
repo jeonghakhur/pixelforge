@@ -36,6 +36,8 @@ export interface PluginPayload {
   variantOptions?: Record<string, string[]>
   /** COMPONENT_SET 자식 각각의 스타일 */
   variants?: VariantEntry[]
+  /** Component Properties (Boolean, Instance Swap, Text) */
+  componentProperties?: Record<string, ComponentPropertyDef>
 }
 
 export interface VariantEntry {
@@ -45,6 +47,14 @@ export interface VariantEntry {
   height?: number
   styles: Record<string, string>
   childStyles: Record<string, Record<string, string>>
+}
+
+/** Component Property 정의 (Boolean, Instance Swap, Text) */
+export interface ComponentPropertyDef {
+  type: 'BOOLEAN' | 'INSTANCE_SWAP' | 'TEXT'
+  defaultValue: string | boolean
+  /** INSTANCE_SWAP일 때 허용되는 컴포넌트 목록 */
+  preferredValues?: Array<{ type: string; key: string }>
 }
 
 // ── 정규화된 payload ────────────────────────────────────────────────

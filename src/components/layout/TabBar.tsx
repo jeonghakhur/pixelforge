@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import type { Section } from './ActivityBar';
 import styles from './TabBar.module.scss';
@@ -23,7 +24,6 @@ const STATIC_SECTION_TABS: Partial<Record<Section, TabItem[]>> = {
     { id: 'account', label: '계정', icon: 'solar:shield-user-linear' },
     { id: 'team', label: '팀원', icon: 'solar:users-group-two-rounded-linear' },
     { id: 'figma', label: 'Figma', icon: 'solar:figma-linear' },
-    { id: 'generator', label: 'Generator', icon: 'solar:code-square-linear' },
   ],
 };
 
@@ -93,6 +93,12 @@ export default function TabBar({ section, activeTab, onTabChange, tokenTabs = []
           {tab.label}
         </button>
       ))}
+      {section === 'settings' && (
+        <Link href="/settings/generator" className={styles.tab}>
+          <Icon icon="solar:code-square-linear" width={14} height={14} />
+          Generator
+        </Link>
+      )}
     </div>
   );
 }

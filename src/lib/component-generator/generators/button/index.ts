@@ -14,6 +14,7 @@ import { mapFontWeightValue } from '../../css-var-mapper'
 import { buildSizeCSSRules, buildIconOnlyCSSRules } from '../shared/size-css'
 import { buildTsx, parseInnerStructure } from '../shared/tsx-builder'
 import { mapSpacingValue } from '../../css-var-mapper'
+import { parseComponentProperties } from '../../component-props-parser'
 import {
   extractStateStyles,
   extractAppearanceSchemes,
@@ -74,6 +75,33 @@ function buildInnerElementsCSS(
   }
 
   return rules.length > 0 ? `/* ── Inner elements ── */\n${rules.join('\n\n')}` : ''
+}
+
+/** childStyles placeholder.width에서 size별 아이콘 크기 CSS 생성 */
+function buildIconSizeCSS(
+  variants: NormalizedPayload['variants'],
+  sizeKey: string,
+  stateKey?: string,
+): string {
+  const sizeMap = new Map<string, string>()
+
+  for (const v of variants) {
+    const size = v.properties[sizeKey]
+    if (!size || sizeMap.has(size)) continue
+    if (stateKey) {
+      const state = v.properties[stateKey]?.toLowerCase()
+      if (state && !/^(rest|default|normal|idle|none)$/i.test(state)) continue
+    }
+
+    const ph = v.childStyles?.['placeholder']
+    if (!ph?.width) continue
+
+    sizeMap.set(size, `.root[data-size='${size}'] .iconSlot {\n  width: ${ph.width};\n  height: ${ph.width};\n}`)
+  }
+
+  return sizeMap.size > 0
+    ? `/* ── Icon size per variant ── */\n${Array.from(sizeMap.values()).join('\n\n')}`
+    : ''
 }
 
 export function generateButton(
@@ -156,8 +184,15 @@ export function generateButton(
   // ── 내부 구조 파싱 (icon slot + text wrapper) ────────────────────────
   const innerStructure = parseInnerStructure(payload.childStyles)
 
+  // componentProperties → 추가 props
+  const variantDims = Object.keys(variantOptions)
+  const componentProps = parseComponentProperties(payload.componentProperties, variantDims)
+
   // 내부 요소 CSS 생성
   const innerCSS = buildInnerElementsCSS(payload.childStyles, innerStructure)
+
+  // icon size CSS (childStyles placeholder.width에서 size별 추출)
+  const iconSizeCSS = dims.sizeKey ? buildIconSizeCSS(variants, dims.sizeKey, dims.stateKey) : ''
 
   // ── TSX ────────────────────────────────────────────────────────────────
   const tsx = buildTsx(payload, dims, {
@@ -165,6 +200,8 @@ export function generateButton(
     elementPropsType: 'ButtonHTMLAttributes',
     elementPropsGeneric: '<HTMLButtonElement>',
     innerStructure,
+    componentProps,
+    overrides: ctx.overrides,
   })
 
   // ── CSS 조합 ──────────────────────────────────────────────────────────
@@ -223,6 +260,7 @@ ${blockCSS ? `\n/* ── Block ── */\n${blockCSS}` : ''}
 ${iconOnlyCSS ? `\n/* ── Icon Only ── */\n${iconOnlyCSS}` : ''}
 ${stateCSS ? `\n${stateCSS}` : ''}
 ${innerCSS ? `\n${innerCSS}` : ''}
+${iconSizeCSS ? `\n${iconSizeCSS}` : ''}
 `
 
   return { name, category: 'action', tsx, css, warnings }

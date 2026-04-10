@@ -9,10 +9,20 @@ import { resolveType, resolveElement } from './detect'
 import { getGenerator } from './generators/registry'
 import { generateGeneric } from './generators/generic'
 import type { PipelineResult } from './types'
+import type { ComponentOverrides } from './props-override'
 
-export function runPipeline(raw: Record<string, unknown>): PipelineResult {
+export interface PipelineOptions {
+  overrides?: ComponentOverrides
+}
+
+export function runPipeline(raw: Record<string, unknown>, options?: PipelineOptions): PipelineResult {
   // 1. 정규화
   const payload = normalize(raw)
+
+  // 컴포넌트명 오버라이드 적용
+  if (options?.overrides?.name) {
+    payload.name = options.overrides.name
+  }
 
   // 2. 타입 감지
   const resolvedType = resolveType(payload)
@@ -27,7 +37,7 @@ export function runPipeline(raw: Record<string, unknown>): PipelineResult {
 
   // 5. 생성
   try {
-    const output = gen(payload, { element })
+    const output = gen(payload, { element, overrides: options?.overrides })
     if (useGeneric) {
       output.warnings.push({
         code: 'GENERIC_FALLBACK',

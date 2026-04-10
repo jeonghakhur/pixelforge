@@ -1,0 +1,928 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+// ===========================
+// 모드 필터
+// ===========================
+.colorModeFilter {
+  display: flex;
+  gap: map-get($spacers, 1);
+  margin-bottom: map-get($spacers, 4);
+}
+
+.colorModeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-pill;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
+  }
+}
+
+.colorModeBtnActive {
+  color: var(--text-primary);
+  background: var(--glass-highlight);
+  border-color: var(--text-muted);
+}
+
+.colorModeCount {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+// ===========================
+// 색상 그룹 섹션 (Tokens Studio 스타일)
+// ===========================
+.colorGroups {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 7);
+}
+
+.colorGroupSection {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.colorGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+  padding-bottom: map-get($spacers, 3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.colorGroupHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.colorGroupLabel {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  text-transform: capitalize;
+}
+
+.colorGroupCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-pill;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.colorGroupCollection {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+// ── 패밀리 (컬렉션 내 그룹) ──────────────
+.colorFamily {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.colorFamilyDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: map-get($spacers, 2) 0;
+}
+
+.colorFamilyLabel {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.colorFamilyCount {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+// ===========================
+// 색상 카드 그리드
+// ===========================
+.colorCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: map-get($spacers, 4);
+
+  @include media-down(sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.colorCard {
+  display: flex;
+  flex-direction: column;
+  border-radius: $border-radius-xl;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              box-shadow 0.22s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+
+    .colorCardDeleteBtn { opacity: 1; pointer-events: auto; }
+  }
+}
+
+.colorCardSwatch {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.colorCardMode {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.colorCardDeleteBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+
+  &:hover { background: rgba($danger, 0.7); color: #fff; }
+
+  &:focus-visible { outline: 2px solid var(--border-focus); }
+}
+
+.colorCardDeleteBtnLight {
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.colorCardBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.colorCardNameRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.colorCardName {
+  flex: 1;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.colorCardCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-top: -2px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  &:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+}
+
+.colorCardVarRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.colorCardVar {
+  flex: 1;
+  font-size: 11px;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.colorCardAliasRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.colorCardAliasIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+}
+
+.colorCardAliasRef {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colorCardDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.colorCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 2);
+}
+
+.colorCardRowLabel {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.colorCardRowValue {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+// ===========================
+// 타이포그래피 목록
+// ===========================
+.typoList {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.typoCard {
+  @include double-bezel;
+}
+
+.typoCardInner {
+  background: var(--bg-surface);
+  border-radius: calc(#{$border-radius-3xl} - 6px);
+  box-shadow: var(--glass-shadow);
+  padding: map-get($spacers, 5);
+}
+
+.typoSample {
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 3);
+  word-break: keep-all;
+  line-height: $line-height-snug;
+}
+
+.typoMeta {
+  border-top: 1px solid var(--glass-border);
+  padding-top: map-get($spacers, 3);
+}
+
+.typoName {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin-bottom: map-get($spacers, 1);
+}
+
+.typoDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 간격 목록 (Collection 그룹)
+// ===========================
+.spacingCollections {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 7);
+}
+
+.spacingSection {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.spacingSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: map-get($spacers, 3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.spacingSectionHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.spacingSectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.spacingSectionCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-pill;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.spacingSectionDesc {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.baseUnitBadge {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 3px 10px;
+  border-radius: $border-radius-pill;
+  flex-shrink: 0;
+}
+
+// ── 테이블 ──────────────────────────
+.spacingTableHeader {
+  display: grid;
+  grid-template-columns: 160px 1fr 72px 72px 200px 56px;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  @include media-down(md) {
+    grid-template-columns: 120px 1fr 56px 56px 120px 48px;
+  }
+}
+
+.spacingTableBody {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+.spacingTableRow {
+  display: grid;
+  grid-template-columns: 160px 1fr 72px 72px 200px 56px;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(255, 255, 255, 0.02); }
+  &:hover .spacingColActions { opacity: 1; }
+
+  @include media-down(md) {
+    grid-template-columns: 120px 1fr 56px 56px 120px 48px;
+  }
+}
+
+// ── 컬럼 ──────────────────────────
+.spacingColName {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.spacingTokenName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spacingColAlias {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.spacingAliasRef {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spacingAliasIcon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.spacingAliasResolved {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+.spacingColRem {
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.spacingColPx {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.spacingColBar {
+  display: flex;
+  align-items: center;
+}
+
+.spacingTrack {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: $border-radius-pill;
+  overflow: hidden;
+}
+
+.spacingFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: $border-radius-pill;
+  min-width: 4px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spacingColActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+// Primitive 전용: Reference 컬럼 없는 5컬럼 그리드
+.spacingTablePrimitive {
+  &.spacingTableHeader,
+  &.spacingTableBody,
+  &.spacingTableRow {
+    grid-template-columns: 160px 72px 72px 1fr 56px;
+
+    @include media-down(md) {
+      grid-template-columns: 120px 56px 56px 1fr 48px;
+    }
+  }
+}
+
+// ===========================
+// 반경 목록 (새 디자인)
+// ===========================
+.radiusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: map-get($spacers, 4);
+
+  @include media-down(sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.radiusCard2 {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &:hover .radiusCardActions { opacity: 1; }
+}
+
+.radiusPreview {
+  @include flex-center;
+  position: relative;
+  padding: map-get($spacers, 5) map-get($spacers, 4);
+  min-height: 160px;
+}
+
+.radiusRect {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: #eee;
+  transition: $transition-fast;
+  @include flex-center;
+}
+
+.radiusPreviewVal {
+  font-family: var(--font-mono);
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.radiusCardBody {
+  padding: map-get($spacers, 4);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.radiusTokenName {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--accent);
+}
+
+.radiusUsageTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+}
+
+.radiusUsageDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.radiusCardActions {
+  position: absolute;
+  top: map-get($spacers, 2);
+  right: map-get($spacers, 2);
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+// ===========================
+// 공통 액션 버튼
+// ===========================
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    border-color: var(--glass-border);
+    color: var(--text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.actionBtnDelete {
+  &:hover {
+    background: rgba($danger, 0.1);
+    border-color: rgba($danger, 0.2);
+    color: $danger;
+  }
+
+}
+
+// ===========================
+// 편집 폼 (모달 내부)
+// ===========================
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.editLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editInput {
+  width: 100%;
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+  font-family: inherit;
+  transition: $transition-fast;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-surface);
+  }
+
+  &[type='number'] {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+}
+
+.editColorRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.editColorSwatch {
+  width: 40px;
+  height: 40px;
+  border-radius: $border-radius;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+
+  &::-webkit-color-swatch-wrapper { padding: 0; }
+  &::-webkit-color-swatch { border: none; }
+}
+
+.editRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: map-get($spacers, 2);
+}
+
+.editRow3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: map-get($spacers, 2);
+}
+
+.editFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: map-get($spacers, 2);
+  padding-top: map-get($spacers, 3);
+  border-top: 1px solid var(--glass-border);
+  margin-top: map-get($spacers, 2);
+}
+
+.editCancelBtn {
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    background: var(--glass-highlight);
+    color: var(--text-primary);
+  }
+}
+
+.editSaveBtn {
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  color: #fff;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ===========================
+// Shadow
+// ===========================
+.shadowGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: map-get($spacers, 4);
+}
+
+.shadowCard {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 4);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: $border-radius-lg;
+}
+
+.shadowPreview {
+  width: 100%;
+  height: 80px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  border-radius: $border-radius;
+}
+
+.shadowMeta {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+}
+
+.shadowNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 2);
+}
+
+.shadowName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.shadowLayers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: map-get($spacers, 1);
+}
+
+.shadowLayerBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+}
+
+.shadowRaw {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  font-family: monospace;
+  word-break: break-all;
+}

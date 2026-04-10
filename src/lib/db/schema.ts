@@ -78,6 +78,8 @@ export const components = sqliteTable('components', {
   contentHash: text('content_hash'),
   /** sync 버전 (동일 노드 재전송 시 증가) */
   version: integer('version').notNull().default(1),
+  /** 개발자가 편집한 props 오버라이드 JSON (ComponentOverrides 직렬화) */
+  propsOverrides: text('props_overrides'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });

@@ -6,10 +6,12 @@
  */
 
 import type { NormalizedPayload, GeneratorOutput } from '../types'
+import type { ComponentOverrides } from '../props-override'
 import { generateButton } from './button'
 
 export interface GeneratorContext {
   element: string
+  overrides?: ComponentOverrides
 }
 
 export type GeneratorFn = (

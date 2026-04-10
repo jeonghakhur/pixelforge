@@ -164,6 +164,8 @@ function migrateColumns(): void {
     `ALTER TABLE components ADD COLUMN figma_node_id TEXT;`,
     `ALTER TABLE components ADD COLUMN figma_file_key TEXT;`,
     `ALTER TABLE tokens ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;`,
+    // component-props-editor 컬럼 추가
+    `ALTER TABLE components ADD COLUMN props_overrides TEXT;`,
   ];
   for (const sql of alters) {
     try { sqlite.exec(sql); } catch { /* already exists — skip */ }

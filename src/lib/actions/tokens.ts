@@ -749,7 +749,7 @@ export async function captureTokenPageScreenshotAction(
   type: string,
 ): Promise<{ error: string | null; screenshotPath: string | null }> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:4000';
     const targetUrl = `${baseUrl}/tokens/${type}`;
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports

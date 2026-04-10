@@ -5,6 +5,7 @@ export type {
   GeneratorOutput,
   PipelineResult,
   ComponentCategory,
+  ComponentPropertyDef,
   PluginComponentPayload,
   EngineResult,
 } from './types'

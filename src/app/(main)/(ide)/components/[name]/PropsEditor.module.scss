@@ -1,0 +1,277 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+.editor {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+}
+
+// ── 헤더 ────────────────────────────────────────────────────────────────
+.editorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.editorTitle {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.editorActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+// ── 버튼 ────────────────────────────────────────────────────────────────
+.saveBtn,
+.resetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.saveBtn {
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border: 1px solid rgba(var(--accent-rgb, 100, 200, 155), 0.3);
+
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+}
+
+.resetBtn {
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border-color);
+
+  &:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── 에러 바 ──────────────────────────────────────────────────────────────
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  font-size: $font-size-sm;
+  color: #fe8983;
+  background: rgba(254, 137, 131, 0.06);
+  border-bottom: 1px solid rgba(254, 137, 131, 0.15);
+}
+
+// ── 컴포넌트명 행 ────────────────────────────────────────────────────────
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-body);
+}
+
+.nameLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.nameInput {
+  flex: 1;
+  max-width: 260px;
+  padding: 4px map-get($spacers, 3);
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+
+  &::placeholder { color: var(--text-muted); }
+  &:focus { outline: none; border-color: var(--accent); }
+}
+
+.nameChangedBadge {
+  font-size: 11px;
+  font-weight: $font-weight-bold;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 7px;
+  border-radius: $border-radius-sm;
+}
+
+// ── Props 테이블 ─────────────────────────────────────────────────────────
+.propsTable {
+  display: flex;
+  flex-direction: column;
+}
+
+.propsHeader {
+  display: grid;
+  grid-template-columns: 32px 56px 1fr 140px;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+
+  span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: $font-weight-bold;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+.propRow {
+  display: grid;
+  grid-template-columns: 32px 56px 1fr 140px;
+  gap: map-get($spacers, 2);
+  align-items: center;
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-color);
+  transition: background 120ms ease;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: var(--bg-elevated); }
+}
+
+.propRemoved {
+  opacity: 0.45;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+
+    &:disabled { cursor: not-allowed; }
+  }
+}
+
+// ── 이름 셀 ─────────────────────────────────────────────────────────────
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sourceNameBadge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 0 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &::before {
+    content: '← ';
+    opacity: 0.6;
+  }
+}
+
+// ── Kind 배지 ────────────────────────────────────────────────────────────
+.kindBadge {
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kind_union   { color: #a78bfa; }
+.kind_boolean { color: #67e8f9; }
+.kind_node    { color: #86efac; }
+.kind_string  { color: #fbbf24; }
+
+// ── 입력 필드 ────────────────────────────────────────────────────────────
+.nameFieldInput,
+.defaultInput,
+.defaultSelect {
+  width: 100%;
+  padding: 3px map-get($spacers, 2);
+  font-family: var(--font-mono);
+  font-size: $font-size-sm;
+  color: var(--text-primary);
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+
+  &::placeholder { color: var(--text-muted); }
+  &:focus { outline: none; border-color: var(--accent); }
+}
+
+.fieldDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+// ── 하단 노트 ────────────────────────────────────────────────────────────
+.dirtyNote {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  margin: 0;
+  padding: map-get($spacers, 2) map-get($spacers, 4);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-color);
+}
