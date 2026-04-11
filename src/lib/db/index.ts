@@ -129,6 +129,50 @@ function initTables(): void {
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
+
+    CREATE TABLE IF NOT EXISTS sync_payloads (
+      id           TEXT PRIMARY KEY,
+      project_id   TEXT NOT NULL REFERENCES projects(id),
+      type         TEXT NOT NULL CHECK(type IN ('tokens','icons','images','themes','components')),
+      version      INTEGER NOT NULL DEFAULT 1,
+      content_hash TEXT NOT NULL,
+      data         TEXT NOT NULL,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_payloads_project_type
+      ON sync_payloads(project_id, type, version);
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id           TEXT PRIMARY KEY,
+      key_hash     TEXT NOT NULL UNIQUE,
+      name         TEXT NOT NULL,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      last_used_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS component_files (
+      id           TEXT PRIMARY KEY,
+      component_id TEXT NOT NULL REFERENCES components(id),
+      style_mode   TEXT NOT NULL CHECK(style_mode IN ('css-modules','styled','html')),
+      file_type    TEXT NOT NULL CHECK(file_type IN ('tsx','css','html')),
+      file_name    TEXT NOT NULL,
+      content      TEXT NOT NULL,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_component_files_component_id
+      ON component_files(component_id);
+
+    CREATE TABLE IF NOT EXISTS component_node_snapshots (
+      id              TEXT PRIMARY KEY,
+      component_id    TEXT NOT NULL REFERENCES components(id),
+      figma_node_data TEXT NOT NULL,
+      figma_version   TEXT,
+      trigger         TEXT NOT NULL DEFAULT 'generate' CHECK(trigger IN ('generate','update')),
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_component_node_snapshots_component_id
+      ON component_node_snapshots(component_id);
   `);
 }
 
