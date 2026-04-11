@@ -8,6 +8,7 @@ import { deleteTokenAction } from '@/lib/actions/tokens';
 import { toVarName, TYPE_PREFIX, semanticSortKey } from '@/lib/tokens/css-generator';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useUIStore } from '@/stores/useUIStore';
+import ContrastChecker from './ContrastChecker';
 import styles from './token-views.module.scss';
 
 // ── 파서 ─────────────────────────────────────────────────
@@ -145,6 +146,8 @@ function groupTokens(tokens: TokenRow[]): ColorCollection[] {
 
 // ── 컴포넌트 ─────────────────────────────────────────────
 
+type GridTab = 'palette' | 'contrast';
+
 export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorToken[] }) {
   const invalidateTokens = useUIStore((s) => s.invalidateTokens);
   const [tokens, setTokens] = useState<ResolvedColorToken[]>(initial);
@@ -152,6 +155,7 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TokenRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<GridTab>('palette');
 
   // 서버에서 이미 tokens.css 순서로 정렬되어 전달됨
   const filtered = useMemo(() => {
@@ -184,6 +188,31 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
 
   return (
     <>
+      {/* 탭 토글 */}
+      <div className={styles.colorGridTabs}>
+        <button
+          type="button"
+          className={`${styles.colorGridTab} ${activeTab === 'palette' ? styles.colorGridTabActive : ''}`}
+          onClick={() => setActiveTab('palette')}
+        >
+          <Icon icon="solar:palette-linear" width={14} height={14} />
+          팔레트
+        </button>
+        <button
+          type="button"
+          className={`${styles.colorGridTab} ${activeTab === 'contrast' ? styles.colorGridTabActive : ''}`}
+          onClick={() => setActiveTab('contrast')}
+        >
+          <Icon icon="solar:eye-linear" width={14} height={14} />
+          명도대비
+        </button>
+      </div>
+
+      {/* 명도대비 탭 */}
+      {activeTab === 'contrast' && <ContrastChecker tokens={tokens} />}
+
+      {/* 팔레트 탭 */}
+      {activeTab === 'palette' && <>
       <div className={styles.colorModeFilter}>
         {(['all', 'light', 'dark'] as const).map((mode) => (
           <button
@@ -319,6 +348,7 @@ export default function ColorGrid({ tokens: initial }: { tokens: ResolvedColorTo
           </section>
         ))}
       </div>
+      </>}
 
       <ConfirmDialog
         isOpen={deleteTarget !== null}
