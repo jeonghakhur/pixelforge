@@ -185,7 +185,7 @@ export default function AppShell({ children, userRole }: { children: React.React
         router.push('/admin');
         break;
     }
-  }, [router, setSection]);
+  }, [router, setSection, tokenTabs]);
 
   const handleTabChange = useCallback((tabId: string) => {
     setTab(tabId);
