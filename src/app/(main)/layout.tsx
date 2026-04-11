@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
+import { cookies } from 'next/headers';
 import { Geist_Mono } from 'next/font/google';
 import '@/styles/globals.scss';
 import IconProvider from '@/components/providers/IconProvider';
@@ -16,30 +16,23 @@ const geistMono = Geist_Mono({
   display: 'swap',
 });
 
-const themeInitScript = `
-(function(){
-  try {
-    var t = localStorage.getItem('pixelforge-theme') || 'system';
-    var r = t === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : t;
-    document.documentElement.dataset.theme = r;
-  } catch(e) {
-    document.documentElement.dataset.theme = 'dark';
-  }
-})();
-`;
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('pixelforge-theme')?.value;
+  // 'light' / 'dark'만 명시적으로 세팅. 'system' 또는 미설정 시 속성 미부여 → CSS media query가 처리.
+  const dataTheme = themeCookie === 'light' || themeCookie === 'dark' ? themeCookie : undefined;
+
   return (
-    <html lang="ko" suppressHydrationWarning className={geistMono.variable}>
-      <head>
-        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
+    <html
+      lang="ko"
+      suppressHydrationWarning
+      className={geistMono.variable}
+      data-theme={dataTheme}
+    >
       <body>
         <IconProvider>{children}</IconProvider>
       </body>

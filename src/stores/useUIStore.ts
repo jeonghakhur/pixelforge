@@ -30,6 +30,21 @@ function applyTheme(resolved: ResolvedTheme): void {
   document.documentElement.dataset.theme = resolved;
 }
 
+/**
+ * Theme cookie 저장.
+ * 서버 컴포넌트(layout)에서 SSR 시점에 읽어 `<html data-theme>` 직접 세팅 → FOUC 방지.
+ * 'system'은 cookie 삭제 → CSS @media (prefers-color-scheme)이 처리.
+ */
+function persistThemeCookie(theme: Theme): void {
+  if (typeof document === 'undefined') return;
+  const maxAge = 60 * 60 * 24 * 365; // 1년
+  if (theme === 'system') {
+    document.cookie = `${STORAGE_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  } else {
+    document.cookie = `${STORAGE_KEY}=${theme}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  }
+}
+
 // Sync notification
 interface SyncAlert {
   type: 'tokens' | 'component';
@@ -91,6 +106,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   setTheme: (theme) => {
     const resolved = resolveTheme(theme);
     applyTheme(resolved);
+    persistThemeCookie(theme);
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
@@ -109,6 +125,9 @@ export const useUIStore = create<UIState>((set, get) => ({
     } catch {
       // ignore
     }
+
+    // localStorage → cookie 동기화 (SSR이 다음 요청부터 cookie를 읽어 FOUC 방지)
+    persistThemeCookie(stored);
 
     const resolved = resolveTheme(stored);
     applyTheme(resolved);
