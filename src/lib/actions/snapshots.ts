@@ -239,8 +239,10 @@ function toCssVarLine(name: string, type: string, rawValue: string | null | unde
   const prefix = prefixMap[type] ?? type;
   let slug = name
     .replace(/[()]/g, '')
+    .replace(/[\u2024\u00B7\u2027]/g, '-') // U+2024 ONE DOT LEADER 등 → dash
     .replace(/\//g, '-')
     .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .toLowerCase();
   while (slug.startsWith(`${prefix}-`)) {
     slug = slug.slice(prefix.length + 1);
