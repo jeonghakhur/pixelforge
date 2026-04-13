@@ -243,16 +243,17 @@ function formatLetterSpacing(
  * Figma gradientTransform(2x3 affine matrix) → CSS angle(deg)
  * matrix: [[a, b, tx], [c, d, ty]]
  * gradient 방향 벡터: (b, d) → CSS 각도 = atan2(b, d) + 반전
+ * 소수점 1자리까지 보존 (e.g. 26.5deg)
  */
-function gradientTransformToAngle(matrix: number[][]): number {
-  if (!matrix || matrix.length < 2) return 180;
+function gradientTransformToAngle(matrix: number[][]): number | null {
+  if (!matrix || matrix.length < 2) return null;
   const [, b] = matrix[0];
   const [, d] = matrix[1];
   // Figma의 gradient 벡터를 CSS 각도로 변환
   // CSS: 0deg = to top, 90deg = to right, 180deg = to bottom
   const radians = Math.atan2(b, d);
-  const degrees = Math.round(radians * (180 / Math.PI) + 180) % 360;
-  return degrees;
+  const raw = (radians * (180 / Math.PI) + 180) % 360;
+  return Math.round(raw * 10) / 10; // 소수점 1자리
 }
 
 /** Figma RGBA(0~1) → CSS rgba() 문자열 */
@@ -265,8 +266,17 @@ function colorToRgba(c: FigmaColor): string {
   return `rgba(${r},${g},${b},${Math.round(a * 100) / 100})`;
 }
 
+/**
+ * 스타일 이름에서 각도 추출 (e.g. "Gradient/Linear (26.5deg)" → 26.5)
+ * 소수점 포함 숫자를 지원. 이름에 각도 없으면 null 반환.
+ */
+function angleFromName(name: string): number | null {
+  const match = name.match(/\(([\d.]+)deg\)/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
 /** Gradient paint → CSS gradient 문자열 */
-function paintToGradient(paint: PluginPaint): string | null {
+function paintToGradient(paint: PluginPaint, styleName?: string): string | null {
   if (!paint.gradientStops || paint.gradientStops.length === 0) return null;
 
   const stops = paint.gradientStops
@@ -274,7 +284,12 @@ function paintToGradient(paint: PluginPaint): string | null {
     .join(', ');
 
   if (paint.type === 'GRADIENT_LINEAR') {
-    const angle = gradientTransformToAngle(paint.gradientTransform ?? []);
+    // 1순위: gradientTransform 행렬 계산
+    const matrixAngle = gradientTransformToAngle(paint.gradientTransform ?? []);
+    // 2순위: 스타일 이름에서 추출 (행렬 없을 때 fallback)
+    const nameAngle = matrixAngle === null && styleName ? angleFromName(styleName) : null;
+    // 3순위: 90deg 기본값 (to right)
+    const angle = matrixAngle ?? nameAngle ?? 90;
     return `linear-gradient(${angle}deg, ${stops})`;
   }
   if (paint.type === 'GRADIENT_RADIAL') {
@@ -406,7 +421,7 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
       // Gradient paint → gradient 타입 토큰
       const gradientPaint = visiblePaints.find((p) => p.type.startsWith('GRADIENT_'));
       if (gradientPaint) {
-        const cssGradient = paintToGradient(gradientPaint);
+        const cssGradient = paintToGradient(gradientPaint, style.name);
         if (cssGradient) {
           result.push({
             type: 'gradient',
