@@ -18,6 +18,8 @@ import { mapCssValue } from '../../css-var-mapper'
 export interface StateStyle {
   bg:          string | null
   color:       string | null
+  /** 아이콘 슬롯 색상 (placeholder > Icon.iconColor) */
+  iconColor:   string | null
   border:      string | null
   borderWidth: string | null
   opacity:     string | null
@@ -88,6 +90,7 @@ export function buildStateCSS(
   baseExtras?: string[],
 ): string {
   const rules: string[] = []
+  const iconColorRules: string[] = []
 
   // base state 스타일 찾기 (중복 제거용)
   let baseStyle: StateStyle | null = null
@@ -137,17 +140,18 @@ export function buildStateCSS(
     }
     if (shouldEmit('boxShadow', style.boxShadow)) {
       lines.push(`  box-shadow: ${style.boxShadow};`)
-      // box-shadow 변경 시 base의 border-image가 border-radius를 무효화하므로 리셋
-      if (!isBase && baseStyle?.borderImage) {
-        lines.push(`  border-image-source: none;`)
-      }
     }
     if (style.opacity) lines.push(`  opacity: ${style.opacity};`)
 
     if (lines.length) rules.push(`${sel} {\n${lines.join('\n')}\n}`)
+
+    // 아이콘 색상 — base는 항상, non-base는 변경된 경우만
+    if (shouldEmit('iconColor', style.iconColor)) {
+      iconColorRules.push(`${sel} .iconSlot {\n  color: ${style.iconColor};\n}`)
+    }
   }
 
-  return rules.join('\n\n')
+  return [...rules, ...iconColorRules].join('\n\n')
 }
 
 export function buildSingleSchemeCSS(

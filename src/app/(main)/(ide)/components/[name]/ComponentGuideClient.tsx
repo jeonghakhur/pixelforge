@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@iconify/react';
+// ── 프로젝트 커스텀 아이콘 (src/components/icon/Icon.tsx) ─────────────────────
+// "icon:star" 패턴 입력 시 인라인 프리뷰에 사용.
+// ⚠️ 아이콘 파일 경로가 바뀌면 이 import 경로만 수정하면 됩니다.
+import { Icon as ProjectIcon, type IconName } from '@/components/icon/Icon';
 import { deleteComponentAndRedirect } from '@/lib/actions/components';
 import { useUIStore } from '@/stores/useUIStore';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -380,9 +384,29 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
             {nodeProps.map((p) => {
               const val = nodeValues[p.name] ?? '';
               const trimmed = val.trim();
-              const isIcon = /^[\w-]+:[\w-]+$/.test(trimmed);
+
+              // ── 아이콘 패턴 판별 ─────────────────────────────────────────
+              // "collection:iconName" 형식을 Iconify / 프로젝트 커스텀으로 분리
+              //
+              //  · isIconifyIcon  — "solar:star-bold", "mdi:home" 등
+              //                     Iconify @iconify/react <Icon> 컴포넌트로 렌더
+              //
+              //  · isProjectIcon  — "icon:star", "icon:bell" 등
+              //                     src/components/icon/Icon.tsx의 <ProjectIcon>으로 렌더
+              //                     ⚠️ collection이 정확히 "icon"인 경우만 해당
+              //
+              // 두 패턴 모두 /^[\w-]+:[\w-]+$/ 에 해당하므로,
+              // collection 앞부분을 꺼내 "icon"인지 아닌지로 분기한다.
+              const colonIdx = trimmed.indexOf(':')
+              const collection = colonIdx > 0 ? trimmed.slice(0, colonIdx) : ''
+              const isIconifyIcon = collection !== 'icon' && /^[\w-]+:[\w-]+$/.test(trimmed)
+              const isProjectIcon = collection === 'icon' && /^[\w-]+$/.test(trimmed.slice(colonIdx + 1))
+              const isIcon = isIconifyIcon || isProjectIcon
+
               const isHtml = trimmed.includes('<');
               const isValid = isIcon || isHtml || !trimmed;
+              const projectIconName = isProjectIcon ? trimmed.slice(colonIdx + 1) : ''
+
               return (
                 <tr key={p.name}>
                   <td className={styles.propName}>{p.name}</td>
@@ -394,12 +418,22 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
                         value={val}
                         onChange={(e) => setNodeValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
                         className={`${styles.propInput} ${!isValid ? styles.propInputInvalid : ''}`}
-                        placeholder="solar:star-bold 또는 <span>텍스트</span>"
+                        placeholder="solar:star-bold, icon:star 또는 <span>텍스트</span>"
                         spellCheck={false}
                       />
-                      {isIcon && (
+                      {/* Iconify 외부 아이콘 인라인 프리뷰 (solar:, mdi: 등) */}
+                      {isIconifyIcon && (
                         <span className={styles.iconPreview}>
-                          <Icon icon={val.trim()} width={16} height={16} />
+                          <Icon icon={trimmed} width={16} height={16} />
+                        </span>
+                      )}
+                      {/* 프로젝트 커스텀 아이콘 인라인 프리뷰 (icon:star 등) */}
+                      {isProjectIcon && (
+                        <span className={styles.iconPreview}>
+                          <ProjectIcon
+                            name={projectIconName as IconName}
+                            style={{ width: 16, height: 16, display: 'block' }}
+                          />
                         </span>
                       )}
                     </div>

@@ -130,6 +130,11 @@ export function toVarName(tokenName: string, prefix: string): string {
     if (prefix === 'font' && slug.startsWith('family-font-family-')) {
       slug = slug.replace('family-font-family-', 'family-');
     }
+    // line-height 토큰은 font prefix 없이 그대로 출력
+    // "Line height/Text/xs" → --line-height-text-xs (not --font-line-height-text-xs)
+    if (prefix === 'font' && slug.startsWith('line-height-')) {
+      return `--${slug}`;
+    }
     // 복수형 제거: shadows- → shadow prefix와 중복, backdrop-blurs- → blur
     slug = deduplicateSlugSegments(slug, prefix);
     return `--${prefix}-${slug}`;

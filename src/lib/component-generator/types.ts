@@ -42,6 +42,8 @@ export interface PluginPayload {
 
 export interface VariantEntry {
   properties: Record<string, string>
+  /** property 값을 '_'로 join한 식별자 (예: 'md_primary_default') */
+  variantSlug?: string
   /** 렌더링 크기 (px) */
   width?: number
   height?: number

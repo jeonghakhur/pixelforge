@@ -19,6 +19,7 @@ import {
   extractStateStyles,
   extractAppearanceSchemes,
   deduplicateByBlock,
+  extractSpinnerColor,
 } from './extract'
 
 import type { NormalizedPayload, GeneratorOutput } from '../../types'
@@ -101,6 +102,47 @@ function buildIconSizeCSS(
 
   return sizeMap.size > 0
     ? `/* ── Icon size per variant ── */\n${Array.from(sizeMap.values()).join('\n\n')}`
+    : ''
+}
+
+/**
+ * hierarchy별 Loading 스피너 색상 CSS 생성
+ *
+ * 플러그인이 제공하는 "Buttons/Button loading icon > Line" 색상을 기반으로
+ * .loadingLine / .loadingTrack 클래스의 색상을 생성한다.
+ * - Line:  스피너 선 (동일 색상, 불투명)
+ * - Track: 스피너 트랙 (동일 색상, opacity 0.3)
+ */
+function buildLoadingSpinnerCSS(
+  variants: NormalizedPayload['variants'],
+  appearanceKey: string,
+  stateKey: string,
+): string {
+  const rules: string[] = []
+  const seen = new Set<string>()
+
+  for (const v of variants) {
+    const state = v.properties[stateKey]?.toLowerCase()
+    if (state !== 'loading') continue
+
+    const appearance = v.properties[appearanceKey]
+    if (!appearance || seen.has(appearance)) continue
+    seen.add(appearance)
+
+    const spinnerColor = extractSpinnerColor(v.childStyles)
+    if (!spinnerColor) continue
+
+    const attrVal = appearance.toLowerCase().replace(/\s+/g, '-')
+    const sel = `.root[data-${appearanceKey.toLowerCase().replace(/\s+/g, '-')}='${attrVal}'][data-state='loading']`
+
+    rules.push(
+      `${sel} .loadingLine {\n  color: ${spinnerColor};\n}`,
+      `${sel} .loadingTrack {\n  color: ${spinnerColor};\n  opacity: 0.3;\n}`,
+    )
+  }
+
+  return rules.length > 0
+    ? `/* ── Loading spinner colors ── */\n${rules.join('\n\n')}`
     : ''
 }
 
@@ -194,6 +236,11 @@ export function generateButton(
   // icon size CSS (childStyles placeholder.width에서 size별 추출)
   const iconSizeCSS = dims.sizeKey ? buildIconSizeCSS(variants, dims.sizeKey, dims.stateKey) : ''
 
+  // Loading 스피너 색상 CSS (hierarchy별)
+  const spinnerCSS = appearanceKey && dims.stateKey
+    ? buildLoadingSpinnerCSS(variants, appearanceKey, dims.stateKey)
+    : ''
+
   // ── TSX ────────────────────────────────────────────────────────────────
   const tsx = buildTsx(payload, dims, {
     element: ctx.element,
@@ -261,6 +308,7 @@ ${iconOnlyCSS ? `\n/* ── Icon Only ── */\n${iconOnlyCSS}` : ''}
 ${stateCSS ? `\n${stateCSS}` : ''}
 ${innerCSS ? `\n${innerCSS}` : ''}
 ${iconSizeCSS ? `\n${iconSizeCSS}` : ''}
+${spinnerCSS ? `\n${spinnerCSS}` : ''}
 `
 
   return { name, category: 'action', tsx, css, warnings }

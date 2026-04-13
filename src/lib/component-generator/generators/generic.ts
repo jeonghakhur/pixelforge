@@ -45,6 +45,7 @@ function extractGenericStateStyles(
     map.set(state, {
       bg:          s['background-color'] ? mapValue(s['background-color']) : null,
       color:       s.color ? mapValue(s.color) : null,
+      iconColor:   null,
       border:      s['border'] ?? s['border-color'] ?? null,
       borderWidth: s['border-width'] ?? null,
       opacity:     isDisabledState(state) ? (s.opacity ?? null) : null,
@@ -81,6 +82,7 @@ function extractGenericAppearanceSchemes(
       states.set(state, {
         bg:          s['background-color'] ? mapValue(s['background-color']) : null,
         color:       s.color ? mapValue(s.color) : null,
+        iconColor:   null,
         border:      s['border'] ?? s['border-color'] ?? null,
         borderWidth: s['border-width'] ?? null,
         opacity:     isDisabledState(state) ? (s.opacity ?? null) : null,

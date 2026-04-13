@@ -86,7 +86,7 @@ interface PluginEffectItem {
   spread?: number;
   blendMode?: string;
   showShadowBehindNode?: boolean;
-  boundVariables?: Record<string, unknown>;
+  boundVariables?: { color?: FigmaAlias };
 }
 
 interface PluginEffectStyle {
@@ -284,12 +284,12 @@ function paintToGradient(paint: PluginPaint, styleName?: string): string | null 
     .join(', ');
 
   if (paint.type === 'GRADIENT_LINEAR') {
-    // 1순위: gradientTransform 행렬 계산
-    const matrixAngle = gradientTransformToAngle(paint.gradientTransform ?? []);
-    // 2순위: 스타일 이름에서 추출 (행렬 없을 때 fallback)
-    const nameAngle = matrixAngle === null && styleName ? angleFromName(styleName) : null;
+    // 1순위: 스타일 이름에서 추출 (Untitled UI는 이름이 신뢰도 높음)
+    const nameAngle   = styleName ? angleFromName(styleName) : null;
+    // 2순위: gradientTransform 행렬 계산 (이름에 각도 없을 때 — Gradient/Linear/01~91)
+    const matrixAngle = nameAngle === null ? gradientTransformToAngle(paint.gradientTransform ?? []) : null;
     // 3순위: 90deg 기본값 (to right)
-    const angle = matrixAngle ?? nameAngle ?? 90;
+    const angle = nameAngle ?? matrixAngle ?? 90;
     return `linear-gradient(${angle}deg, ${stops})`;
   }
   if (paint.type === 'GRADIENT_RADIAL') {
@@ -532,10 +532,19 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
     );
     if (shadowLayers.length === 0) continue;
 
-    const cssBoxShadow = shadowLayers.map((e) => {
-      const color = e.color
-        ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
-        : 'transparent';
+    // Figma effects 배열: 인덱스 0이 패널 위(앞), 마지막이 패널 아래(뒤)
+    // CSS box-shadow: 첫 번째가 앞(위), 마지막이 뒤
+    // → 두 시스템의 렌더 순서가 반대 — Figma 배열을 역순으로 CSS에 출력해야 시각적으로 일치
+    //   (focus ring의 2px 갭 레이어가 4px 링보다 앞에 와야 갭이 보임)
+    const cssBoxShadow = [...shadowLayers].reverse().map((e) => {
+      // boundVariables.color 가 있으면 CSS var() 참조를 우선 사용
+      // → 다크 모드에서 shadow color 변수가 transparent로 오버라이드되어 그림자가 자동으로 사라짐
+      const bvColor = e.boundVariables?.color;
+      const color = bvColor
+        ? resolveAliasToVar(bvColor.id, varById)
+        : e.color
+          ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
+          : 'transparent';
       const x = e.offset?.x ?? 0;
       const y = e.offset?.y ?? 0;
       const inset = e.type === 'INNER_SHADOW' ? 'inset ' : '';

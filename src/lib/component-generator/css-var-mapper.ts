@@ -176,7 +176,7 @@ export function mapSpacingValue(value: string): string {
 
 interface TypographyMaps {
   fontSize: Record<string, string>      // "16px" → "var(--font-size-text-md, 1rem)"
-  lineHeight: Record<string, string>    // "24px" → "var(--font-line-height-text-md, 1.5rem)"
+  lineHeight: Record<string, string>    // "24px" → "var(--line-height-text-md, 1.5rem)"
   fontWeight: Record<string, string>    // "600" → "var(--font-weight-semibold, 600)"
 }
 
@@ -206,8 +206,8 @@ function buildTypographyMaps(): TypographyMaps {
     fontSize[`${px}px`] = `var(--${match[1]}, ${pxToRem(px)})`
   }
 
-  // --font-line-height-text-md: 24px
-  for (const match of css.matchAll(/--(font-line-height-[\w-]+):\s*(\d+(?:\.\d+)?)px\s*;/g)) {
+  // --line-height-text-md: 24px
+  for (const match of css.matchAll(/--(line-height-[\w-]+):\s*(\d+(?:\.\d+)?)px\s*;/g)) {
     const px = parseFloat(match[2])
     lineHeight[`${px}px`] = `var(--${match[1]}, ${pxToRem(px)})`
   }
@@ -243,7 +243,7 @@ export function mapFontSizeValue(value: string): string {
 
 /**
  * line-height px → 토큰 변수 매핑 (rem fallback)
- * "24px" → "var(--font-line-height-text-md, 1.5rem)", 매핑 없으면 rem 변환만
+ * "24px" → "var(--line-height-text-md, 1.5rem)", 매핑 없으면 rem 변환만
  */
 export function mapLineHeightValue(value: string): string {
   if (value.includes('var(')) return value

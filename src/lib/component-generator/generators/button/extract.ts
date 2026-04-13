@@ -15,9 +15,46 @@ type VariantEntry = {
   childStyles: Record<string, Record<string, string>>
 }
 
-// ── 자식 텍스트 색상 추출 ────────────────────────────────────────────────
+// ── 자식 텍스트/아이콘 색상 추출 ────────────────────────────────────────
 
 const ICON_CHILD_NAMES = new Set(['search', 'icon', 'arrow', 'chevron', 'arrow-right', 'placeholder'])
+
+/**
+ * childStyles에서 아이콘 색상을 추출한다.
+ *
+ * 플러그인이 "placeholder > Icon" 키에 iconColor 필드를 제공한다.
+ * (VECTOR의 border 값에서 추출한 실제 fill 색상)
+ */
+export function extractIconColor(
+  childStyles: Record<string, Record<string, string>>,
+): string | null {
+  for (const [key, cs] of Object.entries(childStyles)) {
+    if (key.toLowerCase().includes('> icon')) {
+      const ic = (cs as Record<string, string>).iconColor
+      return ic ? mapValue(ic) : null
+    }
+  }
+  return null
+}
+
+/**
+ * Loading 상태의 스피너 색상을 추출한다.
+ *
+ * 플러그인이 "Buttons/Button loading icon > Line" / "> Background" 키에
+ * iconColor 필드를 제공한다. Line의 iconColor = 스피너 선 색상.
+ * (track은 동일 색상 + opacity 0.3으로 CSS에서 처리)
+ */
+export function extractSpinnerColor(
+  childStyles: Record<string, Record<string, string>>,
+): string | null {
+  for (const [key, cs] of Object.entries(childStyles)) {
+    if (key.toLowerCase().includes('loading icon > line')) {
+      const ic = (cs as Record<string, string>).iconColor
+      return ic ? mapValue(ic) : null
+    }
+  }
+  return null
+}
 
 /**
  * 자식 텍스트 노드의 색상을 추출한다.
@@ -63,6 +100,7 @@ export function toStateStyle(v: VariantEntry): StateStyle {
   return {
     bg:          s['background-color'] ? mapValue(s['background-color']) : null,
     color:       extractChildTextColor(v.childStyles),
+    iconColor:   extractIconColor(v.childStyles),
     border:      s['border'] ?? s['border-color'] ?? null,
     borderWidth: s['border-width'] ?? null,
     opacity:     null,
@@ -76,6 +114,7 @@ export function toDisabledStateStyle(v: VariantEntry): StateStyle {
   return {
     bg:          s['background-color'] ? mapValue(s['background-color']) : null,
     color:       extractChildTextColor(v.childStyles),
+    iconColor:   extractIconColor(v.childStyles),
     border:      s['border'] ?? s['border-color'] ?? null,
     borderWidth: s['border-width'] ?? null,
     opacity:     extractDisabledOpacity(v.childStyles, s),
