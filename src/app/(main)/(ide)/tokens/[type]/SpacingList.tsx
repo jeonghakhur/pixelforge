@@ -30,10 +30,23 @@ function extractAliasRef(value: string): string | null {
   return m ? m[1] : null;
 }
 
-/** primitive name → var key: "0․5 (2px)" → "spacing-0-5" */
+/** primitive name → CSS var key — mirrors toVarName(name, 'spacing') logic.
+ *  "Spacing/0 (0px)"    → "spacing-0"
+ *  "Spacing/0.5 (2px)"  → "spacing-0.5"
+ *  "spacing/spacing-4"  → "spacing-4"
+ */
 function primitiveVarKey(name: string): string {
-  const short = displayName(name).replace(/\s*\(.*\)/, '').replace(/[․.]/g, '-');
-  return `spacing-${short}`;
+  let slug = name
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[·․\u2024\u00B7\u2027]/g, '-')
+    .replace(/\./g, '-')
+    .replace(/\//g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  while (slug.startsWith('spacing-')) slug = slug.slice('spacing-'.length);
+  return `spacing-${slug}`;
 }
 
 /* ── 참조 primitive 필터 ─────────────────────────── */
@@ -56,7 +69,7 @@ function filterReferencedPrimitives(
 function buildPrimitiveMap(tokens: TokenRow[]): Map<string, TokenRow> {
   const map = new Map<string, TokenRow>();
   for (const t of tokens) {
-    if (t.collectionName === '_Primitives') {
+    if (!t.value.startsWith('var(--')) {
       map.set(primitiveVarKey(t.name), t);
     }
   }
@@ -78,18 +91,18 @@ export default function SpacingList({ tokens: initial, primitives: externalPrimi
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // 자체 _Primitives (spacing 페이지)
+  // primitive: 직접 수치를 가진 토큰 (alias 아님)
   const ownPrimitives = useMemo(
     () => tokens
-      .filter((t) => t.collectionName === '_Primitives')
+      .filter((t) => !t.value.startsWith('var(--'))
       .sort((a, b) => extractPxValue(a) - extractPxValue(b)),
     [tokens],
   );
 
-  // 시맨틱 토큰 (primitive 제외)
+  // 시맨틱 토큰: alias(var) 참조를 가진 토큰
   const semanticTokens = useMemo(
     () => tokens
-      .filter((t) => t.collectionName !== '_Primitives')
+      .filter((t) => t.value.startsWith('var(--'))
       .sort((a, b) => extractPxValue(a) - extractPxValue(b)),
     [tokens],
   );
@@ -106,9 +119,7 @@ export default function SpacingList({ tokens: initial, primitives: externalPrimi
   // primitive map (alias 해석용) — 자체 + 외부 합산
   const primitiveMap = useMemo(() => {
     const all = [...ownPrimitives, ...(externalPrimitives ?? [])];
-    return buildPrimitiveMap(
-      all.map((t) => ({ ...t, collectionName: '_Primitives' })),
-    );
+    return buildPrimitiveMap(all);
   }, [ownPrimitives, externalPrimitives]);
 
   // Scale 바 공통 max — 표시되는 모든 토큰의 실제 px 기준
@@ -152,7 +163,6 @@ export default function SpacingList({ tokens: initial, primitives: externalPrimi
               <div className={styles.spacingSectionHeaderLeft}>
                 <h3 className={styles.spacingSectionTitle}>Primitives</h3>
                 <span className={styles.spacingSectionCount}>{displayPrimitives.length}</span>
-                <span className={styles.baseUnitBadge}>Base: 4px</span>
               </div>
             </div>
 

@@ -44,10 +44,6 @@ export default async function TokenPage({ params }: TokenPageProps) {
   if (COLLECTION_MAP[type]) {
     tokenRows = await getTokensByCollection(COLLECTION_MAP[type]);
     primitives = await getSpacingPrimitives();
-  } else if (type === 'spacing') {
-    tokenRows = tokenRows.filter(
-      (t) => t.collectionName === '_Primitives' || t.collectionName === '3. Spacing',
-    );
   }
 
   const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
@@ -89,12 +85,11 @@ export default async function TokenPage({ params }: TokenPageProps) {
           <div data-token-grid>
             {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}
             {type === 'typography'                       && <TypographyList tokens={tokenRows} />}
-            {(type === 'text-style' || type === 'heading') && <TypographyList tokens={tokenRows} />}
             {(type === 'spacing' || type === 'layout-spacing') && <SpacingList tokens={tokenRows} />}
             {(type === 'container' || type === 'width')  && <SpacingList tokens={tokenRows} primitives={primitives} />}
             {type === 'radius'                           && <RadiusList tokens={tokenRows} />}
             {type === 'shadow'                           && <ShadowList tokens={tokenRows} />}
-            {!['color', 'typography', 'text-style', 'heading', 'spacing', 'layout-spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
+            {!['color', 'typography', 'spacing', 'layout-spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
               <GenericTokenList tokens={tokenRows} />
             )}
           </div>

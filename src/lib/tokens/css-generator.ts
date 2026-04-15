@@ -110,20 +110,23 @@ export function toVarName(tokenName: string, prefix: string): string {
       // Shadow/Blur: 마지막 세그먼트만 사용 (이름 자체가 고유)
       //   "Shadows/shadow-xs"                              → --shadow-xs
       //   "Focus rings/focus-ring-shadow-xs-skeuomorphic"  → --focus-ring-shadow-xs-skeuomorphic
+      //   "Elevation/10"                                   → --shadow-10 (digit-start guard)
       const lastSegment = segments.pop() ?? tokenName;
-      return `--${lastSegment
+      const shadowCleaned = lastSegment
         .replace(/[·․]/g, '-')
         .replace(/[>()<>.]/g, '-')
         .replace(/\s+/g, '-')
         .replace(/-{2,}/g, '-')
         .replace(/^-+|-+$/g, '')
-        .toLowerCase()}`;
+        .toLowerCase();
+      return /^\d/.test(shadowCleaned) ? `--${prefix}-${shadowCleaned}` : `--${shadowCleaned}`;
     }
 
     // 기타 prefix 타입 (spacing, radius 등): 중복 선두 제거 후 prefix 붙임
     let slug = tokenName
       .replace(/\([^)]*\)/g, '')
       .replace(/[·․]/g, '-')       // U+00B7 middle dot + U+2024 one dot leader → dash
+      .replace(/\./g, '-')          // decimal points (e.g. 0.5 → 0-5) — dots are invalid in CSS ident
       .replace(/\//g, '-')
       .replace(/\s+/g, '-')
       .replace(/-{2,}/g, '-')
@@ -444,6 +447,8 @@ function resolveColorGroupLabel(groupName: string): string {
 
 function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
   const map = new Map<string, VarLine[]>();
+  // 동일 varName 중복 방지 — 같은 이름의 토큰이 여러 모드로 반복될 때 첫 번째만 유지
+  const emittedVars = new Set<string>();
 
   // Color 타입: Primitives → Semantic → Component 순 정렬
   const isColor = prefix === '';
@@ -458,6 +463,14 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
       : (token.name.indexOf('/') >= 0 ? token.name.slice(0, token.name.indexOf('/')) : '');
     const varName = toVarName(token.name, prefix);
 
+    // 동일 varName 중복 스킵 (같은 토큰이 여러 모드로 반복될 때 첫 번째만 유지)
+    if (emittedVars.has(varName)) continue;
+    emittedVars.add(varName);
+
+    // 미해석 alias 스킵 (parse-variables가 빈 cssVar 또는 raw VariableID를 남긴 경우)
+    const rawVal = token.raw ?? token.value;
+    if (!rawVal || rawVal.startsWith('VariableID:')) continue;
+
     // Typography / Text Style / Heading: parse JSON value → font shorthand (CSS 변수 참조 방식)
     if (prefix === 'font' || prefix === 'text' || prefix === 'heading') {
       try {
@@ -468,9 +481,19 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
         };
         if (parsed.fontFamily) {
           // group: "Display 2xl" → size slug: "display-2xl"
-          const sizeSlug = group.toLowerCase().replace(/\s+/g, '-');
-          // family slug: display-* → display, 나머지 → body
-          const familySlug = sizeSlug.startsWith('display') ? 'display' : 'body';
+          // group: "LG (Default)" → size slug: "lg" (parenthesised qualifier stripped)
+          const sizeSlug = group
+            .replace(/\([^)]*\)/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-{2,}/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase();
+          // family slug: parsed.category 우선, 없으면 이름 prefix fallback (구버전 DB 데이터)
+          const familySlug = parsed.category === 'display'
+            ? 'display'
+            : parsed.category === 'body'
+              ? 'body'
+              : sizeSlug.startsWith('display') ? 'display' : 'body';
           // weight slug: fontWeight 숫자 → 이름
           const weightSlugMap: Record<number, string> = { 400: 'regular', 500: 'medium', 600: 'semibold', 700: 'bold' };
           const weightSlug = parsed.fontWeight !== undefined

@@ -366,18 +366,15 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         // alias → CSS var() 참조로 변환
         const aliasId = (rawValue as FigmaAlias).id;
         const cssVar = resolveAliasToVar(aliasId, varById);
+        // 미해석 cross-collection alias는 스킵 — 빈 값이나 raw VariableID를 CSS에 내보내지 않음
+        if (!cssVar) continue;
         let type: string;
         if (variable.resolvedType === 'COLOR') {
           type = 'color';
         } else {
-          // alias target의 실제 값을 조회해 임계값 분류에 사용
-          const targetVar = uniqueVars.find((v) => v.id === aliasId);
-          const targetVal = targetVar
-            ? (() => { const v = Object.values(targetVar.valuesByMode)[0]; return typeof v === 'number' ? v : undefined; })()
-            : undefined;
           type = inferFloatType(variable.name);
         }
-        result.push({ ...base, type, value: cssVar, raw: cssVar || aliasId });
+        result.push({ ...base, type, value: cssVar, raw: cssVar });
         continue;
       }
 
@@ -668,8 +665,10 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
       // boundVariables.color 가 있으면 CSS var() 참조를 우선 사용
       // → 다크 모드에서 shadow color 변수가 transparent로 오버라이드되어 그림자가 자동으로 사라짐
       const bvColor = e.boundVariables?.color;
-      const color = bvColor
-        ? resolveAliasToVar(bvColor.id, varById)
+      const bvResolved = bvColor ? resolveAliasToVar(bvColor.id, varById) : '';
+      // cross-collection alias 미해석 시 실제 색상값으로 fallback
+      const color = bvResolved
+        ? bvResolved
         : e.color
           ? rgbaToHex({ r: e.color.r, g: e.color.g, b: e.color.b, a: e.color.a })
           : 'transparent';
