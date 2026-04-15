@@ -321,5 +321,17 @@ function migrateSyncPayloadsType(): void {
 }
 migrateSyncPayloadsType();
 
+// ── letter-spacing → typography 통합 마이그레이션 ────────────────
+// letter-spacing 토큰을 typography로 재분류하고 별도 메뉴 항목 삭제
+sqlite.exec(`
+  BEGIN;
+  UPDATE tokens
+    SET type = 'typography'
+    WHERE type = 'letter-spacing';
+  DELETE FROM token_type_configs
+    WHERE type = 'letter-spacing';
+  COMMIT;
+`);
+
 export const db = drizzle(sqlite, { schema });
 export { schema, sqlite };

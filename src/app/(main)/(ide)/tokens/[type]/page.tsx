@@ -42,11 +42,9 @@ export default async function TokenPage({ params }: TokenPageProps) {
   let primitives: Awaited<ReturnType<typeof getSpacingPrimitives>> = [];
 
   if (COLLECTION_MAP[type]) {
-    // collection 기반 조회 + 참조 primitive
     tokenRows = await getTokensByCollection(COLLECTION_MAP[type]);
     primitives = await getSpacingPrimitives();
   } else if (type === 'spacing') {
-    // spacing 페이지: _Primitives + 3. Spacing만 (width/container 제외)
     tokenRows = tokenRows.filter(
       (t) => t.collectionName === '_Primitives' || t.collectionName === '3. Spacing',
     );
@@ -85,7 +83,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
         </div>
       ) : (
         <>
-          {type === 'color' && (
+          {(type === 'color' || type === 'typography') && (
             <link rel="stylesheet" href="/css/tokens.css" />
           )}
           <div data-token-grid>

@@ -126,6 +126,25 @@ export interface PluginTokenPayload {
     /** PixelForge JSON 파일의 fonts 배열 (font family 정보) */
     fontFamilies?: PluginFontFamily[];
   };
+  /** Typography 통합 구조 (v2): textStyles/headings/font변수를 하나로 통합 */
+  typography?: {
+    textStyles?: Array<{
+      name: string;
+      category: 'body' | 'display';
+      fontSize: number;
+      fontWeight: number;
+      lineHeight: { unit: string; value: number | string };
+      letterSpacing: { unit: string; value: number };
+      fontName: { family: string; style: string };
+      fontSizeVarId?: string;
+      lineHeightVarId?: string;
+      fontFamilyVarId?: string;
+    }>;
+    fontSizes?: Array<{ id: string; name: string; value: number }>;
+    lineHeights?: Array<{ id: string; name: string; value: number }>;
+    fontFamilies?: Array<{ id: string; name: string; value: string }>;
+    fontWeights?: Array<{ id: string; name: string; value: number }>;
+  };
 }
 
 // ───────────────────────────────────────────────────────
@@ -385,6 +404,10 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
           break;
         }
         case 'FLOAT': {
+          // payload.typography 있으면 font/line-height 관련 변수는 typography.* 경로에서 처리 (중복 방지)
+          if (payload.typography && /font.?(?:size|weight|family)|line.?height|letter.?spacing/i.test(variable.name)) {
+            break;
+          }
           const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
           const type = inferFloatType(variable.name, variable.scopes, floatVal);
           result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
@@ -393,6 +416,12 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         case 'STRING': {
           const strVal = String(rawValue);
           const lower = variable.name.toLowerCase();
+          // payload.typography 있으면 font/line-height 관련 string 변수도 typography.* 경로에서 처리
+          if (payload.typography && /font.?(family|size|weight)|line.?height|letter.?spacing/.test(lower)) {
+            break;
+          }
+          // font-weight italic은 CSS font-weight 속성과 무관 → 제외
+          if (/font.?weight/i.test(lower) && /italic/i.test(lower)) break;
           const strType = /font.?(family|size|weight)|line.?height|letter.?spacing/.test(lower)
             ? 'typography'
             : 'string';
@@ -457,19 +486,12 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
     }
   }
 
-  // 텍스트 스타일 — 각 배열을 별도 타입으로 저장
-  const textStyleGroups: Array<{ items: PluginTextStyle[]; type: string }> = [
-    { items: payload.styles?.textStyles ?? [], type: 'text-style' },
-    { items: payload.styles?.headings   ?? [], type: 'heading'    },
-    { items: payload.styles?.texts      ?? [], type: 'typography' },
-  ];
-  const seenTextIds = new Set<string>();
+  // 텍스트 스타일 — 신규 통합 포맷 (payload.typography) 우선 처리
+  if (payload.typography) {
+    const typo = payload.typography;
 
-  for (const { items, type } of textStyleGroups) {
-    for (const ts of items) {
-      if (seenTextIds.has(ts.id)) continue;
-      seenTextIds.add(ts.id);
-
+    // textStyles → 복합 JSON 토큰 (가이드 페이지 + 컴포넌트 생성용)
+    for (const ts of typo.textStyles ?? []) {
       const lineHeight = formatLineHeight(ts.lineHeight);
       const letterSpacing = formatLetterSpacing(ts.letterSpacing);
       const raw = [
@@ -478,13 +500,13 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
       ].filter(Boolean).join(' ');
 
       result.push({
-        type,
+        type: 'typography',
         name: ts.name,
         value: JSON.stringify({
-          fontFamily: ts.fontName.family,
-          fontStyle:  ts.fontName.style,
-          fontSize:   ts.fontSize,
-          fontWeight: ts.fontWeight,
+          fontFamily:    ts.fontName.family,
+          category:      ts.category,
+          fontSize:      ts.fontSize,
+          fontWeight:    ts.fontWeight,
           lineHeight,
           letterSpacing,
         }),
@@ -492,6 +514,127 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
         mode: null,
         collectionName: null,
         alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+
+    // fontSizes → CSS 변수용 원시 토큰
+    for (const fs of typo.fontSizes ?? []) {
+      result.push({
+        type: 'typography',
+        name: fs.name,
+        value: String(fs.value),
+        raw: `${fs.value}px`,
+        mode: null, collectionName: null, alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+
+    // lineHeights → CSS 변수용 원시 토큰
+    for (const lh of typo.lineHeights ?? []) {
+      result.push({
+        type: 'typography',
+        name: lh.name,
+        value: String(lh.value),
+        raw: `${lh.value}px`,
+        mode: null, collectionName: null, alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+
+    // fontFamilies → CSS 변수용 원시 토큰
+    for (const ff of typo.fontFamilies ?? []) {
+      result.push({
+        type: 'typography',
+        name: ff.name,
+        value: ff.value,
+        raw: ff.value,
+        mode: null, collectionName: null, alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+
+    // fontWeights → CSS 변수용 원시 토큰 (italic 제외 — font-weight는 숫자 값만, italic은 font-style 속성)
+    for (const fw of typo.fontWeights ?? []) {
+      if (/italic/i.test(fw.name)) continue;
+      result.push({
+        type: 'typography',
+        name: fw.name,
+        value: String(fw.value),
+        raw: String(fw.value),
+        mode: null, collectionName: null, alias: null,
+        sortOrder: styleOrder++,
+      });
+    }
+  } else {
+    // 구버전 폴백: styles.headings + styles.textStyles (삭제 예정)
+    const textStyleGroups: Array<{ items: PluginTextStyle[]; type: string }> = [
+      { items: payload.styles?.textStyles ?? [], type: 'typography' },
+      { items: payload.styles?.headings   ?? [], type: 'typography' },
+      { items: payload.styles?.texts      ?? [], type: 'typography' },
+    ];
+    const seenTextIds = new Set<string>();
+
+    for (const { items, type } of textStyleGroups) {
+      for (const ts of items) {
+        if (seenTextIds.has(ts.id)) continue;
+        seenTextIds.add(ts.id);
+
+        const lineHeight = formatLineHeight(ts.lineHeight);
+        const letterSpacing = formatLetterSpacing(ts.letterSpacing);
+        const raw = [
+          `${ts.fontWeight} ${ts.fontSize}px/${lineHeight} '${ts.fontName.family}'`,
+          letterSpacing !== '0' ? `ls:${letterSpacing}` : '',
+        ].filter(Boolean).join(' ');
+
+        result.push({
+          type,
+          name: ts.name,
+          value: JSON.stringify({
+            fontFamily: ts.fontName.family,
+            fontSize:   ts.fontSize,
+            fontWeight: ts.fontWeight,
+            lineHeight,
+            letterSpacing,
+          }),
+          raw,
+          mode: null,
+          collectionName: null,
+          alias: null,
+          sortOrder: styleOrder++,
+        });
+      }
+    }
+  }
+
+  // letterSpacings — 모든 텍스트 스타일에서 non-zero 값을 개별 토큰으로 추출
+  // 신규 포맷(payload.typography.textStyles) + 구버전 폴백(styles.headings / textStyles / texts) 공통 처리
+  // 이름: "Letter spacing/{n}" — n은 Figma PERCENT 절댓값 (e.g. -2% → "2")
+  {
+    const allTextStyles: Array<{ letterSpacing?: { unit: string; value: number } }> = [
+      ...(payload.typography?.textStyles ?? []),
+      ...(payload.styles?.headings   ?? []),
+      ...(payload.styles?.textStyles ?? []),
+      ...(payload.styles?.texts      ?? []),
+    ];
+    const seenLs = new Set<string>();
+
+    for (const ts of allTextStyles) {
+      const ls = ts.letterSpacing;
+      if (!ls || ls.value === 0) continue;
+
+      // 이름 키: 절댓값 정수 문자열 (e.g. -2 → "2")
+      const absKey = String(Math.abs(ls.value));
+      if (seenLs.has(absKey)) continue;
+      seenLs.add(absKey);
+
+      const cssValue = formatLetterSpacing(ls);
+      result.push({
+        type: 'typography',
+        name: `Letter spacing/${absKey}`,
+        value: cssValue,
+        raw: cssValue,
+        mode: null, collectionName: null, alias: null,
         sortOrder: styleOrder++,
       });
     }
