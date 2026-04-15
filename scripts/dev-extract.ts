@@ -278,13 +278,18 @@ function getRawFigmaNames(
 }
 
 function inferFloatType(name: string, scopes: string[]): string | null {
-  if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
-  if (scopes.includes('CORNER_RADIUS')) return 'radius';
-  if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
   const lower = name.toLowerCase();
-  if (/spacing|gap|padding|margin/.test(lower)) return 'spacing';
+  // 이름 패턴 우선 (scope보다 구체적)
   if (/radius|corner|rounded/.test(lower)) return 'radius';
+  if (/^container/.test(lower) || /paragraph.?max.?width/.test(lower)) return null; // container는 이 스크립트 미지원
+  if (/^width-/.test(lower)) return null; // width 타입은 이 스크립트 미지원
   if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
+  // scope 기반 fallback
+  if (scopes.includes('CORNER_RADIUS')) return 'radius';
+  if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
+  if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
+  // 일반 이름 패턴
+  if (/spacing|gap|padding|margin/.test(lower)) return 'spacing';
   return null;
 }
 

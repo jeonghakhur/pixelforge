@@ -200,16 +200,20 @@ function buildTypographyMaps(): TypographyMaps {
   const lineHeight: Record<string, string> = {}
   const fontWeight: Record<string, string> = {}
 
-  // --font-size-text-md: 16px
-  for (const match of css.matchAll(/--(font-size-[\w-]+):\s*(\d+(?:\.\d+)?)px\s*;/g)) {
-    const px = parseFloat(match[2])
-    fontSize[`${px}px`] = `var(--${match[1]}, ${pxToRem(px)})`
+  // --font-size-text-md: 1rem  (또는 레거시 16px)
+  for (const match of css.matchAll(/--(font-size-[\w-]+):\s*(\d+(?:\.\d+)?)(rem|px)\s*;/g)) {
+    const unit = match[3]
+    const px = unit === 'rem' ? parseFloat(match[2]) * 16 : parseFloat(match[2])
+    const remVal = unit === 'rem' ? `${match[2]}rem` : pxToRem(px)
+    fontSize[`${px}px`] = `var(--${match[1]}, ${remVal})`
   }
 
-  // --line-height-text-md: 24px
-  for (const match of css.matchAll(/--(line-height-[\w-]+):\s*(\d+(?:\.\d+)?)px\s*;/g)) {
-    const px = parseFloat(match[2])
-    lineHeight[`${px}px`] = `var(--${match[1]}, ${pxToRem(px)})`
+  // --line-height-text-md: 1.5rem  (또는 레거시 24px)
+  for (const match of css.matchAll(/--(line-height-[\w-]+):\s*(\d+(?:\.\d+)?)(rem|px)\s*;/g)) {
+    const unit = match[3]
+    const px = unit === 'rem' ? parseFloat(match[2]) * 16 : parseFloat(match[2])
+    const remVal = unit === 'rem' ? `${match[2]}rem` : pxToRem(px)
+    lineHeight[`${px}px`] = `var(--${match[1]}, ${remVal})`
   }
 
   // --font-weight-semibold: 600

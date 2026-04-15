@@ -1,19 +1,21 @@
 import type { TokenRow } from '@/lib/actions/tokens';
 
 export const TYPE_PREFIX: Record<string, string> = {
-  color:            '',        // 색상은 prefix 없이 경로 기반 (--brand-600, --bg-primary 등)
-  typography:       'font',
-  spacing:          'spacing',
-  'layout-spacing': 'layout',
-  radius:           'radius',
-  'text-style':     'text',
-  heading:          'heading',
-  shadow:           'shadow',
-  gradient:         'gradient',
-  blur:             'blur',
-  container:        'container',
-  width:            'width',
-  font:             'font-family',
+  color:                 '',        // 색상은 prefix 없이 경로 기반 (--brand-600, --bg-primary 등)
+  'typography-primitive':'font',    // primitive: font-size / line-height / font-weight / font-family
+  'letter-spacing':      'letter-spacing',
+  typography:            'font',    // shorthand: --font-display-2xl-regular (primitive 참조)
+  spacing:               'spacing',
+  'layout-spacing':      'layout',
+  radius:                'radius',
+  'text-style':          'text',
+  heading:               'heading',
+  shadow:                'shadow',
+  gradient:              'gradient',
+  blur:                  'blur',
+  container:             'container',
+  width:                 'width',
+  font:                  'font-family',
 };
 
 /**
@@ -48,22 +50,28 @@ export function deduplicateColorSlug(slug: string): string {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  color:            'Color',
-  typography:       'Typography',
-  spacing:          'Spacing',
-  'layout-spacing': 'Layout Spacing',
-  radius:           'Radius',
-  'text-style':     'Text Style',
-  heading:          'Heading',
-  shadow:           'Shadow',
-  gradient:         'Gradient',
-  blur:             'Blur',
-  container:        'Container',
-  width:            'Width',
-  font:             'Font',
+  color:                 'Color',
+  'typography-primitive':'Typography — Primitives',
+  'letter-spacing':      'Letter Spacing',
+  typography:            'Typography',
+  spacing:               'Spacing',
+  'layout-spacing':      'Layout Spacing',
+  radius:                'Radius',
+  'text-style':          'Text Style',
+  heading:               'Heading',
+  shadow:                'Shadow',
+  gradient:              'Gradient',
+  blur:                  'Blur',
+  container:             'Container',
+  width:                 'Width',
+  font:                  'Font',
 };
 
-const TYPE_ORDER = ['color', 'typography', 'spacing', 'radius'];
+// typography 타입을 두 단계로 분리:
+//   1. typography-primitive: font-size / line-height / font-weight / font-family / letter-spacing (개별 원시 토큰)
+//   2. typography:           shorthand 복합 토큰 (--font-display-2xl-regular 등, primitive 참조)
+// letter-spacing 타입도 primitive이므로 shorthand 앞에 위치
+const TYPE_ORDER = ['color', 'typography-primitive', 'letter-spacing', 'typography', 'spacing', 'radius'];
 
 /** mode 문자열이 다크모드 블록에 속하는지 판별 */
 function isDarkMode(mode: string | null): boolean {
@@ -133,6 +141,11 @@ export function toVarName(tokenName: string, prefix: string): string {
     // line-height 토큰은 font prefix 없이 그대로 출력
     // "Line height/Text/xs" → --line-height-text-xs (not --font-line-height-text-xs)
     if (prefix === 'font' && slug.startsWith('line-height-')) {
+      return `--${slug}`;
+    }
+    // letter-spacing 토큰도 동일 — font prefix 없이 출력
+    // "Letter spacing/2" → --letter-spacing-2 (not --font-letter-spacing-2)
+    if (prefix === 'font' && slug.startsWith('letter-spacing-')) {
       return `--${slug}`;
     }
     // 복수형 제거: shadows- → shadow prefix와 중복, backdrop-blurs- → blur
@@ -309,17 +322,26 @@ function extractDisplayValue(token: TokenRow, type: string): string {
     }
   }
 
-  // typography: font-weight 문자열 → 숫자 변환
-  if (type === 'typography') {
-    const raw = token.raw ?? token.value;
-    return normalizeFontWeight(raw);
-  }
-
   const raw = token.raw ?? token.value;
-  // alias 참조가 다른 타입에도 있을 수 있음 (spacing, container, width 등)
+
+  // alias 참조
   if (raw.startsWith('var(--')) {
     return resolveAliasRef(raw);
   }
+
+  // font-size / line-height → rem 변환 (WCAG 1.4.4)
+  // typography 타입 여부와 무관하게 토큰 이름으로 판단 (typography-primitive 포함)
+  if (/^(font[\s_-]?size|line[\s_-]?height)\//i.test(token.name)) {
+    const m = raw.match(/^(\d+(?:\.\d+)?)px$/);
+    if (m) return `${parseFloat(m[1]) / 16}rem`;
+    return raw;
+  }
+
+  // typography: font-weight 문자열 → 숫자 변환 (font-size/line-height 이후 처리)
+  if (type === 'typography') {
+    return normalizeFontWeight(raw);
+  }
+
   return raw;
 }
 
@@ -436,21 +458,44 @@ function buildGroups(tokens: TokenRow[], prefix: string): TokenGroup[] {
       : (token.name.indexOf('/') >= 0 ? token.name.slice(0, token.name.indexOf('/')) : '');
     const varName = toVarName(token.name, prefix);
 
-    // Typography / Text Style / Heading: parse JSON value → font shorthand
+    // Typography / Text Style / Heading: parse JSON value → font shorthand (CSS 변수 참조 방식)
     if (prefix === 'font' || prefix === 'text' || prefix === 'heading') {
       try {
         const parsed = JSON.parse(token.value) as {
           fontFamily?: string; fontWeight?: number; fontSize?: number;
           lineHeight?: string | number | null; letterSpacing?: string | number | null;
+          category?: string;
         };
         if (parsed.fontFamily) {
-          const lh = parsed.lineHeight ?? 'normal';
-          const fontShorthand = `${parsed.fontWeight} ${parsed.fontSize}px/${lh} '${parsed.fontFamily}'`;
+          // group: "Display 2xl" → size slug: "display-2xl"
+          const sizeSlug = group.toLowerCase().replace(/\s+/g, '-');
+          // family slug: display-* → display, 나머지 → body
+          const familySlug = sizeSlug.startsWith('display') ? 'display' : 'body';
+          // weight slug: fontWeight 숫자 → 이름
+          const weightSlugMap: Record<number, string> = { 400: 'regular', 500: 'medium', 600: 'semibold', 700: 'bold' };
+          const weightSlug = parsed.fontWeight !== undefined
+            ? (weightSlugMap[parsed.fontWeight] ?? `w${parsed.fontWeight}`)
+            : 'regular';
+          // 폴백용 실제 값
+          const fsFallback = parsed.fontSize ? `${parsed.fontSize / 16}rem` : '1rem';
+          const lhRaw = parsed.lineHeight ?? 'normal';
+          const lhFallback = typeof lhRaw === 'number'
+            ? `${lhRaw / 16}rem`
+            : String(lhRaw).match(/^(\d+(?:\.\d+)?)px$/)
+              ? `${parseFloat(String(lhRaw)) / 16}rem`
+              : String(lhRaw);
+          // 개별 CSS 변수를 참조하는 단축 변수
+          const fontShorthand = [
+            `var(--font-weight-${weightSlug}, ${parsed.fontWeight ?? 400})`,
+            `var(--font-size-${sizeSlug}, ${fsFallback})`,
+            `/`,
+            `var(--line-height-${sizeSlug}, ${lhFallback})`,
+            `var(--font-family-${familySlug}, '${parsed.fontFamily}')`,
+          ].join(' ').replace(' / ', '/');
+
           if (!map.has(group)) map.set(group, []);
           map.get(group)!.push({ varName, value: fontShorthand });
-          if (parsed.letterSpacing && parsed.letterSpacing !== '0' && parsed.letterSpacing !== 0) {
-            map.get(group)!.push({ varName: `${varName}-ls`, value: String(parsed.letterSpacing) });
-          }
+          // -ls 중간 변수 없음 — 사용처에서 --letter-spacing-{n} 직접 참조
           continue;
         }
       } catch { /* not JSON typography — fall through */ }
@@ -756,8 +801,22 @@ export function generateAllCssCode(allTokens: TokenRow[]): string {
 function renderBlock(selector: string, tokens: TokenRow[]): string[] {
   const byType = new Map<string, TokenRow[]>();
   for (const token of tokens) {
-    if (!byType.has(token.type)) byType.set(token.type, []);
-    byType.get(token.type)!.push(token);
+    // typography 토큰을 primitive / shorthand(JSON) 로 분리
+    // primitive: value가 JSON이 아닌 것 (font-size, line-height, font-weight, font-family)
+    // shorthand: value가 JSON인 것 (Display 2xl/Regular 등 복합 토큰)
+    let effectiveType = token.type;
+    if (token.type === 'typography') {
+      try {
+        const parsed = JSON.parse(token.value);
+        effectiveType = parsed && typeof parsed === 'object' && parsed.fontFamily
+          ? 'typography'           // shorthand (JSON with fontFamily)
+          : 'typography-primitive'; // primitive (숫자/문자열)
+      } catch {
+        effectiveType = 'typography-primitive'; // JSON 파싱 실패 = primitive
+      }
+    }
+    if (!byType.has(effectiveType)) byType.set(effectiveType, []);
+    byType.get(effectiveType)!.push(token);
   }
 
   const orderedTypes = [

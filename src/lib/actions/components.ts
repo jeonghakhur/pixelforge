@@ -424,3 +424,115 @@ export async function regenerateComponentFiles(
 
   return { error: null, newName: nameChanged ? newName : undefined };
 }
+
+// ===========================
+// Text 컴포넌트 생성 (토큰 기반 예외 경로)
+// ===========================
+
+/**
+ * DB Typography 토큰 → Text 컴포넌트 생성/재생성.
+ *
+ * 플러그인 JSON 임포트(importComponentFromJson)와 독립적인 별도 플로우.
+ * Text는 Figma에 COMPONENT_SET이 없으므로 DB 토큰에서 직접 생성한다.
+ */
+export async function generateTextComponentAction(): Promise<{
+  error: string | null;
+  component: ComponentRow | null;
+  regenerated: boolean;
+}> {
+  const project = db
+    .select({ id: projects.id })
+    .from(projects)
+    .orderBy(desc(projects.updatedAt))
+    .limit(1)
+    .get();
+
+  if (!project) {
+    return { error: '프로젝트 정보가 없습니다. Figma 토큰을 먼저 추출해주세요.', component: null, regenerated: false };
+  }
+
+  const { resolveTypographyPayload } = await import(
+    '@/lib/component-generator/generators/text/token-resolver'
+  );
+  const { generateText } = await import('@/lib/component-generator/generators/text');
+
+  const typographyPayload = await resolveTypographyPayload();
+
+  if (typographyPayload.sizes.length === 0) {
+    return { error: 'Typography 토큰이 없습니다. 먼저 Font size 토큰을 동기화해주세요.', component: null, regenerated: false };
+  }
+
+  const result = generateText(typographyPayload);
+
+  // 기존 Text 컴포넌트 여부 확인
+  const existing = db
+    .select({ id: components.id, version: components.version })
+    .from(components)
+    .where(eq(components.name, 'Text'))
+    .get();
+
+  const now = new Date();
+  let componentId: string;
+
+  if (existing) {
+    componentId = existing.id;
+    db.update(components)
+      .set({
+        tsx: result.tsx,
+        scss: result.css,
+        version: (existing.version ?? 0) + 1,
+        updatedAt: now,
+      })
+      .where(eq(components.id, existing.id))
+      .run();
+  } else {
+    componentId = generateId();
+    const allOrders = db
+      .select({ menuOrder: components.menuOrder })
+      .from(components)
+      .where(eq(components.projectId, project.id))
+      .all();
+    const nextOrder = allOrders.length > 0
+      ? Math.max(...allOrders.map((r) => r.menuOrder)) + 1
+      : 0;
+
+    db.insert(components).values({
+      id: componentId,
+      projectId: project.id,
+      name: 'Text',
+      category: 'feedback',
+      tsx: result.tsx,
+      scss: result.css,
+      detectedType: 'text',
+      contentHash: null,
+      version: 1,
+      menuOrder: nextOrder,
+      isVisible: true,
+    }).run();
+  }
+
+  // 파일 쓰기
+  const { writeComponentFiles } = await import('@/lib/component-generator/file-writer');
+  writeComponentFiles('Text', result.tsx, result.css);
+
+  revalidatePath('/components');
+
+  const row = db
+    .select({
+      id: components.id,
+      name: components.name,
+      category: components.category,
+      tsx: components.tsx,
+      css: components.scss,
+      description: components.description,
+      menuOrder: components.menuOrder,
+      detectedType: components.detectedType,
+      radixProps: components.radixProps,
+      version: components.version,
+    })
+    .from(components)
+    .where(eq(components.id, componentId))
+    .get();
+
+  return { error: null, component: row ?? null, regenerated: !!existing };
+}

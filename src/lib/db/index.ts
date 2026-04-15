@@ -333,5 +333,18 @@ sqlite.exec(`
   COMMIT;
 `);
 
+// ── layout-spacing → spacing 통합 마이그레이션 ───────────────────
+// _Primitives의 Spacing/0~Spacing/480은 하나의 연속된 세트이므로
+// 인위적인 256px 임계값 분리를 제거하고 모두 spacing으로 통합
+sqlite.exec(`
+  BEGIN;
+  UPDATE tokens
+    SET type = 'spacing'
+    WHERE type = 'layout-spacing';
+  DELETE FROM token_type_configs
+    WHERE type = 'layout-spacing';
+  COMMIT;
+`);
+
 export const db = drizzle(sqlite, { schema });
 export { schema, sqlite };

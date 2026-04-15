@@ -181,35 +181,20 @@ function resolveAliasToVar(
   const target = varById.get(aliasId);
   if (!target) return '';
   // COLOR는 prefix 없음(toVarName의 빈 prefix 경로 사용), FLOAT 등은 타입 추론
-  const prefix = target.resolvedType === 'COLOR' ? '' : inferFloatType(target.name, target.scopes ?? []);
+  const prefix = target.resolvedType === 'COLOR' ? '' : inferFloatType(target.name);
   return `var(${toVarName(target.name, prefix)})`;
 }
 
-/**
- * spacing 이름 패턴이지만 이 값 이상이면 layout-spacing으로 분류한다.
- * (컴포넌트 패딩/갭 vs 레이아웃 너비·섹션 높이 경계)
- * Figma 파일에서 scopes가 설정되지 않을 때 값으로 구분하는 폴백 전략.
+/** FLOAT variable을 이름 패턴으로 타입 분류
+ * 플러그인 JSON에 scopes 필드가 포함되지 않으므로 이름 기반으로만 판단한다.
  */
-const LAYOUT_SPACING_THRESHOLD_PX = 256;
-
-/** FLOAT variable을 scopes + 이름 패턴 + 값으로 타입 분류 */
-function inferFloatType(name: string, scopes: string[] = [], value?: number): string {
-  if (scopes.includes('CORNER_RADIUS')) return 'radius';
-  if (scopes.includes('GAP') || scopes.includes('WIDTH_HEIGHT')) return 'spacing';
-  if (scopes.includes('FONT_SIZE') || scopes.includes('LINE_HEIGHT') || scopes.includes('LETTER_SPACING')) return 'typography';
-
+function inferFloatType(name: string): string {
   const lower = name.toLowerCase();
   if (/radius|corner|rounded/.test(lower)) return 'radius';
-  // container/width는 spacing 보다 먼저 매칭 (width 키워드 충돌 방지)
   if (/^container/.test(lower) || /paragraph.?max.?width/.test(lower)) return 'container';
   if (/^width-/.test(lower)) return 'width';
-  // typography 체크를 spacing보다 먼저 — "line height/..."이 height 키워드에 걸리지 않도록
   if (/font.?size|font.?weight|line.?height|letter.?spacing/.test(lower)) return 'typography';
-  if (/spacing|gap|padding|margin|width|height/.test(lower)) {
-    // 값이 임계값 초과면 레이아웃 스케일 spacing으로 분리
-    if (value !== undefined && value > LAYOUT_SPACING_THRESHOLD_PX) return 'layout-spacing';
-    return 'spacing';
-  }
+  if (/spacing|gap|padding|margin|width|height/.test(lower)) return 'spacing';
   if (/resolution/.test(lower)) return 'resolution';
   if (/size/.test(lower)) return 'size';
   return 'float';
@@ -390,7 +375,7 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
           const targetVal = targetVar
             ? (() => { const v = Object.values(targetVar.valuesByMode)[0]; return typeof v === 'number' ? v : undefined; })()
             : undefined;
-          type = inferFloatType(variable.name, variable.scopes, targetVal);
+          type = inferFloatType(variable.name);
         }
         result.push({ ...base, type, value: cssVar, raw: cssVar || aliasId });
         continue;
@@ -409,7 +394,7 @@ export function parseVariablesPayload(payload: PluginTokenPayload): NormalizedTo
             break;
           }
           const floatVal = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
-          const type = inferFloatType(variable.name, variable.scopes, floatVal);
+          const type = inferFloatType(variable.name);
           result.push({ ...base, type, value: String(floatVal), raw: `${floatVal}px` });
           break;
         }

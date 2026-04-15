@@ -98,28 +98,30 @@ export function extractDisabledOpacity(
 export function toStateStyle(v: VariantEntry): StateStyle {
   const s = v.styles
   return {
-    bg:          s['background-color'] ? mapValue(s['background-color']) : null,
-    color:       extractChildTextColor(v.childStyles),
-    iconColor:   extractIconColor(v.childStyles),
-    border:      s['border'] ?? s['border-color'] ?? null,
-    borderWidth: s['border-width'] ?? null,
-    opacity:     null,
-    borderImage: s['border-image'] ?? null,
-    boxShadow:   s['box-shadow'] ?? null,
+    bg:           s['background-color'] ? mapValue(s['background-color']) : null,
+    color:        extractChildTextColor(v.childStyles),
+    iconColor:    extractIconColor(v.childStyles),
+    border:       s['border'] ?? s['border-color'] ?? null,
+    borderWidth:  s['border-width'] ?? null,
+    opacity:      null,
+    borderImage:  s['border-image'] ?? null,
+    boxShadow:    s['box-shadow'] ?? null,
+    borderRadius: s['border-radius'] ?? null,
   }
 }
 
 export function toDisabledStateStyle(v: VariantEntry): StateStyle {
   const s = v.styles
   return {
-    bg:          s['background-color'] ? mapValue(s['background-color']) : null,
-    color:       extractChildTextColor(v.childStyles),
-    iconColor:   extractIconColor(v.childStyles),
-    border:      s['border'] ?? s['border-color'] ?? null,
-    borderWidth: s['border-width'] ?? null,
-    opacity:     extractDisabledOpacity(v.childStyles, s),
-    borderImage: s['border-image'] ?? null,
-    boxShadow:   s['box-shadow'] ?? null,
+    bg:           s['background-color'] ? mapValue(s['background-color']) : null,
+    color:        extractChildTextColor(v.childStyles),
+    iconColor:    extractIconColor(v.childStyles),
+    border:       s['border'] ?? s['border-color'] ?? null,
+    borderWidth:  s['border-width'] ?? null,
+    opacity:      extractDisabledOpacity(v.childStyles, s),
+    borderImage:  s['border-image'] ?? null,
+    boxShadow:    s['box-shadow'] ?? null,
+    borderRadius: s['border-radius'] ?? null,
   }
 }
 

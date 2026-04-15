@@ -16,15 +16,16 @@ import { mapCssValue } from '../../css-var-mapper'
 // ── 타입 ──────────────────────────────────────────────────────────────────
 
 export interface StateStyle {
-  bg:          string | null
-  color:       string | null
+  bg:           string | null
+  color:        string | null
   /** 아이콘 슬롯 색상 (placeholder > Icon.iconColor) */
-  iconColor:   string | null
-  border:      string | null
-  borderWidth: string | null
-  opacity:     string | null
-  borderImage: string | null
-  boxShadow:   string | null
+  iconColor:    string | null
+  border:       string | null
+  borderWidth:  string | null
+  opacity:      string | null
+  borderImage:  string | null
+  boxShadow:    string | null
+  borderRadius: string | null
 }
 
 export interface AppearanceScheme {
@@ -129,7 +130,9 @@ export function buildStateCSS(
       warnUnmappedHex(warnings, style.color, `${name} ${state}.color`)
     }
     if (shouldEmit('border', style.border)) {
-      lines.push(`  border: ${style.border!.startsWith('1px') ? style.border! : `1px solid ${style.border}`};`)
+      const b = style.border!
+      // 숫자로 시작하면 이미 full shorthand (예: "2px solid rgba(...)"), 아니면 color 값만 있는 경우
+      lines.push(`  border: ${/^\d/.test(b.trim()) ? b : `1px solid ${b}`};`)
     }
     if (shouldEmit('borderWidth', style.borderWidth)) {
       lines.push(`  border-width: ${style.borderWidth};`)
@@ -140,6 +143,9 @@ export function buildStateCSS(
     }
     if (shouldEmit('boxShadow', style.boxShadow)) {
       lines.push(`  box-shadow: ${style.boxShadow};`)
+    }
+    if (shouldEmit('borderRadius', style.borderRadius)) {
+      lines.push(`  border-radius: ${style.borderRadius};`)
     }
     if (style.opacity) lines.push(`  opacity: ${style.opacity};`)
 

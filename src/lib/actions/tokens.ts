@@ -98,7 +98,7 @@ export async function getSpacingPrimitives(): Promise<TokenRow[]> {
     .where(and(
       eq(tokens.projectId, project.id),
       eq(tokens.collectionName, '_Primitives'),
-      sql`${tokens.type} IN ('spacing', 'layout-spacing')`,
+      eq(tokens.type, 'spacing'),
     ))
     .orderBy(tokens.sortOrder)
     .all();

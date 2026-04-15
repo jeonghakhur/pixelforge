@@ -43,14 +43,15 @@ function extractGenericStateStyles(
     if (!state || map.has(state)) continue
     const s = v.styles
     map.set(state, {
-      bg:          s['background-color'] ? mapValue(s['background-color']) : null,
-      color:       s.color ? mapValue(s.color) : null,
-      iconColor:   null,
-      border:      s['border'] ?? s['border-color'] ?? null,
-      borderWidth: s['border-width'] ?? null,
-      opacity:     isDisabledState(state) ? (s.opacity ?? null) : null,
-      borderImage: s['border-image'] ?? null,
-      boxShadow:   s['box-shadow'] ?? null,
+      bg:           s['background-color'] ? mapValue(s['background-color']) : null,
+      color:        s.color ? mapValue(s.color) : null,
+      iconColor:    null,
+      border:       s['border'] ?? s['border-color'] ?? null,
+      borderWidth:  s['border-width'] ?? null,
+      opacity:      isDisabledState(state) ? (s.opacity ?? null) : null,
+      borderImage:  s['border-image'] ?? null,
+      boxShadow:    s['box-shadow'] ?? null,
+      borderRadius: s['border-radius'] ?? null,
     })
   }
   return map
@@ -80,14 +81,15 @@ function extractGenericAppearanceSchemes(
       if (!state || states.has(state)) continue
       const s = v.styles
       states.set(state, {
-        bg:          s['background-color'] ? mapValue(s['background-color']) : null,
-        color:       s.color ? mapValue(s.color) : null,
-        iconColor:   null,
-        border:      s['border'] ?? s['border-color'] ?? null,
-        borderWidth: s['border-width'] ?? null,
-        opacity:     isDisabledState(state) ? (s.opacity ?? null) : null,
-        borderImage: s['border-image'] ?? null,
-        boxShadow:   s['box-shadow'] ?? null,
+        bg:           s['background-color'] ? mapValue(s['background-color']) : null,
+        color:        s.color ? mapValue(s.color) : null,
+        iconColor:    null,
+        border:       s['border'] ?? s['border-color'] ?? null,
+        borderWidth:  s['border-width'] ?? null,
+        opacity:      isDisabledState(state) ? (s.opacity ?? null) : null,
+        borderImage:  s['border-image'] ?? null,
+        boxShadow:    s['box-shadow'] ?? null,
+        borderRadius: s['border-radius'] ?? null,
       })
     }
     return { appearanceValue, states }

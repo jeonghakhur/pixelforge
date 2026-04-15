@@ -331,52 +331,359 @@
 }
 
 // ===========================
-// 타이포그래피 목록
+// 타이포그래피 — Specimen
 // ===========================
-.typoList {
+.typoSpecimen {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: map-get($spacers, 5);
+  align-items: end;
+  margin-bottom: map-get($spacers, 5);
+
+  @include media-down(md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typoSpecimenLeft {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.typoFontName {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-normal;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-tight;
+}
+
+.typoFontAg {
+  font-size: 96px;
+  font-weight: $font-weight-normal;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.typoAlphabet {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-normal;
+  color: var(--text-primary);
+  line-height: $line-height-snug;
+  word-break: break-all;
+}
+
+.typoWeightList {
   display: flex;
   flex-direction: column;
   gap: map-get($spacers, 3);
+  min-width: 280px;
+
+  @include media-down(md) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
 }
 
-.typoCard {
-  @include double-bezel;
-}
-
-.typoCardInner {
-  background: var(--bg-surface);
-  border-radius: calc(#{$border-radius-3xl} - 6px);
-  box-shadow: var(--glass-shadow);
-  padding: map-get($spacers, 5);
-}
-
-.typoSample {
-  color: var(--text-primary);
-  margin-bottom: map-get($spacers, 3);
-  word-break: keep-all;
-  line-height: $line-height-snug;
-}
-
-.typoMeta {
+.typoWeightItem {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) 0;
   border-top: 1px solid var(--glass-border);
-  padding-top: map-get($spacers, 3);
 }
 
-.typoName {
-  display: block;
-  font-size: $font-size-sm;
+.typoWeightAa {
+  font-size: 48px;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.typoWeightInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.typoWeightLabel {
+  font-size: $font-size-base;
   font-weight: $font-weight-semibold;
   color: var(--text-primary);
-  margin-bottom: map-get($spacers, 1);
 }
 
-.typoDetails {
+.typoWeightValue {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+}
+
+// ===========================
+// 타이포그래피 — Type Scale
+// ===========================
+.typoScale {
   display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+}
+
+.typoScaleRow {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  padding-bottom: map-get($spacers, 5);
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: map-get($spacers, 2);
+}
+
+.typoScaleRowHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+
+  @include media-down(md) {
+    flex-direction: column;
+    gap: map-get($spacers, 1);
+  }
+}
+
+.typoScaleRowLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.typoScaleRowSpecs {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: right;
+
+  @include media-down(md) {
+    text-align: left;
+  }
+}
+
+// 웨이트별 스펙시맨 목록
+.typoScaleWeightRows {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+}
+
+// 웨이트 하나당 행
+.typoScaleWeightRow {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  padding-bottom: map-get($spacers, 4);
+  border-bottom: 1px solid var(--border-subtle);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+// 실제 크기 스펙시맨 텍스트
+.typoScaleSpecimenText {
+  margin: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 변수명 + 웨이트 레이블 행
+.typoScaleVarMeta {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: map-get($spacers, 2) map-get($spacers, 3);
+  gap: map-get($spacers, 2);
+}
+
+.typoScaleVarName {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.typoScaleWeightLabel {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+}
+
+// helper
+.typoMono {
+  font-family: var(--font-mono);
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+}
+
+// ===========================
+// 타이포그래피 — Scale Group Header
+// ===========================
+.typoScaleGroupHeader {
+  display: flex;
+  align-items: baseline;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) 0;
+  margin-top: map-get($spacers, 3);
+}
+
+.typoScaleGroupLabel {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.typoScaleGroupDesc {
   font-size: $font-size-sm;
   color: var(--text-muted);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+// ===========================
+// 타이포그래피 — Token Reference
+// ===========================
+.typoRefSection {
+  margin-top: map-get($spacers, 7);
+  padding-top: map-get($spacers, 6);
+  border-top: 1px solid var(--glass-border);
+}
+
+.typoRefTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 map-get($spacers, 2);
+}
+
+.typoRefDesc {
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin: 0 0 map-get($spacers, 5);
+}
+
+.typoRefGroups {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 5);
+}
+
+.typoRefGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.typoRefGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding-bottom: map-get($spacers, 2);
+  margin-bottom: map-get($spacers, 1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.typoRefGroupLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.typoRefGroupCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 map-get($spacers, 1);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-pill;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.typoRefTableHead {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: $border-radius-sm $border-radius-sm 0 0;
+
+  @include media-down(md) {
+    grid-template-columns: 1fr 1fr;
+
+    span:last-child {
+      display: none;
+    }
+  }
+}
+
+.typoRefRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  @include media-down(md) {
+    grid-template-columns: 1fr 1fr;
+
+    span:last-child {
+      display: none;
+    }
+  }
+}
+
+.typoRefTokenName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.typoRefValue {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.typoRefAlt {
+  color: var(--text-muted);
+  font-size: $font-size-xs;
+}
+
+.typoRefVar {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  word-break: break-all;
 }
 
 // ===========================

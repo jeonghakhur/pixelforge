@@ -94,6 +94,30 @@ export type WarningCode =
   | 'BLOCK_STYLE_MISMATCH'
   | 'UNKNOWN_STATE'
   | 'GENERIC_FALLBACK'
+  | 'TEXT_TOKEN_MISSING'
+  | 'TEXT_SIZE_BELOW_MIN'
+
+// ── Text 컴포넌트 전용 ────────────────────────────────────────────────
+
+export interface TypographySizeToken {
+  /** rem (e.g. '0.75rem') */
+  fontSize: string
+  /** rem (e.g. '1.125rem') */
+  lineHeight: string
+  /** display-* 스케일은 font-family-display, text-* 스케일은 font-family-body */
+  fontFamily: 'display' | 'body'
+}
+
+export interface TypographyPayload {
+  name: string
+  /** DB 조회 순서대로 정렬된 size 목록 (예: ['display-2xl', ..., 'text-xs']) */
+  sizes: string[]
+  /** ['regular', 'medium', 'semibold', 'bold'] */
+  weights: string[]
+  /** semantic text color slug 목록 (예: ['primary', 'secondary', ...]) */
+  colorTokens: string[]
+  sizeTokenMap: Record<string, TypographySizeToken>
+}
 
 export interface GeneratorWarning {
   code: WarningCode
