@@ -27,6 +27,38 @@ function extractSlug(name: string): string {
   return name.split('/').pop()!.toLowerCase().replace(/\s+/g, '-')
 }
 
+/**
+ * colors 토큰 slug → Text 컴포넌트 color prop 값
+ *
+ * tokens.css 변수명 규칙:
+ *   Colors/Text/text-quaternary-(500)  → --text-quaternary        (숫자 레이블 제거)
+ *   Colors/Text/text-secondary_hover   → --text-secondary_hover   (_는 state 구분자, 보존)
+ *   Colors/Text/text-primary_on-brand  → --text-primary_on-brand  (_는 보존)
+ *   Colors/Text/text-brand-tertiary    → --text-brand-tertiary     (-는 보존)
+ *
+ * Text generator: var(--text-{slug})
+ * 따라서 slug = tokens.css 변수명에서 "--text-" 제거한 값이어야 함.
+ *
+ * 처리 순서:
+ *   1. 마지막 경로 세그먼트 추출
+ *   2. "(숫자)" 레이블 제거 — CSS generator와 동일 규칙
+ *   3. 선두 "text-" 제거 — CSS generator가 text-text- → text- dedup하는 것과 동일
+ *   4. 공백 → "-", 괄호 제거 (유효 CSS ident)
+ *   5. "_"와 "-"는 보존 (tokens.css 규칙 그대로)
+ */
+function extractColorSlug(name: string): string {
+  const last = name.split('/').pop() ?? name
+  return last
+    .toLowerCase()
+    .replace(/\((\d+)\)/g, '')          // (500) 제거 — CSS generator line 161과 동일
+    .replace(/\(([^)]+)\)/g, '-$1')     // (alpha) → -alpha
+    .replace(/\s+/g, '-')               // 공백 → dash
+    .replace(/^text-/, '')              // 선두 "text-" 제거 (css-generator dedup과 대응)
+    .replace(/[^a-z0-9_-]/g, '')        // _와 -는 보존, 그 외 특수문자만 제거
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+}
+
 /** "12px" → "0.75rem", 이미 rem이면 그대로, 그 외 원본 반환 */
 function pxToRem(raw: string): string {
   const m = raw.match(/^(\d+(?:\.\d+)?)px$/)
@@ -64,10 +96,13 @@ export async function resolveTypographyPayload(): Promise<TypographyPayload> {
     lineHeightMap[extractSlug(r.name)] = pxToRem(r.raw ?? r.value)
   }
 
-  // color slug 목록
-  const colorTokens = colorRows.length > 0
-    ? colorRows.map(r => extractSlug(r.name))
+  // color slug 목록 — extractColorSlug로 CSS-safe ident 생성
+  const rawColorSlugs = colorRows.length > 0
+    ? colorRows.map(r => extractColorSlug(r.name))
     : ['primary', 'secondary', 'tertiary', 'quaternary', 'disabled', 'placeholder']
+
+  // 빈 slug 제거 + 중복 제거
+  const colorTokens = [...new Set(rawColorSlugs.filter(Boolean))]
 
   // size 목록 — SIZE_ORDER 기준 정렬, 없는 것 제외
   const foundSlugs = new Set(fontSizeRows.map(r => extractSlug(r.name)))

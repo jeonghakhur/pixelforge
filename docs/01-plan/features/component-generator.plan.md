@@ -314,3 +314,35 @@ Button 제너레이터의 `shared/` 유틸을 그대로 재사용:
 | CSS 변수 매핑 | 부분적 | 완전 (tokens.css 연동) |
 | legacy 필드 | 4개 잔존 | 제거 |
 | generator 추가 방법 | engine.ts 수정 필요 | registry.ts + 새 파일만 |
+
+---
+
+## 13. 미해결 과제 (Backlog)
+
+> 작업 중 발견된 구조적 제약. 다음 컴포넌트 생성기 작업 시 반드시 검토.
+
+### 13-1. PropsEditor — union props 편집 불가
+
+**현상**: PropsEditor에서 union 타입 prop(size, variant, color 등)은 이름 변경·기본값 편집만 가능하고, 값 목록(union 멤버) 자체는 수정할 수 없음. Button도 동일.
+
+**원인**: union 값 목록이 생성된 TSX의 `export type` 선언에서 파싱되며, 편집 후 재생성 파이프라인이 union 멤버 오버라이드를 지원하지 않음.
+
+**방향**: `ComponentOverrides`에 `unionValues?: string[]` 필드 추가 → 재생성 시 TSX의 union type 선언을 오버라이드로 교체.
+
+---
+
+### 13-2. Sandbox — props without default value 미표시
+
+**현상**: 생성된 컴포넌트 TSX에서 destructuring 기본값이 없는 prop(`truncate`, `align`, `wrap`, `srOnly` 등)은 Sandbox 컨트롤에 나타나지 않음.
+
+**원인**: `parseSandboxProps`가 destructuring `name = value` 패턴에서만 prop을 추출함. 기본값 없는 prop은 interface에서 별도로 추출해야 함.
+
+**방향**: `parseSandboxProps`에서 interface 파싱 단계를 보강 — boolean·인라인 union prop을 destructured와 독립적으로 추출.
+
+---
+
+### 13-3. Sandbox — 일반 함수 컴포넌트 props 미표시 (부분 해결)
+
+**현상**: `forwardRef` 없이 생성된 컴포넌트(Text 등)는 Sandbox props 파서가 `}, ref` 패턴을 찾지 못해 props를 추출하지 못함.
+
+**상태**: `}, ref` + `}: TypeProps` 두 패턴 모두 지원하도록 수정 완료 (2026-04-16). 단, 기본값 없는 props는 13-2 이슈로 여전히 미표시.

@@ -2,4 +2,4 @@
 export * from './AvatarImage';
 export * from './Button';
 export * from './ButtonDestructive';
-export * from './Buttons/Button';
+export * from './Text';

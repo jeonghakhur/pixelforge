@@ -47,18 +47,25 @@ function parseEditorProps(tsx: string): EditorPropDef[] {
     seen.add(propName);
 
     if (typeDecls.has(typeName)) {
+      // 선언된 유니온 타입: TextSize, ButtonVariant 등
       props.push({ name: propName, kind: 'union', values: typeDecls.get(typeName) });
+    } else if (/^'[^']+'(\s*\|\s*'[^']+')+$/.test(typeName)) {
+      // 인라인 유니온 리터럴: 'left' | 'center' | 'right'
+      const values = typeName.split('|').map(s => s.trim().replace(/'/g, '').replace(/"/g, ''));
+      props.push({ name: propName, kind: 'union', values });
     } else if (typeName === 'ReactNode') {
       props.push({ name: propName, kind: 'node' });
     } else if (typeName === 'boolean') {
       props.push({ name: propName, kind: 'boolean' });
-    } else if (typeName === 'string') {
+    } else if (typeName === 'string' || typeName === 'React.ElementType') {
       props.push({ name: propName, kind: 'string' });
     }
   }
 
-  // 3. destructuring에서 defaultValue 추출
-  const blockMatch = tsx.match(/\(\s*\{([\s\S]*?)\},\s*\n\s*ref/);
+  // 3. destructuring에서 defaultValue 추출 (forwardRef 패턴 + 일반 함수 패턴)
+  const blockMatch =
+    tsx.match(/\(\s*\{([\s\S]*?)\},\s*\n\s*ref/) ??
+    tsx.match(/\(\s*\{([\s\S]*?)\}\s*:\s*\w+Props\s*\)/);
   if (blockMatch) {
     const defaults = new Map<string, string>();
     for (const l of blockMatch[1].split('\n')) {
@@ -107,7 +114,7 @@ export default function PropsEditor({
   // 컴포넌트명 (override > original)
   const displayName = overrides.name ?? componentName;
 
-  // baseProps와 overrides를 병합하여 화면에 표시 (union 제외)
+  // baseProps와 overrides를 병합하여 화면에 표시 (union 제외 — 값 목록 편집 미지원)
   const displayProps = baseProps
     .filter(base => base.kind !== 'union')
     .map(base => {

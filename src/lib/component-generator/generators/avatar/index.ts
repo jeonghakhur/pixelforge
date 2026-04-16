@@ -30,9 +30,11 @@ function buildAvatarCSS(name: string, s: AvatarStyles): string {
 
 /* ── Image ── */
 .image {
+  display: block;
   width: 100%;
-  background: var(--surface-secondary) center / cover no-repeat;
   aspect-ratio: 1 / 1;
+  object-fit: cover;         /* <img>에 적용 */
+  background: var(--bg-secondary); /* placeholder <div>에 적용 */
 }
 
 /* ── Shape ── */
@@ -78,53 +80,69 @@ function buildAvatarTSX(componentName: string, s: AvatarStyles): string {
   return `import styles from './${componentName}.module.css'
 import { forwardRef } from 'react'
 
-export interface ${componentName}Props extends React.HTMLAttributes<HTMLElement> {
-  /** 이미지 URL — 없으면 CSS placeholder 배경 사용 */
-  src?: string
+export type ${componentName}Shape = 'square' | 'circle';
+export type ${componentName}Size = 'sm' | 'md' | 'lg';
+
+export interface ${componentName}Props extends Omit<React.HTMLAttributes<HTMLElement>, 'role'> {
+  /** 이미지 URL — https:// 또는 http:// URL만 허용 */
+  src?: string;
   /** 표시 이름 (Name 텍스트) */
-  name?: string
-  /** 직책/출처 (Source 텍스트) */
-  role?: string
+  displayName?: string;
+  /** 직책/출처 텍스트 */
+  jobTitle?: string;
   /** 이미지 형태 */
-  shape?: 'square' | 'circle'
+  shape?: ${componentName}Shape;
   /** 이미지 크기 (sm: 160px / md: 240px / lg: 320px) */
-  size?: 'sm' | 'md' | 'lg'
+  size?: ${componentName}Size;
 }
+
+const isSafeUrl = (url?: string): url is string =>
+  !!url && /^https?:\\/\\//i.test(url.trim())
 
 export const ${componentName} = forwardRef<HTMLElement, ${componentName}Props>(
   (
     {
       src,
-      name,
-      role,
+      displayName,
+      jobTitle,
       shape = '${s.shape}',
       size = '${s.defaultSize}',
-      className = '',
+      className,
       ...props
     },
     ref,
-  ) => (
-    <figure
-      ref={ref}
-      data-shape={shape}
-      data-size={size}
-      className={\`\${styles.root}\${className ? \` \${className}\` : ''}\`}
-      {...props}
-    >
-      <div
-        className={styles.image}
-        style={src ? { backgroundImage: \`url(\${src})\` } : undefined}
-        role="img"
-        aria-label={name}
-      />
-      {(name || role) && (
-        <figcaption className={styles.caption}>
-          {name && <span className={styles.name}>{name}</span>}
-          {role && <span className={styles.source}>{role}</span>}
-        </figcaption>
-      )}
-    </figure>
-  ),
+  ) => {
+    const hasCaption = displayName || jobTitle
+    const altText = displayName || jobTitle || ''
+
+    return (
+      <figure
+        ref={ref}
+        data-shape={shape}
+        data-size={size}
+        className={[styles.root, className].filter(Boolean).join(' ')}
+        {...props}
+      >
+        {isSafeUrl(src) ? (
+          <img
+            src={src}
+            alt={altText}
+            loading="lazy"
+            decoding="async"
+            className={styles.image}
+          />
+        ) : (
+          <div className={styles.image} aria-hidden="true" />
+        )}
+        {hasCaption && (
+          <figcaption className={styles.caption}>
+            {displayName && <span className={styles.name}>{displayName}</span>}
+            {jobTitle && <span className={styles.source}>{jobTitle}</span>}
+          </figcaption>
+        )}
+      </figure>
+    )
+  },
 )
 
 ${componentName}.displayName = '${componentName}'

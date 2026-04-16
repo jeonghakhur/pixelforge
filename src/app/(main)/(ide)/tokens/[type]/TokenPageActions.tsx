@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteTokensByTypeAction } from '@/lib/actions/tokens';
+import { generateTextComponentAction } from '@/lib/actions/components';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
 import Button from '@/components/common/Button';
@@ -21,9 +22,30 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cssPreviewOpen, setCssPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const typeConfig = TOKEN_TYPE_MAP[type];
+
+  const handleGenerateText = async () => {
+    setGenerating(true);
+    const result = await generateTextComponentAction();
+    setGenerating(false);
+
+    if (result.error) {
+      setToasts((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), variant: 'danger' as const, message: result.error! },
+      ]);
+    } else {
+      const label = result.regenerated ? 'Text 컴포넌트가 재생성되었습니다.' : 'Text 컴포넌트가 생성되었습니다.';
+      setToasts((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), variant: 'success' as const, message: label },
+      ]);
+      router.push(`/components/${result.component?.name ?? 'Text'}`);
+    }
+  };
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -38,6 +60,20 @@ export default function TokenPageActions({ type, count }: TokenPageActionsProps)
 
   return (
     <>
+      {type === 'typography' && (
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon="solar:cpu-bolt-linear"
+          onClick={handleGenerateText}
+          loading={generating}
+          disabled={generating}
+          aria-label="Typography 토큰으로 Text 컴포넌트 생성"
+        >
+          컴포넌트 생성
+        </Button>
+      )}
+
       <Button
         variant="secondary"
         size="sm"
