@@ -1,0 +1,397 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+// ── 페이지 레이아웃 ─────────────────────────────────────────────────
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 6);
+  padding: map-get($spacers, 6);
+  min-height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: map-get($spacers, 4);
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 1);
+}
+
+.eyebrow {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-semibold;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.description {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-shrink: 0;
+  padding-top: map-get($spacers, 1);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 3px map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-primary);
+  border-radius: $border-radius;
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+}
+
+.pathBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 3px map-get($spacers, 2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-primary);
+  border-radius: $border-radius;
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  font-family: monospace;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legacyWarning {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: $border-radius-lg;
+  font-size: $font-size-sm;
+  color: #fbbf24;
+}
+
+// ── 이미지 그리드 ───────────────────────────────────────────────────
+
+.gridToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gridCount {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+}
+
+.deleteAllBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 4px map-get($spacers, 3);
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: $border-radius;
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: map-get($spacers, 4);
+}
+
+.imageCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  border-radius: $border-radius-lg;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.imagePreview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+  border-radius: $border-radius;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.previewActions {
+  position: absolute;
+  top: map-get($spacers, 2);
+  right: map-get($spacers, 2);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.imageCard:hover .previewActions {
+  opacity: 1;
+}
+
+.imageThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.imageMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.imageName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imageInfo {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+}
+
+.imageFile {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.imageScale {
+  flex-shrink: 0;
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+}
+
+.previewBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.copyBtn {
+  @extend .previewBtn;
+  color: #d4d4d4;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  &.copyBtnSuccess {
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.4);
+  }
+}
+
+.deleteBtn {
+  @extend .previewBtn;
+  color: #d4d4d4;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+// ── 빈 상태 ─────────────────────────────────────────────────────────
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: map-get($spacers, 3);
+  padding: map-get($spacers, 8) 0;
+  color: var(--text-tertiary);
+  font-size: $font-size-sm;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.emptyHint {
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+// ── 라이트박스 ──────────────────────────────────────────────────────
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: map-get($spacers, 4);
+}
+
+.lightboxInner {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+  background: var(--bg-primary, #0a0a0a);
+  border: 1px solid var(--border-primary);
+  border-radius: $border-radius-xl;
+  padding: map-get($spacers, 4);
+  max-width: 80vw;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.lightboxHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+}
+
+.lightboxTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.lightboxActions {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+}
+
+.lightboxBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 1);
+  padding: 4px map-get($spacers, 3);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-primary);
+  border-radius: $border-radius;
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
+}
+
+.lightboxClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: $border-radius;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.lightboxImage {
+  max-width: 100%;
+  max-height: calc(90vh - 120px);
+  object-fit: contain;
+  border-radius: $border-radius;
+}
+
+.lightboxFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 3);
+}
+
+.lightboxUrl {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

@@ -2,9 +2,31 @@
 
 import { getFigmaToken, setFigmaToken } from '@/lib/config';
 import { db } from '@/lib/db';
-import { projects } from '@/lib/db/schema';
+import { projects, appSettings } from '@/lib/db/schema';
 import { extractFileKey } from '@/lib/figma/api';
 import { eq, desc } from 'drizzle-orm';
+import { IMAGE_STORAGE_DEFAULT } from '@/lib/constants/images';
+
+export async function getImageStoragePath(): Promise<string> {
+  const row = db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, 'image_storage_path'))
+    .get();
+  return row?.value ?? IMAGE_STORAGE_DEFAULT;
+}
+
+export async function saveImageStoragePath(storagePath: string): Promise<{ error: string | null }> {
+  const trimmed = storagePath.trim().replace(/\/+$/, '');
+  if (!trimmed) return { error: '경로를 입력해주세요.' };
+
+  const existing = db.select().from(appSettings).where(eq(appSettings.key, 'image_storage_path')).get();
+  if (existing) {
+    db.update(appSettings).set({ value: trimmed }).where(eq(appSettings.key, 'image_storage_path')).run();
+  } else {
+    db.insert(appSettings).values({ key: 'image_storage_path', value: trimmed }).run();
+  }
+  return { error: null };
+}
 
 interface SaveTokenResult {
   error: string | null;

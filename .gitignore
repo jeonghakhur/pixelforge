@@ -38,6 +38,8 @@ yarn-error.log*
 
 # pixelforge local data
 .pixelforge/
+data/
+public/plugin-images/
 
 # typescript
 *.tsbuildinfo

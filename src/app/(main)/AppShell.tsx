@@ -18,6 +18,7 @@ function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/components')) return 'components';
   if (pathname.startsWith('/screens')) return 'screens';
   if (pathname.startsWith('/diff')) return 'diff';
+  if (pathname.startsWith('/images')) return 'images';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/admin')) return 'admin';
   return 'home';
@@ -177,6 +178,9 @@ export default function AppShell({ children, userRole }: { children: React.React
         break;
       case 'diff':
         router.push('/diff');
+        break;
+      case 'images':
+        router.push('/images');
         break;
       case 'settings':
         router.push('/settings');
