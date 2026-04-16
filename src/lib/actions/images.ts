@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { syncPayloads } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -65,10 +66,12 @@ export async function deleteImageAction(fileName: string): Promise<{ error: stri
   // 구형 포맷에서 target이 없으면 DB 업데이트 없이 파일만 삭제하고 종료
   if (!target) return { error: null };
 
-  // ── DB 메타데이터 업데이트 (해당 항목 제거) ───────────────────────
+  // ── DB 메타데이터 업데이트 (해당 항목 제거, contentHash도 갱신) ────
   const updated = images.filter((img) => img.fileName !== fileName);
+  const updatedData = JSON.stringify(updated);
+  const updatedHash = crypto.createHash('sha256').update(updatedData).digest('hex');
   db.update(syncPayloads)
-    .set({ data: JSON.stringify(updated) })
+    .set({ data: updatedData, contentHash: updatedHash })
     .where(eq(syncPayloads.id, payload.id))
     .run();
 
@@ -121,10 +124,12 @@ export async function deleteAllImagesAction(): Promise<{ error: string | null; d
     } catch { /* 무시 */ }
   }
 
-  // ── DB 메타데이터 초기화 ──────────────────────────────────────────
+  // ── DB 메타데이터 초기화 (contentHash도 갱신해야 재전송 시 hash 충돌 방지) ──
   if (payload) {
+    const emptyData = JSON.stringify([]);
+    const emptyHash = crypto.createHash('sha256').update(emptyData).digest('hex');
     db.update(syncPayloads)
-      .set({ data: JSON.stringify([]) })
+      .set({ data: emptyData, contentHash: emptyHash })
       .where(eq(syncPayloads.id, payload.id))
       .run();
   }
