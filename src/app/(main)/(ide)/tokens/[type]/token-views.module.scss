@@ -1555,3 +1555,103 @@
   padding: map-get($spacers, 4);
   margin: 0;
 }
+
+// ===========================
+// GradientList
+// ===========================
+.gradientGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: map-get($spacers, 4);
+}
+
+.gradientCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--colors-neutral-500);
+  border-radius: $border-radius-lg;
+
+  &:hover .gradientDeleteBtn {
+    opacity: 1;
+  }
+}
+
+.gradientPreview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: $border-radius-lg;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gradientMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.gradientStopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.gradientStopLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.gradientColorRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.gradientHex {
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.gradientAngle {
+  font-size: $font-size-xs;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.gradientNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 2);
+}
+
+.gradientName {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+  word-break: break-all;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.gradientDeleteBtn {
+  position: absolute;
+  top: map-get($spacers, 3);
+  right: map-get($spacers, 3);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: $border-radius;
+}

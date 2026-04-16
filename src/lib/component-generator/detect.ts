@@ -11,6 +11,7 @@ export function resolveType(payload: NormalizedPayload): string {
   const { detectedType, name } = payload
 
   if (/button/i.test(name))               return 'button'
+  if (/avatar/i.test(name))               return 'avatar'
   if (/badge|chip|tag/i.test(name))        return 'badge'
   if (/input|field|textarea/i.test(name))  return 'input'
   if (/card|panel/i.test(name))            return 'card'
@@ -20,12 +21,13 @@ export function resolveType(payload: NormalizedPayload): string {
   return detectedType
 }
 
-export type HtmlElement = 'button' | 'span' | 'input' | 'article' | 'a' | 'div'
+export type HtmlElement = 'button' | 'span' | 'input' | 'article' | 'figure' | 'a' | 'div'
 
 /** 컴포넌트 타입 → HTML 요소 */
 export function resolveElement(resolvedType: string): HtmlElement {
   switch (resolvedType) {
     case 'button':  return 'button'
+    case 'avatar':  return 'figure'
     case 'badge':   return 'span'
     case 'input':   return 'input'
     case 'card':    return 'article'

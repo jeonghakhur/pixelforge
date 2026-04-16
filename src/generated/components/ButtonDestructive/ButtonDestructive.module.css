@@ -1,0 +1,296 @@
+/**
+ * ButtonDestructive.module.css
+ * source: Figma COMPONENT_SET variants data
+ * size(xs|sm|md|lg|xl), hierarchy(Primary|Secondary|Tertiary|Link), state(Default|Hover|Focused|Disabled|Loading), icon only(False|True)
+ */
+
+/* ── Base ── */
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: var(--font-weight-semibold, 600);
+  white-space: nowrap;
+  font-family: inherit;
+  transition: opacity 150ms ease, transform 150ms ease, background 150ms ease;
+}
+
+/* ── Color scheme ── */
+.root[data-hierarchy='primary'] {
+  background: var(--bg-error-solid);
+  color: var(--text-white);
+  border: 2px solid rgba(255,255,255,0.12);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  border-radius: var(--radius-md, 8px);
+}
+
+.root[data-hierarchy='primary'][data-state='disabled'] {
+  opacity: 0.5;
+}
+
+.root[data-hierarchy='primary'][data-state='focused'] {
+  box-shadow: var(--focus-ring-error-shadow-xs-skeuomorphic);
+}
+
+.root[data-hierarchy='primary'][data-state='hover'] {
+  background: var(--bg-error-solid_hover);
+}
+
+.root[data-hierarchy='primary'] .iconSlot {
+  color: var(--fg-white);
+}
+
+.root[data-hierarchy='link'] {
+  color: var(--text-error-primary);
+}
+
+.root[data-hierarchy='link'][data-state='disabled'] {
+  opacity: 0.5;
+}
+
+.root[data-hierarchy='link'][data-state='focused'] {
+  box-shadow: var(--focus-ring-error);
+  border-radius: var(--radius-xs, 4px);
+}
+
+.root[data-hierarchy='link'][data-state='hover'] {
+  color: var(--text-error-primary_hover);
+}
+
+.root[data-hierarchy='link'] .iconSlot {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='link'][data-state='hover'] .iconSlot {
+  color: var(--fg-error-primary);
+}
+
+.root[data-hierarchy='tertiary'] {
+  color: var(--text-error-primary);
+  border-radius: var(--radius-md, 8px);
+}
+
+.root[data-hierarchy='tertiary'][data-state='disabled'] {
+  opacity: 0.5;
+}
+
+.root[data-hierarchy='tertiary'][data-state='focused'] {
+  background: var(--bg-primary);
+  box-shadow: var(--focus-ring-error);
+}
+
+.root[data-hierarchy='tertiary'][data-state='hover'] {
+  background: var(--bg-error-primary);
+  color: var(--text-error-primary_hover);
+}
+
+.root[data-hierarchy='tertiary'][data-state='loading'] {
+  background: var(--bg-error-primary);
+}
+
+.root[data-hierarchy='tertiary'] .iconSlot {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='tertiary'][data-state='hover'] .iconSlot {
+  color: var(--fg-error-primary);
+}
+
+.root[data-hierarchy='secondary'] {
+  background: var(--bg-primary);
+  color: var(--text-error-primary);
+  border: 1px solid var(--border-error_subtle);
+  box-shadow: var(--shadow-xs-skeuomorphic);
+  border-radius: var(--radius-md, 8px);
+}
+
+.root[data-hierarchy='secondary'][data-state='disabled'] {
+  box-shadow: var(--shadow-xs);
+  opacity: 0.5;
+}
+
+.root[data-hierarchy='secondary'][data-state='focused'] {
+  box-shadow: var(--focus-ring-error-shadow-xs-skeuomorphic);
+}
+
+.root[data-hierarchy='secondary'][data-state='hover'] {
+  background: var(--bg-error-primary);
+  color: var(--text-error-primary_hover);
+}
+
+.root[data-hierarchy='secondary'][data-state='loading'] {
+  background: var(--bg-error-primary);
+}
+
+.root[data-hierarchy='secondary'] .iconSlot {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='secondary'][data-state='hover'] .iconSlot {
+  color: var(--fg-error-primary);
+}
+
+/* ── Size variants ── */
+.root[data-size='md'] {
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-text-sm, 0.875rem);
+  line-height: var(--line-height-text-sm, 1.25rem);
+}
+
+.root[data-size='lg'] {
+  padding: 10px var(--spacing-xl) 10px var(--spacing-xl);
+  border-radius: var(--radius-md, 8px);
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-text-md, 1rem);
+  line-height: var(--line-height-text-md, 1.5rem);
+}
+
+.root[data-size='xl'] {
+  padding: var(--spacing-lg) 18px var(--spacing-lg) 18px;
+  border-radius: var(--radius-md, 8px);
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-text-md, 1rem);
+  line-height: var(--line-height-text-md, 1.5rem);
+}
+
+.root[data-size='sm'] {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md, 8px);
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-text-sm, 0.875rem);
+  line-height: var(--line-height-text-sm, 1.25rem);
+}
+
+.root[data-size='xs'] {
+  padding: var(--spacing-sm) 10px var(--spacing-sm) 10px;
+  border-radius: var(--radius-md, 8px);
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-text-sm, 0.875rem);
+  line-height: var(--line-height-text-sm, 1.25rem);
+}
+
+/* ── No-padding overrides (Link 계열) ── */
+.root[data-hierarchy='link'] {
+  padding: 0;
+  border-radius: 0;
+}
+
+
+/* ── Icon Only ── */
+.root[data-icon-only] {
+  gap: 0;
+}
+
+.root[data-icon-only][data-size='md'] {
+  padding: 10px;
+}
+
+.root[data-icon-only][data-size='lg'] {
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
+}
+
+.root[data-icon-only][data-size='xl'] {
+  padding: 14px;
+}
+
+.root[data-icon-only][data-size='sm'] {
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-md);
+}
+
+.root[data-icon-only][data-size='xs'] {
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-md);
+}
+
+/* ── State ── */
+.root[data-state='disabled'] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.root[data-state='loading'] {
+  pointer-events: none;
+}
+
+/* ── Inner elements ── */
+.iconSlot {
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+
+.textWrapper {
+  display: flex;
+  padding: 0 var(--spacing-xxs);
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Icon size per variant ── */
+.root[data-size='md'] .iconSlot {
+  width: 20px;
+  height: 20px;
+}
+
+.root[data-size='lg'] .iconSlot {
+  width: 20px;
+  height: 20px;
+}
+
+.root[data-size='xl'] .iconSlot {
+  width: 20px;
+  height: 20px;
+}
+
+.root[data-size='sm'] .iconSlot {
+  width: 20px;
+  height: 20px;
+}
+
+.root[data-size='xs'] .iconSlot {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Loading spinner colors ── */
+.root[data-hierarchy='primary'][data-state='loading'] .loadingLine {
+  color: var(--fg-white);
+}
+
+.root[data-hierarchy='primary'][data-state='loading'] .loadingTrack {
+  color: var(--fg-white);
+  opacity: 0.3;
+}
+
+.root[data-hierarchy='link'][data-state='loading'] .loadingLine {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='link'][data-state='loading'] .loadingTrack {
+  color: var(--fg-error-secondary);
+  opacity: 0.3;
+}
+
+.root[data-hierarchy='tertiary'][data-state='loading'] .loadingLine {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='tertiary'][data-state='loading'] .loadingTrack {
+  color: var(--fg-error-secondary);
+  opacity: 0.3;
+}
+
+.root[data-hierarchy='secondary'][data-state='loading'] .loadingLine {
+  color: var(--fg-error-secondary);
+}
+
+.root[data-hierarchy='secondary'][data-state='loading'] .loadingTrack {
+  color: var(--fg-error-secondary);
+  opacity: 0.3;
+}

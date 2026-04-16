@@ -15,6 +15,31 @@ function deleteTokensCss() {
   try { fs.unlinkSync(path.join(process.cwd(), 'public', 'css', 'tokens.css')); } catch { /* 없으면 무시 */ }
 }
 
+async function regenerateTokensCss(projectId: string): Promise<void> {
+  try {
+    const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+    const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
+    initGeneratorConfig(await getGeneratorConfig());
+
+    const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
+    const allTokenRows = db
+      .select()
+      .from(tokens)
+      .where(eq(tokens.projectId, projectId))
+      .all() as TokenRow[];
+
+    if (allTokenRows.length === 0) {
+      deleteTokensCss();
+      return;
+    }
+
+    const css = generateAllCssCode(allTokenRows);
+    const cssDir = path.join(process.cwd(), 'public', 'css');
+    fs.mkdirSync(cssDir, { recursive: true });
+    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+  } catch { /* CSS 재생성 실패 시 무시 */ }
+}
+
 // ─────────────────────────────────────────────────────────
 // 활성 프로젝트 관리 (단일 프로젝트 원칙)
 // ─────────────────────────────────────────────────────────
@@ -155,6 +180,12 @@ export interface TokenSummary {
   lastExtracted: string | null;
 }
 
+// container/width는 DB에서 type='spacing'으로 저장되어 collection_name 기반으로 카운트
+const COLLECTION_COUNT_MAP: Record<string, string> = {
+  container: '5. Containers',
+  width: '4. Widths',
+};
+
 export async function getTokenSummary(): Promise<TokenSummary> {
   const project = getActiveProject();
   const counts = project
@@ -171,6 +202,20 @@ export async function getTokenSummary(): Promise<TokenSummary> {
   const countMap: Record<string, number> = {};
   for (const row of counts) {
     countMap[row.type] = row.count;
+  }
+
+  // collection_name 기반 타입은 실제 페이지와 동일한 기준으로 카운트 덮어씌우기
+  if (project) {
+    for (const [type, collectionName] of Object.entries(COLLECTION_COUNT_MAP)) {
+      const result = db.select({ count: sql<number>`count(*)` })
+        .from(tokens)
+        .where(and(
+          eq(tokens.projectId, project.id),
+          eq(tokens.collectionName, collectionName),
+        ))
+        .get();
+      countMap[type] = result?.count ?? 0;
+    }
   }
 
   const lastHistory = db.select({
@@ -226,8 +271,9 @@ export async function getRecentHistoriesAction(limit = 8): Promise<HistoryEntry[
 // ===========================
 export async function deleteTokenAction(id: string): Promise<{ error: string | null }> {
   try {
+    const project = getActiveProject();
     db.delete(tokens).where(eq(tokens.id, id)).run();
-
+    if (project) await regenerateTokensCss(project.id);
     return { error: null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패' };
@@ -265,7 +311,7 @@ export async function deleteTokensByTypeAction(
     ).run();
 
     db.delete(tokens).where(and(eq(tokens.projectId, project.id), eq(tokens.type, type))).run();
-
+    await regenerateTokensCss(project.id);
     return { error: null, deleted: rows.length };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패', deleted: 0 };

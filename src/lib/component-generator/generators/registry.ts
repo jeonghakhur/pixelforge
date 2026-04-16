@@ -8,6 +8,7 @@
 import type { NormalizedPayload, GeneratorOutput } from '../types'
 import type { ComponentOverrides } from '../props-override'
 import { generateButton } from './button'
+import { generateAvatar } from './avatar'
 
 export interface GeneratorContext {
   element: string
@@ -21,6 +22,7 @@ export type GeneratorFn = (
 
 const GENERATORS: Record<string, GeneratorFn> = {
   button: generateButton,
+  avatar: generateAvatar,
 }
 
 export function getGenerator(resolvedType: string): GeneratorFn | null {

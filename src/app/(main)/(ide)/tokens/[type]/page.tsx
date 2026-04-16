@@ -11,6 +11,7 @@ import TypographyList from './TypographyList';
 import SpacingList from './SpacingList';
 import RadiusList from './RadiusList';
 import ShadowList from './ShadowList';
+import GradientList from './GradientList';
 import GenericTokenList from './GenericTokenList';
 import TokenPageActions from './TokenPageActions';
 import TokenCssSection from './TokenCssSection';
@@ -89,7 +90,8 @@ export default async function TokenPage({ params }: TokenPageProps) {
             {(type === 'container' || type === 'width')  && <SpacingList tokens={tokenRows} primitives={primitives} />}
             {type === 'radius'                           && <RadiusList tokens={tokenRows} />}
             {type === 'shadow'                           && <ShadowList tokens={tokenRows} />}
-            {!['color', 'typography', 'spacing', 'layout-spacing', 'container', 'width', 'radius', 'shadow'].includes(type) && (
+            {type === 'gradient'                         && <GradientList tokens={tokenRows} />}
+            {!['color', 'typography', 'spacing', 'layout-spacing', 'container', 'width', 'radius', 'shadow', 'gradient'].includes(type) && (
               <GenericTokenList tokens={tokenRows} />
             )}
           </div>
