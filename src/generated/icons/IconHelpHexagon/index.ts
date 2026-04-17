@@ -1,1 +1,0 @@
-export { IconHelpHexagon } from './IconHelpHexagon';

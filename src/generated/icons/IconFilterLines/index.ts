@@ -1,1 +1,0 @@
-export { IconFilterLines } from './IconFilterLines';

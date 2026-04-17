@@ -1,1 +1,0 @@
-export { IconArchive } from './IconArchive';

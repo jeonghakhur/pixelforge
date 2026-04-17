@@ -1,1 +1,0 @@
-export { IconMessageAlertSquare } from './IconMessageAlertSquare';

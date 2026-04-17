@@ -1,1 +1,0 @@
-export { IconInfoOctagon } from './IconInfoOctagon';

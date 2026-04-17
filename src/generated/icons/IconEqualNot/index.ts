@@ -1,1 +1,0 @@
-export { IconEqualNot } from './IconEqualNot';

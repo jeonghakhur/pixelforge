@@ -1,1 +1,0 @@
-export { IconUsersEdit } from './IconUsersEdit';

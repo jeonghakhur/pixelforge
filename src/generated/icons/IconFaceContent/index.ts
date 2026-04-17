@@ -1,1 +1,0 @@
-export { IconFaceContent } from './IconFaceContent';

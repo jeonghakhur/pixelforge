@@ -1,1 +1,0 @@
-export { IconAnnotationPlus } from './IconAnnotationPlus';

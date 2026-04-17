@@ -1,1 +1,0 @@
-export { IconHelpSquare } from './IconHelpSquare';

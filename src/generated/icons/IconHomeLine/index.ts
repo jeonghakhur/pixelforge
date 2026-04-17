@@ -1,1 +1,0 @@
-export { IconHomeLine } from './IconHomeLine';

@@ -1,1 +1,0 @@
-export { IconDotsGrid } from './IconDotsGrid';

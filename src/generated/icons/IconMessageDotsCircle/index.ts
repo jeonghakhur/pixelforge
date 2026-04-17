@@ -1,1 +1,0 @@
-export { IconMessageDotsCircle } from './IconMessageDotsCircle';

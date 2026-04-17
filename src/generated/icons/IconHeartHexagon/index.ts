@@ -1,1 +1,0 @@
-export { IconHeartHexagon } from './IconHeartHexagon';

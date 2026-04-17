@@ -1,1 +1,0 @@
-export { IconMessageCheckCircle } from './IconMessageCheckCircle';

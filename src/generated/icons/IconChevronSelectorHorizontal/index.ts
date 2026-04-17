@@ -1,1 +1,0 @@
-export { IconChevronSelectorHorizontal } from './IconChevronSelectorHorizontal';

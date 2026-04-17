@@ -1,1 +1,0 @@
-export { IconAnnotationQuestion } from './IconAnnotationQuestion';

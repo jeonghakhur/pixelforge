@@ -1,1 +1,0 @@
-export { IconArrowBlockUp } from './IconArrowBlockUp';

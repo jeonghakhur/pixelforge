@@ -1,1 +1,0 @@
-export { IconVirus } from './IconVirus';

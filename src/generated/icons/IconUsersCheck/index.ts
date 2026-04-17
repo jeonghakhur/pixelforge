@@ -1,1 +1,0 @@
-export { IconUsersCheck } from './IconUsersCheck';

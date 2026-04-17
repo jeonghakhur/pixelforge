@@ -1,1 +1,0 @@
-export { IconFaceNeutral } from './IconFaceNeutral';

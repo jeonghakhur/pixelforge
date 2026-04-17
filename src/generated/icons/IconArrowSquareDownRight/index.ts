@@ -1,1 +1,0 @@
-export { IconArrowSquareDownRight } from './IconArrowSquareDownRight';

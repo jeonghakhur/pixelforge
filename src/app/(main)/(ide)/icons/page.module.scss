@@ -56,6 +56,27 @@
 
 // ── 헤더 액션 버튼 ──────────────────────────────────────────────────
 
+.addIconBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: map-get($spacers, 2) map-get($spacers, 3);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: $border-radius;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+  }
+}
+
 .deleteAllBtn {
   display: inline-flex;
   align-items: center;
@@ -139,6 +160,23 @@
   color: var(--text-muted);
   opacity: 0.5;
   flex-shrink: 0;
+}
+
+.categoryTabHidden {
+  opacity: 0.35;
+  border-style: dashed;
+  color: var(--text-muted);
+  text-decoration: line-through;
+
+  .categoryTabCount {
+    opacity: 0.5;
+  }
+
+  &:hover {
+    opacity: 0.55;
+    border-style: dashed;
+    color: var(--text-secondary);
+  }
 }
 
 .categoryTabDragging {
@@ -270,6 +308,8 @@
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
               border-color 0.2s ease,
               box-shadow 0.22s ease;

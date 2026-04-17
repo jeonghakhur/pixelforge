@@ -1,1 +1,0 @@
-export { IconChevronDownDouble } from './IconChevronDownDouble';

@@ -3,7 +3,7 @@ import { sqliteTable, text, integer, unique } from 'drizzle-orm/sqlite-core';
 export const syncPayloads = sqliteTable('sync_payloads', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull().references(() => projects.id),
-  type: text('type', { enum: ['tokens', 'icons', 'images', 'themes', 'components'] }).notNull(),
+  type: text('type').notNull(),
   version: integer('version').notNull().default(1),
   contentHash: text('content_hash').notNull(),
   data: text('data').notNull(),

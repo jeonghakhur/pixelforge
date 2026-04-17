@@ -1,1 +1,0 @@
-export { IconZapSquare } from './IconZapSquare';

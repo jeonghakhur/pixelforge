@@ -1,1 +1,0 @@
-export { IconBookmarkCheck } from './IconBookmarkCheck';

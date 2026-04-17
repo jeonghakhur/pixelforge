@@ -1,0 +1,429 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+  padding: map-get($spacers, 6);
+  max-width: 760px;
+  min-height: 100%;
+}
+
+// ── 뒤로가기 ────────────────────────────────────────────────────────
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: $font-size-sm;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+  align-self: flex-start;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+// ── 헤더 ─────────────────────────────────────────────────────────────
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: map-get($spacers, 2);
+}
+
+.eyebrow {
+  @include eyebrow-tag;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.title {
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: $line-height-snug;
+  margin: 0 0 map-get($spacers, 2);
+}
+
+.figmaName {
+  font-family: monospace;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+// ── 프리뷰 카드 ──────────────────────────────────────────────────────
+
+.previewCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-xl;
+  padding: map-get($spacers, 5);
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 4);
+}
+
+.previewTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.themeToggle {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $border-radius-pill;
+  padding: 2px;
+}
+
+.themeBtn {
+  background: none;
+  border: none;
+  border-radius: $border-radius-pill;
+  color: var(--text-muted);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  padding: map-get($spacers, 1) map-get($spacers, 3);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &.themeBtnActive {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
+}
+
+.sizeDisplay {
+  font-family: monospace;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+}
+
+.previewArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  background: var(--bg-base);
+  border-radius: $border-radius-lg;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.iconPlaceholder {
+  width: 48px;
+  height: 48px;
+  border-radius: $border-radius;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+// ── Controls ─────────────────────────────────────────────────────────
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: map-get($spacers, 3);
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+}
+
+.controlLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 3);
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.colorPresets {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.colorPresetBtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+
+  &.colorPresetBtnActive {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 99, 102, 241), 0.25);
+  }
+}
+
+.variantRow {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex-wrap: wrap;
+}
+
+.variantBtn {
+  padding: 3px map-get($spacers, 3);
+  border-radius: $border-radius;
+  border: 1px solid rgba(161, 161, 170, 0.3);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(161, 161, 170, 0.5);
+    color: var(--text-primary);
+  }
+
+  &.variantBtnActive {
+    background: rgba(var(--accent-rgb, 99, 102, 241), 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.colorInput {
+  width: 80px;
+  padding: 4px map-get($spacers, 2);
+  background: var(--bg-base);
+  border: 1px solid rgba(161, 161, 170, 0.4);
+  border-radius: $border-radius;
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: $font-size-xs;
+  outline: none;
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+
+  &:focus {
+    border-color: rgba(161, 161, 170, 0.8);
+  }
+}
+
+.sizeControl {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  flex: 1;
+}
+
+.sizeMin,
+.sizeMax {
+  font-family: monospace;
+  font-size: $font-size-xs;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sizeSlider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent, #6366f1);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+}
+
+// ── 섹션 카드 (공통) ─────────────────────────────────────────────────
+
+.sectionCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: $border-radius-xl;
+  padding: map-get($spacers, 4);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: map-get($spacers, 3);
+}
+
+.sectionTitle {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.copyBtnSuccess {
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.4);
+  }
+}
+
+// ── 코드 블록 ────────────────────────────────────────────────────────
+
+.codeBlock {
+  margin: 0;
+  padding: map-get($spacers, 3) map-get($spacers, 4);
+  background: var(--bg-base);
+  border-radius: $border-radius-lg;
+  overflow-x: auto;
+
+  code {
+    font-family: monospace;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre;
+  }
+}
+
+.codeBlockSvg code {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+// ── Props 테이블 ─────────────────────────────────────────────────────
+
+.propsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.propsTableHead {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: var(--text-muted);
+  text-align: left;
+  padding: map-get($spacers, 2) map-get($spacers, 3) map-get($spacers, 2) 0;
+  border-bottom: 1px solid var(--glass-border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.propsTableRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  td {
+    padding: map-get($spacers, 2) map-get($spacers, 3) map-get($spacers, 2) 0;
+    vertical-align: top;
+  }
+}
+
+.propName {
+  font-family: monospace;
+  font-size: $font-size-sm;
+  color: var(--accent, #6366f1);
+  white-space: nowrap;
+}
+
+.propType {
+  font-family: monospace;
+  font-size: $font-size-xs;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.propDefault {
+  font-family: monospace;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.propDesc {
+  font-size: $font-size-sm;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+// ── SVG 토글 ────────────────────────────────────────────────────────
+
+.svgToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+
+    .sectionTitle {
+      color: var(--text-primary);
+    }
+  }
+}

@@ -1,1 +1,0 @@
-export { IconInfoCircle } from './IconInfoCircle';

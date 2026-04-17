@@ -1,1 +1,0 @@
-export { IconPhoneHangUp } from './IconPhoneHangUp';

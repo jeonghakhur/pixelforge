@@ -71,6 +71,7 @@ export const AvatarAddButton = forwardRef<HTMLButtonElement, AvatarAddButtonProp
           viewBox={_viewBox[size]}
           fill="none"
           aria-hidden="true"
+          className={styles.iconSlot}
         >
           <path
             d={_pathData[size]}

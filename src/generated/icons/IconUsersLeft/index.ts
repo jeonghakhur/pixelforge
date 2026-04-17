@@ -1,1 +1,0 @@
-export { IconUsersLeft } from './IconUsersLeft';

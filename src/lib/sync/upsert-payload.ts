@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { projects, syncPayloads } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
-type SyncType = 'icons' | 'images' | 'themes' | 'components';
+type SyncType = string;
 
 export async function ensureProject(figmaFileKey: string, figmaFileName?: string) {
   let project = await db.select().from(projects).where(eq(projects.figmaKey, figmaFileKey)).get();

@@ -1,1 +1,0 @@
-export { IconSlashOctagon } from './IconSlashOctagon';

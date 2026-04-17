@@ -1,1 +1,0 @@
-export { IconBarChartSquareDown } from './IconBarChartSquareDown';

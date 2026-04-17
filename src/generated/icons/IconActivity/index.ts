@@ -1,1 +1,0 @@
-export { IconActivity } from './IconActivity';

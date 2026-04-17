@@ -26,8 +26,10 @@ export function runPipeline(raw: Record<string, unknown>, options?: PipelineOpti
     payload.name = options.overrides.name
   }
 
-  // 2. 타입 감지 — 플러그인 힌트 우선, 없으면 이름 패턴 폴백
-  const resolvedType = options?.componentType ?? resolveType(payload)
+  // 2. 타입 감지 — 이름 기반 전용 제너레이터 우선, 없을 때만 플러그인 힌트 사용
+  // (플러그인 detectedType이 'layout' 등 generic으로 전송돼도 이름 패턴이 button/avatar를 감지하면 우선 적용)
+  const nameType = resolveType(payload)
+  const resolvedType = getGenerator(nameType) ? nameType : (options?.componentType ?? nameType)
 
   // 3. 제너레이터 선택 (전용 > 폴백)
   const generator = getGenerator(resolvedType)

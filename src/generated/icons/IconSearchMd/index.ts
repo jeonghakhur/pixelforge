@@ -1,1 +1,0 @@
-export { IconSearchMd } from './IconSearchMd';

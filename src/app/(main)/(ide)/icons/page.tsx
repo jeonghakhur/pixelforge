@@ -1,12 +1,13 @@
 export const dynamic = 'force-dynamic';
 
 import { db } from '@/lib/db';
-import { syncPayloads, projects } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { projects } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { getActiveProjectId } from '@/lib/db/active-project';
 import { getIconOutputPath } from '@/lib/actions/settings';
+import { getAllIcons } from '@/lib/actions/icons';
 import { Icon } from '@iconify/react';
-import IconGrid, { type IconEntry } from './IconGrid';
+import IconGrid from './IconGrid';
 import IconPageActions from './IconPageActions';
 import styles from './page.module.scss';
 
@@ -30,23 +31,7 @@ export default async function IconsPage() {
     .where(eq(projects.id, projectId))
     .get();
 
-  const payload = db.select({ data: syncPayloads.data, version: syncPayloads.version, createdAt: syncPayloads.createdAt })
-    .from(syncPayloads)
-    .where(and(eq(syncPayloads.projectId, projectId), eq(syncPayloads.type, 'icons')))
-    .orderBy(desc(syncPayloads.version))
-    .limit(1)
-    .get();
-
-  let icons: IconEntry[] = [];
-  if (payload) {
-    try {
-      icons = JSON.parse(payload.data) as IconEntry[];
-    } catch {
-      icons = [];
-    }
-  }
-
-  const syncedAt = payload?.createdAt ? new Date((payload.createdAt as unknown as number) * 1000) : null;
+  const { icons, syncedAt } = await getAllIcons();
 
   return (
     <div className={styles.page}>
@@ -60,7 +45,10 @@ export default async function IconsPage() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <IconPageActions count={icons.length} />
+          <IconPageActions
+            count={icons.length}
+            sections={[...new Set(icons.map((i) => i.section).filter(Boolean) as string[])]}
+          />
         </div>
       </div>
 

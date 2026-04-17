@@ -1,17 +1,21 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useTransition, useCallback } from 'react';
+import { useState, useMemo, useEffect, useTransition, useCallback } from 'react';
 import * as GeneratedIcons from '@/generated/icons';
 import { Icon } from '@iconify/react';
 import { deleteIcon } from '@/lib/actions/icons';
 import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import Link from 'next/link';
 import styles from './page.module.scss';
 
 export interface IconEntry {
   name: string;
   svg: string;
   section?: string;
+  pascal?: string;
+  variants?: string[];
+  kebab?: string;
 }
 
 interface IconGridProps {
@@ -81,7 +85,11 @@ function IconCard({
   };
 
   return (
-    <div className={styles.iconCard} title={`Icon${componentName}`}>
+    <Link
+      href={`/icons/Icon${componentName}`}
+      className={styles.iconCard}
+      title={`Icon${componentName}`}
+    >
       <div className={styles.iconPreview}>
         <IconPreview componentName={componentName} />
       </div>
@@ -111,14 +119,14 @@ function IconCard({
         <button
           type="button"
           className={styles.actionBtn}
-          onClick={(e) => { e.stopPropagation(); onDeleteRequest(entry.name, componentName); }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDeleteRequest(entry.name, componentName); }}
           title="아이콘 삭제"
           aria-label="아이콘 삭제"
         >
           <Icon icon="solar:trash-bin-2-linear" width={13} height={13} />
         </button>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -128,11 +136,12 @@ interface CategoryNavProps {
   categories: string[];
   counts: Record<string, number>;
   order: string[];
+  hidden: Set<string>;
   onOrderChange: (next: string[]) => void;
-  onTabClick: (category: string) => void;
+  onToggle: (category: string) => void;
 }
 
-function CategoryNav({ categories, counts, order, onOrderChange, onTabClick }: CategoryNavProps) {
+function CategoryNav({ categories, counts, order, hidden, onOrderChange, onToggle }: CategoryNavProps) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
@@ -163,7 +172,6 @@ function CategoryNav({ categories, counts, order, onOrderChange, onTabClick }: C
     setDragOver(null);
   };
 
-  // 탭에 없는 카테고리(신규)는 뒤에 append
   const visibleOrder = [
     ...order.filter((c) => categories.includes(c)),
     ...categories.filter((c) => !order.includes(c)),
@@ -174,6 +182,7 @@ function CategoryNav({ categories, counts, order, onOrderChange, onTabClick }: C
       {visibleOrder.map((cat, index) => {
         const isDragging = dragFrom === index;
         const isOver = dragOver === index && dragFrom !== index;
+        const isHidden = hidden.has(cat);
         return (
           <button
             key={cat}
@@ -183,13 +192,15 @@ function CategoryNav({ categories, counts, order, onOrderChange, onTabClick }: C
             onDragOver={(e) => handleDragOver(e, index)}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            onClick={() => onTabClick(cat)}
+            onClick={() => onToggle(cat)}
             className={[
               styles.categoryTab,
+              isHidden ? styles.categoryTabHidden : '',
               isDragging ? styles.categoryTabDragging : '',
               isOver ? styles.categoryTabOver : '',
             ].filter(Boolean).join(' ')}
-            aria-label={`${cat} 섹션으로 이동`}
+            aria-pressed={!isHidden}
+            aria-label={`${cat} ${isHidden ? '표시' : '숨김'}`}
           >
             <Icon icon="solar:menu-dots-bold" width={10} height={10} className={styles.dragHandle} />
             <span className={styles.categoryTabName}>{cat}</span>
@@ -208,7 +219,7 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<{ figmaName: string; componentName: string } | null>(null);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
-  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const entries = useMemo(() => {
@@ -247,9 +258,13 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  const handleTabClick = useCallback((category: string) => {
-    const el = sectionRefs.current.get(category);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleToggle = useCallback((category: string) => {
+    setHiddenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
   }, []);
 
   const filtered = useMemo(() => {
@@ -262,10 +277,11 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
     );
   }, [entries, query]);
 
-  // 카테고리별 그룹 — categoryOrder 순서 반영
+  // 카테고리별 그룹 — categoryOrder 순서 반영, 숨김 카테고리 제외
   const orderedGroups = useMemo(() => {
     const map = new Map<string, typeof filtered>();
     for (const item of filtered) {
+      if (hiddenCategories.has(item.category)) continue;
       if (!map.has(item.category)) map.set(item.category, []);
       map.get(item.category)!.push(item);
     }
@@ -274,7 +290,7 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
       ...[...map.keys()].filter((c) => !categoryOrder.includes(c)),
     ];
     return ordered.map((c) => [c, map.get(c)!] as [string, typeof filtered]);
-  }, [filtered, categoryOrder]);
+  }, [filtered, categoryOrder, hiddenCategories]);
 
   const handleDeleteOne = () => {
     if (!deleteTarget) return;
@@ -292,8 +308,9 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
         categories={allCategories}
         counts={categoryCounts}
         order={categoryOrder}
+        hidden={hiddenCategories}
         onOrderChange={handleOrderChange}
-        onTabClick={handleTabClick}
+        onToggle={handleToggle}
       />
 
       {/* 검색 툴바 */}
@@ -326,10 +343,6 @@ export default function IconGrid({ icons, outputPath }: IconGridProps) {
             <section
               key={category}
               className={styles.categorySection}
-              ref={(el) => {
-                if (el) sectionRefs.current.set(category, el);
-                else sectionRefs.current.delete(category);
-              }}
             >
               <div className={styles.categoryHeader}>
                 <h2 className={styles.categoryTitle}>{category}</h2>

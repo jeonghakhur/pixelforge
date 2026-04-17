@@ -1,1 +1,0 @@
-export { IconFaceWink } from './IconFaceWink';

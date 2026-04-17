@@ -1,1 +1,0 @@
-export { IconFlipBackward } from './IconFlipBackward';

@@ -1,1 +1,0 @@
-export { IconMedicalCross } from './IconMedicalCross';

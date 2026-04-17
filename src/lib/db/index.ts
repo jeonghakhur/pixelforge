@@ -291,13 +291,13 @@ sqlite.exec(`
     ON token_type_configs(project_id);
 `);
 
-// ── sync_payloads CHECK constraint에 'tokens' 추가 ──
-function migrateSyncPayloadsType(): void {
+// ── sync_payloads CHECK constraint 제거 — icons:* 섹션별 타입 지원 ──
+function migrateSyncPayloadsDropCheck(): void {
   const row = sqlite.prepare(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='sync_payloads'`,
   ).get() as { sql: string } | undefined;
 
-  if (!row || row.sql.includes("'tokens'")) return; // 이미 포함됨
+  if (!row || !row.sql.includes('CHECK')) return; // 이미 제약 없음
 
   sqlite.pragma('foreign_keys = OFF');
   sqlite.exec(`
@@ -306,7 +306,7 @@ function migrateSyncPayloadsType(): void {
     CREATE TABLE sync_payloads_new (
       id           TEXT PRIMARY KEY,
       project_id   TEXT NOT NULL REFERENCES projects(id),
-      type         TEXT NOT NULL CHECK(type IN ('tokens','icons','images','themes','components')),
+      type         TEXT NOT NULL,
       version      INTEGER NOT NULL DEFAULT 1,
       content_hash TEXT NOT NULL,
       data         TEXT NOT NULL,
@@ -317,9 +317,13 @@ function migrateSyncPayloadsType(): void {
     ALTER TABLE sync_payloads_new RENAME TO sync_payloads;
     COMMIT;
   `);
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sync_payloads_project_type
+      ON sync_payloads(project_id, type, version);
+  `);
   sqlite.pragma('foreign_keys = ON');
 }
-migrateSyncPayloadsType();
+migrateSyncPayloadsDropCheck();
 
 // ── letter-spacing → typography 통합 마이그레이션 ────────────────
 // letter-spacing 토큰을 typography로 재분류하고 별도 메뉴 항목 삭제

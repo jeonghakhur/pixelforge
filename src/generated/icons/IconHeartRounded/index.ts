@@ -1,1 +1,0 @@
-export { IconHeartRounded } from './IconHeartRounded';

@@ -1,1 +1,0 @@
-export { IconMessageSmileSquare } from './IconMessageSmileSquare';

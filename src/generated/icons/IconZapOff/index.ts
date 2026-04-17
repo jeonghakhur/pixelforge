@@ -1,1 +1,0 @@
-export { IconZapOff } from './IconZapOff';

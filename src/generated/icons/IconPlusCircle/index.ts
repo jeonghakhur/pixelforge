@@ -1,1 +1,0 @@
-export { IconPlusCircle } from './IconPlusCircle';
