@@ -436,11 +436,15 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
                   {p.values.map((v) => `'${v}'`).join(' | ')}
                 </td>
                 <td>
-                  <Select
+                  <select
                     value={unionValues[p.name] ?? p.defaultValue}
-                    onValueChange={(v) => setUnionValues((prev) => ({ ...prev, [p.name]: v }))}
-                    options={p.values.map((v) => ({ value: v }))}
-                  />
+                    onChange={(e) => setUnionValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                    className={styles.propSelect}
+                  >
+                    {p.values.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
                 </td>
               </tr>
             ))}
