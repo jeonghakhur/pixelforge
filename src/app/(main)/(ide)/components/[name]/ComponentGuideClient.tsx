@@ -7,7 +7,6 @@ import { Icon } from '@iconify/react';
 // ⚠️ 아이콘 파일 경로가 바뀌면 이 import 경로만 수정하면 됩니다.
 import { Icon as ProjectIcon, type IconName } from '@/components/icon/Icon';
 import { deleteComponentAndRedirect } from '@/lib/actions/components'
-import Select from '@/components/common/Select';
 import { useUIStore } from '@/stores/useUIStore';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PropsEditor from './PropsEditor';
