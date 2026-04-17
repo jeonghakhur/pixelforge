@@ -1,0 +1,1 @@
+export { IconMessagePlusSquare } from './IconMessagePlusSquare';

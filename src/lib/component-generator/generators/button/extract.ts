@@ -68,8 +68,11 @@ export function extractChildTextColor(
   childStyles: Record<string, Record<string, string>>,
 ): string | null {
   for (const [key, cs] of Object.entries(childStyles)) {
-    if (ICON_CHILD_NAMES.has(key.toLowerCase())) continue
-    if (key.toLowerCase().includes('loading')) continue
+    const lower = key.toLowerCase()
+    if (ICON_CHILD_NAMES.has(lower)) continue
+    if (lower.includes('loading')) continue
+    if (lower.includes('tooltip')) continue
+    if (lower.includes('cursor')) continue
     if (cs.color) return mapValue(cs.color)
     if (cs['background-color']) return mapValue(cs['background-color'])
   }

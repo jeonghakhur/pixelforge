@@ -16,6 +16,7 @@ import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 function sectionFromPath(pathname: string): Section {
   if (pathname.startsWith('/tokens')) return 'tokens';
   if (pathname.startsWith('/components')) return 'components';
+  if (pathname.startsWith('/icons')) return 'icons';
   if (pathname.startsWith('/screens')) return 'screens';
   if (pathname.startsWith('/diff')) return 'diff';
   if (pathname.startsWith('/images')) return 'images';
@@ -33,8 +34,8 @@ function tabFromPath(pathname: string, section: Section): string {
     return '';
   }
   if (section === 'settings') {
-    const match = pathname.match(/^\/settings\/?(\w*)/);
-    return match && match[1] ? match[1] : 'general';
+    const match = pathname.match(/^\/settings\/(\w+)/);
+    return match ? match[1] : '';
   }
   return '';
 }
@@ -173,6 +174,9 @@ export default function AppShell({ children, userRole }: { children: React.React
       case 'components':
         router.push('/components');
         break;
+      case 'icons':
+        router.push('/icons');
+        break;
       case 'screens':
         router.push('/screens');
         break;
@@ -197,6 +201,8 @@ export default function AppShell({ children, userRole }: { children: React.React
       router.push(`/tokens/${tabId}`);
     } else if (activeSection === 'components') {
       router.push('/components');
+    } else if (activeSection === 'settings') {
+      router.push('/settings');
     }
   }, [router, activeSection, setTab]);
 

@@ -28,6 +28,44 @@
 
 ---
 
+## 0-1. Prop 이름 충돌 규칙
+
+Figma 레이어 이름을 그대로 prop 이름으로 쓰면 HTML 속성 또는 동일 컴포넌트 내 다른 prop과 충돌하는 경우가 있다.  
+**충돌 시 Figma 이름 대신 의미 기반 이름을 사용하고, 그 사유를 `index.ts` 주석에 명시한다.**
+
+### 충돌 유형 1 — HTML 속성 충돌
+
+`HTMLAttributes<HTMLElement>` (또는 `HTMLButtonElement` 등)에 이미 존재하는 이름은 사용하지 않는다.  
+spread `{...props}` 시 의도치 않은 HTML 속성으로 넘어가기 때문이다.
+
+| Figma 레이어 | 충돌 원인 | 대체 이름 |
+|-------------|-----------|-----------|
+| `Name` | `HTMLAttributes.name` (input, form 등의 HTML 속성) | `displayName` |
+
+> **확인 방법**: 쓰려는 이름이 `lib.dom.d.ts`의 `HTMLAttributes` 또는 대상 요소 타입에 정의되어 있으면 충돌.
+
+### 충돌 유형 2 — 동일 컴포넌트 내 prop 이름 충돌
+
+`componentProperties`에서 추출한 boolean prop 이름과 텍스트 레이어 이름이 동일하면 인터페이스에서 타입 충돌이 발생한다.
+
+| Figma 레이어 | 충돌 원인 | 대체 이름 |
+|-------------|-----------|-----------|
+| `Source` (텍스트) | `componentProperties`의 `"Source#…"` → boolean prop `source`와 동일 | `jobTitle` |
+
+> **확인 방법**: `booleanProps[].propName` 목록과 텍스트 레이어 이름을 비교.  
+> 겹치면 텍스트 레이어의 **실제 용도**를 기준으로 이름을 정한다.
+
+### 주의: boolean prop이 제어하는 대상 확인
+
+`componentProperties`는 prop 이름과 타입만 내보내며, 어느 레이어의 visibility를 제어하는지는 포함되지 않는다.  
+prop 이름에서 동작을 추론하면 버그로 이어진다. **반드시 Figma에서 해당 prop을 껐을 때 어느 레이어가 숨겨지는지 직접 확인한다.**
+
+| 확인 없이 추론한 경우 (잘못) | 확인 후 (올바름) |
+|----------------------------|-----------------|
+| `source` → jobTitle 텍스트만 숨김 | `source` → figcaption 전체(Name + Source) 숨김 |
+
+---
+
 ## 1. 전체 흐름 한눈에 보기
 
 ```
@@ -123,7 +161,7 @@ const GENERATORS: Record<string, GeneratorFn> = {
 | 수정하고 싶은 것 | 위치 |
 |------------------|------|
 | variant prop 이름 고정 변경 | `extractAvatarStyles()`의 `variantPropName` 로직 |
-| aspect-ratio 계산 방식 변경 | `computeAspectRatio()` + GCD 헬퍼 |
+| 이미지 높이 읽는 방식 변경 | `dimensions` 배열의 `imageHeight` — `variants[i].childStyles['Image']['height']` |
 | circle 감지 패턴 변경 | `/circle/i.test(slug)` → 원하는 패턴으로 |
 | boolean prop 기본값 변경 | `booleanProps` 배열의 `defaultValue` |
 | Name/Source 폰트 fallback 변경 | `extractAvatarStyles()` 하단의 `defaults` 객체 |
@@ -258,13 +296,69 @@ function buildAvatarTSX(componentName: string, s: AvatarStyles): string {
 | `parseAllUnionTypes()` | `export type XxxType = 'a' \| 'b';` → 드롭다운 |
 | `parseDestructuredProps()` | `({ prop = default }` → 기본값 추출 |
 
+#### Sandbox Property 테이블 렌더 규칙
+
+생성된 TSX를 파싱해 Property 테이블을 채운다. 렌더 순서와 각 행의 출처를 이해해야 불필요한 수정을 줄일 수 있다.
+
+| 행 | 출처 | 렌더 조건 |
+|----|------|-----------|
+| union props (드롭다운) | `export type` + interface | 항상 (SKIP 제외) |
+| node props (ReactNode 입력) | interface `ReactNode` 타입 | 항상 (SKIP 제외) |
+| string props (텍스트 입력) | interface `string` 타입 | 항상 (SKIP 제외) |
+| boolean props (체크박스) | destructuring 기본값 `true`/`false` | 항상 (SKIP 제외) |
+| **`disabled` 행** | **하드코딩 — 파싱과 무관** | `state` union에 `"disabled"` 값이 없으면 **항상 표시** |
+
+> **`disabled`는 모든 컴포넌트에 표시되는 것이 의도된 동작이다.**  
+> AvatarImage처럼 `disabled` 개념이 없는 컴포넌트에도 표시된다.  
+> 컴포넌트 속성 목록의 일관성을 위해 제거하지 않는다.  
+> `disabled`를 숨기고 싶으면 `state` union에 `"disabled"` 값을 포함시키는 것이 유일한 방법이다.
+
+#### Sandbox SKIP 세트
+
+```typescript
+// parseSandboxProps() 내부
+const SKIP = new Set(['disabled', 'children', 'className'])
+```
+
+- `disabled`가 SKIP에 있어도 **테이블에는 여전히 표시된다** (하드코딩 행이 별도 존재).
+- `SKIP`은 파싱 단계에서 prop을 배제할 뿐, 하드코딩 행(disabled)은 영향받지 않는다.
+- ⚠️ `'type'`은 절대 추가하지 말 것 — AvatarImage의 variant prop(`type?: AvatarImageType`)과 충돌.
+
 **수정 시나리오**:
-- 특정 prop을 Sandbox에서 숨기고 싶을 때 → `SKIP` 세트에 추가
-  ```typescript
-  const SKIP = new Set(['disabled', 'children', 'className'])
-  // ⚠️ 'type'은 추가하지 말 것 — AvatarImage variant prop과 충돌
-  ```
+- 특정 prop을 Property 테이블에서 숨기고 싶을 때 → `SKIP` 세트에 prop 이름 추가
 - 새 컨트롤 타입 추가 (예: number slider) → `parseSandboxProps()` 반환 타입 및 렌더 로직 수정
+
+---
+
+### 2-9. `PropsEditor.tsx` — Props Editor 패널
+
+**파일 경로**: `src/app/(main)/(ide)/components/[name]/PropsEditor.tsx`
+
+**역할**: 생성된 컴포넌트의 prop 이름·타입·기본값을 UI에서 수정하고, `props_overrides` DB 컬럼에 저장 후 재생성한다.
+
+#### Props Editor SKIP 세트
+
+```typescript
+// parseEditorProps() 내부
+const SKIP = new Set(['children', 'className', 'disabled'])
+```
+
+Sandbox SKIP과 다르게 **`disabled`가 포함**되어 있다.  
+Props Editor에서 `disabled` 편집을 허용하면 HTML 시맨틱이 깨질 수 있어 의도적으로 제외한다.
+
+#### Props Editor vs Sandbox — SKIP 비교
+
+| prop | Sandbox 테이블 | Props Editor |
+|------|---------------|--------------|
+| `disabled` | 항상 표시 (하드코딩) | 숨김 (SKIP) |
+| `children` | 숨김 (SKIP), 별도 입력 | 숨김 (SKIP) |
+| `className` | 숨김 (SKIP) | 숨김 (SKIP) |
+| union props | 드롭다운으로 표시 | **숨김** (`union` 편집 미지원) |
+| boolean props | 체크박스로 표시 | 체크박스로 표시 |
+| string props | 텍스트 입력으로 표시 | 텍스트 입력으로 표시 |
+
+> union props는 Props Editor에 표시되지 않는다 (`.filter(base => base.kind !== 'union')`).  
+> variant 목록 변경은 Figma에서 수정 후 재임포트하는 것이 원칙이다.
 
 ---
 
@@ -344,13 +438,26 @@ const GENERATORS = {
 ### "Sandbox에서 특정 prop 컨트롤이 안 보인다"
 → `ComponentGuideClient.tsx`의 `SKIP` 세트 확인. 또는 TSX 코드에 세미콜론(`;`)이 빠진 것 (`parseAllUnionTypes` 정규식이 `;` 필요).
 
+### "Sandbox Property 테이블에 disabled가 보이는데 이 컴포넌트랑 관계없다"
+→ **의도된 동작이다.** `disabled`는 모든 컴포넌트에 항상 표시된다 (하드코딩 행, 2-8 참고).  
+   숨기려면 `state` union에 `"disabled"` 값을 포함시키는 것이 유일한 방법.
+
+### "Props Editor에서 특정 prop이 안 보인다"
+→ `PropsEditor.tsx`의 `SKIP` 세트(`disabled`, `children`, `className`) 또는 union prop(`kind === 'union'`은 Props Editor에서 필터됨) 확인 (2-9 참고).
+
+### "boolean prop이 컴포넌트의 의도와 다른 레이어를 숨긴다"
+→ `generators/{type}/extract.ts`의 `captionGateProp` 로직 확인.  
+   prop 이름으로 동작을 추론하지 않고, `nodeTree.propRefs.visible` → `booleanProps.rawKey` 역참조로 결정한다.  
+   Figma에서 해당 prop을 껐을 때 어느 레이어가 숨겨지는지 직접 확인 후 플러그인 JSON에 `propRefs`가 올바르게 포함됐는지 검증한다.
+
 ### "색상 변수가 잘못 매핑된다"
 → `css-var-mapper.ts`의 `mapCssValue()` 분기 확인.
    또는 Settings > Generator의 시맨틱 맵 설정 확인.
 
-### "aspect-ratio가 이상하게 나온다"
-→ `generators/avatar/extract.ts`의 `computeAspectRatio()` 함수.
-   입력은 `variants[i].width`와 `variants[i].childStyles["Image"].height`.
+### "이미지 높이가 이상하게 나온다"
+→ `generators/avatar/extract.ts`의 `dimensions` 배열.
+   `variants[i].childStyles['Image']['height']`를 노드에서 직접 읽는다.
+   `aspect-ratio` 파생 계산은 하지 않는다 (원칙: 노드에 명시된 값 우선).
 
 ---
 

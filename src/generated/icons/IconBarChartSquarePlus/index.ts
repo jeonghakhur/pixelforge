@@ -1,0 +1,1 @@
+export { IconBarChartSquarePlus } from './IconBarChartSquarePlus';

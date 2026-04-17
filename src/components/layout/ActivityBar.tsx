@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { logout } from '@/lib/actions/auth';
 import styles from './ActivityBar.module.scss';
 
-export type Section = 'home' | 'tokens' | 'components' | 'screens' | 'diff' | 'images' | 'settings' | 'admin';
+export type Section = 'home' | 'tokens' | 'components' | 'icons' | 'screens' | 'diff' | 'images' | 'settings' | 'admin';
 
 interface ActivityBarProps {
   activeSection: Section;
@@ -20,6 +20,7 @@ const TOP_ITEMS: { section: Section; icon: string; label: string }[] = [
 const MID_ITEMS: { section: Section; icon: string; label: string }[] = [
   { section: 'tokens', icon: 'solar:palette-linear', label: 'Tokens' },
   { section: 'components', icon: 'solar:widget-2-linear', label: 'Components' },
+  { section: 'icons',      icon: 'solar:sticker-circle-linear',     label: 'Icons'      },
   { section: 'screens', icon: 'solar:layers-minimalistic-linear',   label: 'Screens' },
   { section: 'diff',    icon: 'solar:code-scan-linear',             label: 'Diff'    },
   { section: 'images',  icon: 'solar:gallery-minimalistic-linear',  label: 'Images'  },

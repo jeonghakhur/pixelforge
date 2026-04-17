@@ -6,6 +6,7 @@ import { projects, appSettings } from '@/lib/db/schema';
 import { extractFileKey } from '@/lib/figma/api';
 import { eq, desc } from 'drizzle-orm';
 import { IMAGE_STORAGE_DEFAULT } from '@/lib/constants/images';
+import { ICON_OUTPUT_DEFAULT } from '@/lib/constants/icons';
 
 export async function getImageStoragePath(): Promise<string> {
   const row = db.select({ value: appSettings.value })
@@ -13,6 +14,27 @@ export async function getImageStoragePath(): Promise<string> {
     .where(eq(appSettings.key, 'image_storage_path'))
     .get();
   return row?.value ?? IMAGE_STORAGE_DEFAULT;
+}
+
+export async function getIconOutputPath(): Promise<string> {
+  const row = db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, 'icon_output_path'))
+    .get();
+  return row?.value ?? ICON_OUTPUT_DEFAULT;
+}
+
+export async function saveIconOutputPath(outputPath: string): Promise<{ error: string | null }> {
+  const trimmed = outputPath.trim().replace(/\/+$/, '');
+  if (!trimmed) return { error: '경로를 입력해주세요.' };
+
+  const existing = db.select().from(appSettings).where(eq(appSettings.key, 'icon_output_path')).get();
+  if (existing) {
+    db.update(appSettings).set({ value: trimmed }).where(eq(appSettings.key, 'icon_output_path')).run();
+  } else {
+    db.insert(appSettings).values({ key: 'icon_output_path', value: trimmed }).run();
+  }
+  return { error: null };
 }
 
 export async function saveImageStoragePath(storagePath: string): Promise<{ error: string | null }> {

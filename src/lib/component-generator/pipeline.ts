@@ -13,6 +13,8 @@ import type { ComponentOverrides } from './props-override'
 
 export interface PipelineOptions {
   overrides?: ComponentOverrides
+  /** 플러그인/임포트가 명시한 생성기 타입. 이름 기반 자동 감지보다 우선 적용됨 */
+  componentType?: string
 }
 
 export function runPipeline(raw: Record<string, unknown>, options?: PipelineOptions): PipelineResult {
@@ -24,8 +26,8 @@ export function runPipeline(raw: Record<string, unknown>, options?: PipelineOpti
     payload.name = options.overrides.name
   }
 
-  // 2. 타입 감지
-  const resolvedType = resolveType(payload)
+  // 2. 타입 감지 — 플러그인 힌트 우선, 없으면 이름 패턴 폴백
+  const resolvedType = options?.componentType ?? resolveType(payload)
 
   // 3. 제너레이터 선택 (전용 > 폴백)
   const generator = getGenerator(resolvedType)

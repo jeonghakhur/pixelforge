@@ -11,15 +11,21 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { generateTokensCss } from '@/lib/tokens/css-exporter';
-function deleteTokensCss() {
-  try { fs.unlinkSync(path.join(process.cwd(), 'public', 'css', 'tokens.css')); } catch { /* 없으면 무시 */ }
+function deleteTokensCss(tokensCssPath?: string) {
+  try {
+    const absPath = tokensCssPath
+      ? path.isAbsolute(tokensCssPath) ? tokensCssPath : path.join(process.cwd(), tokensCssPath)
+      : path.join(process.cwd(), 'public', 'css', 'tokens.css');
+    fs.unlinkSync(absPath);
+  } catch { /* 없으면 무시 */ }
 }
 
 async function regenerateTokensCss(projectId: string): Promise<void> {
   try {
     const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
     const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
-    initGeneratorConfig(await getGeneratorConfig());
+    const genConfig = await getGeneratorConfig();
+    initGeneratorConfig(genConfig);
 
     const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
     const allTokenRows = db
@@ -29,14 +35,16 @@ async function regenerateTokensCss(projectId: string): Promise<void> {
       .all() as TokenRow[];
 
     if (allTokenRows.length === 0) {
-      deleteTokensCss();
+      deleteTokensCss(genConfig.tokensCssPath);
       return;
     }
 
     const css = generateAllCssCode(allTokenRows);
-    const cssDir = path.join(process.cwd(), 'public', 'css');
-    fs.mkdirSync(cssDir, { recursive: true });
-    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+    const absPath = genConfig.tokensCssPath && !path.isAbsolute(genConfig.tokensCssPath)
+      ? path.join(process.cwd(), genConfig.tokensCssPath)
+      : genConfig.tokensCssPath ?? path.join(process.cwd(), 'public', 'css', 'tokens.css');
+    fs.mkdirSync(path.dirname(absPath), { recursive: true });
+    fs.writeFileSync(absPath, css, 'utf-8');
   } catch { /* CSS 재생성 실패 시 무시 */ }
 }
 
@@ -288,7 +296,9 @@ export async function deleteAllTokensAction(): Promise<{ error: string | null; d
     db.delete(tokenTypeConfigs).run();
     db.delete(histories).run();
     db.delete(tokens).run();
-    deleteTokensCss();
+    const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+    const delConfig = await getGeneratorConfig();
+    deleteTokensCss(delConfig.tokensCssPath);
     return { error: null, deleted: count };
   } catch (err) {
     return { error: err instanceof Error ? err.message : '삭제 실패', deleted: 0 };
@@ -1057,7 +1067,8 @@ export async function rollbackSnapshotAction(
   try {
     const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
     const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
-    initGeneratorConfig(await getGeneratorConfig());
+    const restoreConfig = await getGeneratorConfig();
+    initGeneratorConfig(restoreConfig);
 
     const { generateAllCssCode } = await import('@/lib/tokens/css-generator');
     const allTokenRows = await db
@@ -1066,9 +1077,11 @@ export async function rollbackSnapshotAction(
       .where(eq(tokens.projectId, projectId))
       .all() as TokenRow[];
     const css = generateAllCssCode(allTokenRows);
-    const cssDir = path.join(process.cwd(), 'public', 'css');
-    fs.mkdirSync(cssDir, { recursive: true });
-    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+    const restoreAbsPath = restoreConfig.tokensCssPath && !path.isAbsolute(restoreConfig.tokensCssPath)
+      ? path.join(process.cwd(), restoreConfig.tokensCssPath)
+      : restoreConfig.tokensCssPath ?? path.join(process.cwd(), 'public', 'css', 'tokens.css');
+    fs.mkdirSync(path.dirname(restoreAbsPath), { recursive: true });
+    fs.writeFileSync(restoreAbsPath, css, 'utf-8');
   } catch {}
 
   return { error: null, restoredVersion: prev?.version ?? null };

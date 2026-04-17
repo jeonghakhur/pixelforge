@@ -18,23 +18,31 @@
 import fs from 'fs'
 import path from 'path'
 
-const GENERATED_DIR = path.join(process.cwd(), 'src', 'generated', 'components')
+const DEFAULT_OUTPUT_PATH = path.join(process.cwd(), 'src', 'generated', 'components')
+
+function resolveOutputDir(outputPath?: string): string {
+  if (!outputPath) return DEFAULT_OUTPUT_PATH
+  return path.isAbsolute(outputPath)
+    ? outputPath
+    : path.join(process.cwd(), outputPath)
+}
 
 /**
  * "Buttons/Button" → dir: .../Buttons/Button, baseName: "Button"
  * "Button"         → dir: .../Button, baseName: "Button"
  * "UI/Forms/Input" → dir: .../UI/Forms/Input, baseName: "Input"
  */
-function resolveComponentPath(componentName: string): { dir: string; baseName: string } {
+function resolveComponentPath(componentName: string, outputPath?: string): { dir: string; baseName: string; rootDir: string } {
   const segments = componentName.split('/')
   const baseName = segments[segments.length - 1]
-  const dir = path.join(GENERATED_DIR, ...segments)
-  return { dir, baseName }
+  const rootDir = resolveOutputDir(outputPath)
+  const dir = path.join(rootDir, ...segments)
+  return { dir, baseName, rootDir }
 }
 
-export function writeComponentFiles(componentName: string, tsx: string, css: string): void {
+export function writeComponentFiles(componentName: string, tsx: string, css: string, outputPath?: string): void {
   try {
-    const { dir, baseName } = resolveComponentPath(componentName)
+    const { dir, baseName, rootDir } = resolveComponentPath(componentName, outputPath)
     fs.mkdirSync(dir, { recursive: true })
 
     // 컴포넌트 파일
@@ -46,20 +54,20 @@ export function writeComponentFiles(componentName: string, tsx: string, css: str
     fs.writeFileSync(path.join(dir, 'index.ts'), indexContent, 'utf-8')
 
     // 루트 barrel 갱신
-    updateRootBarrel()
+    updateRootBarrel(rootDir)
   } catch {
     // 파일 생성 실패는 DB 저장에 영향 주지 않음
   }
 }
 
-export function deleteComponentFiles(componentName: string): void {
+export function deleteComponentFiles(componentName: string, outputPath?: string): void {
   try {
-    const { dir } = resolveComponentPath(componentName)
+    const { dir, rootDir } = resolveComponentPath(componentName, outputPath)
     if (fs.existsSync(dir)) {
       fs.rmSync(dir, { recursive: true })
     }
     // 루트 barrel 갱신
-    updateRootBarrel()
+    updateRootBarrel(rootDir)
   } catch {
     // 파일 삭제 실패는 DB 삭제에 영향 주지 않음
   }
@@ -72,8 +80,8 @@ export function deleteComponentFiles(componentName: string): void {
  * Buttons/Button/index.ts → export * from './Buttons/Button';
  * Input/index.ts           → export * from './Input';
  */
-function updateRootBarrel(): void {
-  fs.mkdirSync(GENERATED_DIR, { recursive: true })
+function updateRootBarrel(rootDir: string = DEFAULT_OUTPUT_PATH): void {
+  fs.mkdirSync(rootDir, { recursive: true })
 
   const componentPaths: string[] = []
   function scan(dir: string, rel: string): void {
@@ -88,7 +96,7 @@ function updateRootBarrel(): void {
       if (e.isDirectory()) scan(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name)
     }
   }
-  scan(GENERATED_DIR, '')
+  scan(rootDir, '')
 
   const lines = [
     '// Auto-generated barrel file — do not edit manually',
@@ -96,5 +104,5 @@ function updateRootBarrel(): void {
     '',
   ]
 
-  fs.writeFileSync(path.join(GENERATED_DIR, 'index.ts'), lines.join('\n'), 'utf-8')
+  fs.writeFileSync(path.join(rootDir, 'index.ts'), lines.join('\n'), 'utf-8')
 }

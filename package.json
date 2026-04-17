@@ -21,6 +21,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@iconify-json/solar": "^1.2.5",
     "@iconify/react": "^6.0.2",
+    "@radix-ui/react-select": "^2.2.6",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
     "diff2html": "^3.4.56",

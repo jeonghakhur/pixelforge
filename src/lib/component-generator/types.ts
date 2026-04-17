@@ -32,12 +32,36 @@ export interface PluginPayload {
   childStyles: Record<string, Record<string, string>>
   /** Radix 기반 props 제안 */
   radixProps: Record<string, string>
+  /** COMPONENT_SET 루트의 nodeTree (propRefs 포함) */
+  nodeTree?: NodeTreeEntry
   /** COMPONENT_SET의 실제 variant 옵션 */
   variantOptions?: Record<string, string[]>
   /** COMPONENT_SET 자식 각각의 스타일 */
   variants?: VariantEntry[]
   /** Component Properties (Boolean, Instance Swap, Text) */
   componentProperties?: Record<string, ComponentPropertyDef>
+}
+
+/**
+ * componentPropertyReferences 매핑.
+ * key: CSS 속성명(예: "visible"), value: Figma property ID(예: "Source#3287:4621")
+ * 플러그인이 각 레이어에서 캡처한 데이터이며, 어떤 boolean prop이 이 레이어를 제어하는지를 나타낸다.
+ */
+export type ComponentPropRefs = Record<string, string>
+
+/** nodeTree 의 각 노드 — 플러그인 buildNodeTree() 출력 구조 */
+export interface NodeTreeEntry {
+  id: string
+  type: string
+  name: string
+  styles?: Record<string, string>
+  /** 이 레이어의 visibility 등을 제어하는 component property 매핑 */
+  propRefs?: ComponentPropRefs
+  children?: NodeTreeEntry[]
+  /** TEXT 레이어 텍스트 */
+  characters?: string
+  textRole?: string
+  shape?: string
 }
 
 export interface VariantEntry {
@@ -49,6 +73,8 @@ export interface VariantEntry {
   height?: number
   styles: Record<string, string>
   childStyles: Record<string, Record<string, string>>
+  /** 플러그인 buildNodeTree() 출력 — propRefs 포함 */
+  nodeTree?: NodeTreeEntry
 }
 
 /** Component Property 정의 (Boolean, Instance Swap, Text) */

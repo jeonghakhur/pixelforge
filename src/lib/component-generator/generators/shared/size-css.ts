@@ -80,6 +80,8 @@ export function buildSizeCSSRules(
 
     const s = v.styles
     const lines: string[] = []
+    if (s.width) lines.push(`  width: ${s.width};`)
+    if (s.height) lines.push(`  height: ${s.height};`)
     if (s.padding) lines.push(`  padding: ${mapSpacingShorthand(compactShorthand(mapValue(s.padding)))};`)
     if (s['border-radius']) lines.push(`  border-radius: ${mapRadiusValue(s['border-radius'])};`)
     if (s.gap) lines.push(`  gap: ${mapSpacingValue(mapValue(s.gap))};`)

@@ -1,0 +1,1 @@
+export { IconArrowBlockRight } from './IconArrowBlockRight';

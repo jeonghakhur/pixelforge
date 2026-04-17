@@ -8,7 +8,7 @@
  * - legacy 필드(html, htmlClass, htmlCss, jsx) 무시
  */
 
-import type { NormalizedPayload } from './types'
+import type { NormalizedPayload, NodeTreeEntry } from './types'
 
 // ── Figma color → Button variant 매핑 ───────────────────────────────
 const COLOR_TO_VARIANT: Record<string, string> = {
@@ -93,7 +93,10 @@ export function normalize(raw: Record<string, unknown>): NormalizedPayload {
     texts:          (raw.texts as NormalizedPayload['texts']) ?? { title: '', description: '', actions: [], all: [] },
     childStyles:    (raw.childStyles as Record<string, Record<string, string>>) ?? {},
     radixProps:     normalizedProps,
+    // nodeTree — 플러그인 buildNodeTree() 출력, propRefs 포함. 없으면 undefined 그대로 유지.
+    nodeTree:       (raw.nodeTree as NodeTreeEntry | undefined),
     variantOptions: (raw.variantOptions as Record<string, string[]>) ?? {},
+    // variants 내부의 nodeTree(propRefs 포함)도 캐스트를 통해 그대로 유지됨
     variants:       (raw.variants as NormalizedPayload['variants']) ?? [],
     componentProperties: (raw.componentProperties as NormalizedPayload['componentProperties']) ?? undefined,
   }

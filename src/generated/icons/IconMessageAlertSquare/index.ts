@@ -1,0 +1,1 @@
+export { IconMessageAlertSquare } from './IconMessageAlertSquare';

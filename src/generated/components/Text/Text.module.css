@@ -92,11 +92,6 @@
 .root[data-align='center'] { text-align: center; }
 .root[data-align='right']  { text-align: right; }
 
-/* ── Wrap ── */
-.root[data-wrap='balance'] { text-wrap: balance; }
-.root[data-wrap='pretty']  { text-wrap: pretty; }
-.root[data-wrap='nowrap']  { white-space: nowrap; }
-
 /* ── Truncate ── */
 .truncate {
   overflow: hidden;

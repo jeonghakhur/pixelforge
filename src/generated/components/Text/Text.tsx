@@ -14,7 +14,6 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
   as?: TextTag;
   truncate?: boolean;
   align?: 'left' | 'center' | 'right';
-  wrap?: 'balance' | 'pretty' | 'nowrap';
   srOnly?: boolean;
 }
 
@@ -26,7 +25,6 @@ export function Text({
   as: Tag = 'p',
   truncate,
   align,
-  wrap,
   srOnly,
   className,
   ...props
@@ -47,7 +45,6 @@ export function Text({
       data-weight={weight}
       data-color={color}
       {...(align && { 'data-align': align })}
-      {...(wrap && { 'data-wrap': wrap })}
       {...props}
     >
       {children}

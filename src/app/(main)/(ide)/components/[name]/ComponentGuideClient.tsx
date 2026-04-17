@@ -6,7 +6,8 @@ import { Icon } from '@iconify/react';
 // "icon:star" 패턴 입력 시 인라인 프리뷰에 사용.
 // ⚠️ 아이콘 파일 경로가 바뀌면 이 import 경로만 수정하면 됩니다.
 import { Icon as ProjectIcon, type IconName } from '@/components/icon/Icon';
-import { deleteComponentAndRedirect } from '@/lib/actions/components';
+import { deleteComponentAndRedirect } from '@/lib/actions/components'
+import Select from '@/components/common/Select';
 import { useUIStore } from '@/stores/useUIStore';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PropsEditor from './PropsEditor';
@@ -320,6 +321,14 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
   // state union에 disabled가 포함되면 별도 disabled prop 불필요
   const stateUnionProp = unionProps.find(p => p.name === 'state');
   const hasDisabledInState = stateUnionProp?.values.some(v => /^disabled$/i.test(v)) ?? false;
+
+  // disabled는 인터랙티브 요소(button, input, select, textarea)이거나
+  // CSS에 data-disabled 스타일이 정의된 컴포넌트에만 표시한다.
+  // <p>, <span>, <h1~h6> 등 비인터랙티브 요소에 disabled는 유효하지 않은 HTML 속성.
+  const supportsDisabled =
+    /forwardRef<HTML(Button|Input|Select|TextArea)Element/.test(tsx ?? '') ||
+    /\[data-disabled\]/.test(css ?? '');
+
   const [selDisabled, setDisabled] = useState(false);
 
   // children
@@ -335,7 +344,7 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
   for (const p of boolProps) {
     dataAttrs[`data-${p.dataAttr}`] = boolValues[p.name] ? '' : undefined;
   }
-  if (!hasDisabledInState) {
+  if (supportsDisabled && !hasDisabledInState) {
     dataAttrs['data-disabled'] = selDisabled ? '' : undefined;
   }
 
@@ -375,7 +384,7 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
     for (const p of unionProps) props[p.name] = unionValues[p.name] ?? p.defaultValue;
     for (const p of boolProps) props[p.name] = boolValues[p.name] ?? p.defaultValue;
     for (const p of stringProps) { if (stringValues[p.name]) props[p.name] = stringValues[p.name]; }
-    if (!hasDisabledInState) props.disabled = selDisabled;
+    if (supportsDisabled && !hasDisabledInState) props.disabled = selDisabled;
 
     const nodePayload: Record<string, string> = {};
     for (const p of nodeProps) nodePayload[p.name] = nodeValues[p.name] ?? '';
@@ -428,15 +437,11 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
                   {p.values.map((v) => `'${v}'`).join(' | ')}
                 </td>
                 <td>
-                  <select
-                    className={styles.propSelect}
+                  <Select
                     value={unionValues[p.name] ?? p.defaultValue}
-                    onChange={(e) => setUnionValues((prev) => ({ ...prev, [p.name]: e.target.value }))}
-                  >
-                    {p.values.map((v) => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setUnionValues((prev) => ({ ...prev, [p.name]: v }))}
+                    options={p.values.map((v) => ({ value: v }))}
+                  />
                 </td>
               </tr>
             ))}
@@ -535,7 +540,7 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
               </tr>
             )}
 
-            {!hasDisabledInState && (
+            {supportsDisabled && !hasDisabledInState && (
               <tr>
                 <td className={styles.propName}>disabled</td>
                 <td className={styles.propType}>boolean</td>

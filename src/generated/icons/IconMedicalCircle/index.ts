@@ -1,0 +1,1 @@
+export { IconMedicalCircle } from './IconMedicalCircle';

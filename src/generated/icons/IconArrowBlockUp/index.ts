@@ -1,0 +1,1 @@
+export { IconArrowBlockUp } from './IconArrowBlockUp';

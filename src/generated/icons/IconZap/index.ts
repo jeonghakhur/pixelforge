@@ -1,0 +1,1 @@
+export { IconZap } from './IconZap';

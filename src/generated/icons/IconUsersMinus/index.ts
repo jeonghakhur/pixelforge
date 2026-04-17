@@ -1,0 +1,1 @@
+export { IconUsersMinus } from './IconUsersMinus';

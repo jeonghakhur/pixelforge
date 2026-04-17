@@ -1,0 +1,1 @@
+export { IconInfinity } from './IconInfinity';

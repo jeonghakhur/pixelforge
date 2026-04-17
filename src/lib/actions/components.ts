@@ -171,7 +171,9 @@ export async function deleteComponent(id: string): Promise<void> {
     } catch { /* ignore */ }
 
     const { deleteComponentFiles } = await import('@/lib/component-generator/file-writer');
-    deleteComponentFiles(figmaPath ?? row.name);
+    const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
+    const genConfig = await getGeneratorConfig();
+    deleteComponentFiles(figmaPath ?? row.name, genConfig.outputPath);
   }
 }
 
@@ -200,8 +202,10 @@ export async function importComponentFromJson(
     return { error: 'JSON 파싱 실패: 올바른 JSON 형식인지 확인해주세요.', component: null };
   }
 
-  // 플러그인 envelope { meta, data } 또는 직접 payload 모두 허용
-  const data = (payload as Record<string, unknown>)?.data ?? payload;
+  // 플러그인 envelope { componentType, meta, data } 또는 직접 payload 모두 허용
+  const envelope = payload as Record<string, unknown>;
+  const componentType = typeof envelope.componentType === 'string' ? envelope.componentType : undefined;
+  const data = envelope.data ?? payload;
 
   if (typeof data !== 'object' || data === null) {
     return { error: 'JSON 구조가 올바르지 않습니다.', component: null };
@@ -234,7 +238,7 @@ export async function importComponentFromJson(
     : undefined;
 
   const { runPipeline } = await import('@/lib/component-generator');
-  const result = runPipeline(d, { overrides: preservedOverrides });
+  const result = runPipeline(d, { overrides: preservedOverrides, componentType });
   const componentName = result.output?.name ?? d.name as string;
 
   // 이름 중복 확인 — 있으면 버전 업
@@ -301,7 +305,7 @@ export async function importComponentFromJson(
   // 파일 시스템에 TSX + CSS 파일 생성 (Figma 경로 구조 유지)
   if (result.output?.tsx && result.output?.css) {
     const figmaName = d.name as string;
-    writeComponentFiles(figmaName, result.output.tsx, result.output.css);
+    writeComponentFiles(figmaName, result.output.tsx, result.output.css, genConfig.outputPath);
   }
 
   return { error: null, component: row ?? null };
@@ -381,7 +385,8 @@ export async function regenerateComponentFiles(
   // 파이프라인 설정 로드
   const { getGeneratorConfig } = await import('@/lib/actions/generator-config');
   const { initGeneratorConfig } = await import('@/lib/generator-config-cache');
-  initGeneratorConfig(await getGeneratorConfig());
+  const regenConfig = await getGeneratorConfig();
+  initGeneratorConfig(regenConfig);
 
   const rawData = JSON.parse(row.nodePayload) as Record<string, unknown>;
   const { runPipeline } = await import('@/lib/component-generator');
@@ -412,14 +417,14 @@ export async function regenerateComponentFiles(
     const segments = figmaPath.split('/');
     segments[segments.length - 1] = oldName;
     const oldFigmaPath = segments.join('/');
-    deleteComponentFiles(oldFigmaPath);
+    deleteComponentFiles(oldFigmaPath, regenConfig.outputPath);
 
     const newSegments = figmaPath.split('/');
     newSegments[newSegments.length - 1] = newName;
     const newFigmaPath = newSegments.join('/');
-    writeComponentFiles(newFigmaPath, result.output.tsx, result.output.css);
+    writeComponentFiles(newFigmaPath, result.output.tsx, result.output.css, regenConfig.outputPath);
   } else {
-    writeComponentFiles(figmaPath, result.output.tsx, result.output.css);
+    writeComponentFiles(figmaPath, result.output.tsx, result.output.css, regenConfig.outputPath);
   }
 
   return { error: null, newName: nameChanged ? newName : undefined };
@@ -513,7 +518,9 @@ export async function generateTextComponentAction(): Promise<{
 
   // 파일 쓰기
   const { writeComponentFiles } = await import('@/lib/component-generator/file-writer');
-  writeComponentFiles('Text', result.tsx, result.css);
+  const { getGeneratorConfig: getTextGenConfig } = await import('@/lib/actions/generator-config');
+  const textGenConfig = await getTextGenConfig();
+  writeComponentFiles('Text', result.tsx, result.css, textGenConfig.outputPath);
 
   revalidatePath('/components');
 

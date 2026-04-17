@@ -1,0 +1,1 @@
+export { IconFaceFrown } from './IconFaceFrown';

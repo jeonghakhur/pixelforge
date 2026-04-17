@@ -1,0 +1,1 @@
+export { IconArrowSquareUp } from './IconArrowSquareUp';

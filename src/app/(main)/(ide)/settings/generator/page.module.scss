@@ -67,6 +67,15 @@
   margin-top: map-get($spacers, 4);
 }
 
+// ── Output Path ──
+
+.outputPathRow {
+  display: flex;
+  align-items: center;
+
+  .kvInput { width: 100%; max-width: 480px; }
+}
+
 // ── KV Table ──
 
 .kvTable {

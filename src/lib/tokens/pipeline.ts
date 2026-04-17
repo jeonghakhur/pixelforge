@@ -218,9 +218,13 @@ export async function runTokenPipeline(
       .all() as TokenRow[];
 
     const css = generateAllCssCode(allTokenRows);
-    const cssDir = path.join(process.cwd(), 'public', 'css');
-    fs.mkdirSync(cssDir, { recursive: true });
-    fs.writeFileSync(path.join(cssDir, 'tokens.css'), css, 'utf-8');
+    const { getGeneratorConfig: getPipelineConfig } = await import('@/lib/actions/generator-config');
+    const pipelineCfg = await getPipelineConfig();
+    const pipelineAbsPath = pipelineCfg.tokensCssPath && !path.isAbsolute(pipelineCfg.tokensCssPath)
+      ? path.join(process.cwd(), pipelineCfg.tokensCssPath)
+      : pipelineCfg.tokensCssPath ?? path.join(process.cwd(), 'public', 'css', 'tokens.css');
+    fs.mkdirSync(path.dirname(pipelineAbsPath), { recursive: true });
+    fs.writeFileSync(pipelineAbsPath, css, 'utf-8');
   } catch {
     // CSS 재생성 실패는 파이프라인을 중단하지 않음
   }

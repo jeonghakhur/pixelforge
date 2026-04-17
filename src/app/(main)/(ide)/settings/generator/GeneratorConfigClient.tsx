@@ -46,7 +46,7 @@ function KvEditor({ label, description, data, onChange, onSave, saving }: {
           <tr>
             <th>Key</th>
             <th>Value</th>
-            <th aria-label="Actions" />
+            <th aria-label="작업" />
           </tr>
         </thead>
         <tbody>
@@ -59,7 +59,7 @@ function KvEditor({ label, description, data, onChange, onSave, saving }: {
                   type="button"
                   className={styles.removeBtn}
                   onClick={() => handleRemove(k)}
-                  aria-label={`Remove ${k}`}
+                  aria-label={`${k} 삭제`}
                 >
                   <Icon icon="solar:close-circle-linear" width={14} height={14} />
                 </button>
@@ -73,7 +73,7 @@ function KvEditor({ label, description, data, onChange, onSave, saving }: {
                 className={styles.kvInput}
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
-                placeholder="key"
+                placeholder="키"
               />
             </td>
             <td>
@@ -82,12 +82,12 @@ function KvEditor({ label, description, data, onChange, onSave, saving }: {
                 className={styles.kvInput}
                 value={newVal}
                 onChange={(e) => setNewVal(e.target.value)}
-                placeholder="value"
+                placeholder="값"
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
               />
             </td>
             <td>
-              <button type="button" className={styles.addBtn} onClick={handleAdd} aria-label="Add entry">
+              <button type="button" className={styles.addBtn} onClick={handleAdd} aria-label="항목 추가">
                 <Icon icon="solar:add-circle-linear" width={14} height={14} />
               </button>
             </td>
@@ -95,18 +95,14 @@ function KvEditor({ label, description, data, onChange, onSave, saving }: {
         </tbody>
       </table>
       <div className={styles.cardActions}>
-        <button
+        <Button
           type="button"
-          onClick={() => {
-            // eslint-disable-next-line no-console
-            console.log('[KvEditor] Save clicked for:', label);
-            onSave();
-          }}
+          size="sm"
+          onClick={onSave}
           disabled={saving}
-          className="btn btn-primary btn-sm"
         >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+          {saving ? '저장 중...' : '저장'}
+        </Button>
       </div>
     </Card>
   );
@@ -144,7 +140,7 @@ function TagEditor({ label, description, data, onChange, onSave, saving }: {
               type="button"
               className={styles.tagRemove}
               onClick={() => onChange(data.filter((t) => t !== tag))}
-              aria-label={`Remove ${tag}`}
+              aria-label={`${tag} 삭제`}
             >
               <Icon icon="solar:close-circle-linear" width={12} height={12} />
             </button>
@@ -156,27 +152,23 @@ function TagEditor({ label, description, data, onChange, onSave, saving }: {
             className={styles.kvInput}
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            placeholder="Add..."
+            placeholder="추가..."
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           />
-          <button type="button" className={styles.addBtn} onClick={handleAdd} aria-label="Add tag">
+          <button type="button" className={styles.addBtn} onClick={handleAdd} aria-label="태그 추가">
             <Icon icon="solar:add-circle-linear" width={14} height={14} />
           </button>
         </div>
       </div>
       <div className={styles.cardActions}>
-        <button
+        <Button
           type="button"
-          onClick={() => {
-            // eslint-disable-next-line no-console
-            console.log('[TagEditor] Save clicked for:', label);
-            onSave();
-          }}
+          size="sm"
+          onClick={onSave}
           disabled={saving}
-          className="btn btn-primary btn-sm"
         >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+          {saving ? '저장 중...' : '저장'}
+        </Button>
       </div>
     </Card>
   );
@@ -190,17 +182,10 @@ export default function GeneratorConfigClient({ initialConfig }: { initialConfig
   const [saved, setSaved] = useState<string | null>(null);
 
   const save = async (key: keyof GeneratorConfig, value: unknown) => {
-    // eslint-disable-next-line no-console
-    console.log('[GeneratorConfig] save called:', key, JSON.stringify(value).slice(0, 100));
     setSaving(key);
     try {
-      const result = await saveGeneratorConfigValue(key, value);
-      // eslint-disable-next-line no-console
-      console.log('[GeneratorConfig] save result:', result);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[GeneratorConfig] save error:', err);
-    }
+      await saveGeneratorConfigValue(key, value);
+    } catch { /* 저장 실패는 무시 */ }
     setSaving(null);
     setSaved(key);
     setTimeout(() => setSaved(null), 2000);
@@ -209,8 +194,8 @@ export default function GeneratorConfigClient({ initialConfig }: { initialConfig
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <span className={styles.eyebrow}>Generator Config</span>
-        <h1 className={styles.title}>Generator Settings</h1>
+        <span className={styles.eyebrow}>Generator</span>
+        <h1 className={styles.title}>제너레이터 설정</h1>
         <p className={styles.description}>
           CSS 변수 매핑, 색상 약어, 토큰 타입 규칙을 설정합니다. 변경 후 토큰을 재추출하면 반영됩니다.
         </p>
@@ -218,44 +203,44 @@ export default function GeneratorConfigClient({ initialConfig }: { initialConfig
 
       <div className={styles.sections}>
         <KvEditor
-          label="Semantic Map"
+          label="시맨틱 맵"
           description="Figma primitive 색상을 프로젝트 시맨틱 토큰으로 변환"
           data={config.semanticMap}
           onChange={(d) => setConfig({ ...config, semanticMap: d })}
           onSave={() => save('semanticMap', config.semanticMap)}
           saving={saving === 'semanticMap'}
         />
-        {saved === 'semanticMap' && <p className={styles.savedMsg}>Saved</p>}
+        {saved === 'semanticMap' && <p className={styles.savedMsg}>저장됨</p>}
 
         <KvEditor
-          label="Color Abbreviations"
+          label="색상 약어"
           description="색상 그룹 이름의 약어 매핑 (slug 중복 제거용)"
           data={config.colorAbbrev}
           onChange={(d) => setConfig({ ...config, colorAbbrev: d })}
           onSave={() => save('colorAbbrev', config.colorAbbrev)}
           saving={saving === 'colorAbbrev'}
         />
-        {saved === 'colorAbbrev' && <p className={styles.savedMsg}>Saved</p>}
+        {saved === 'colorAbbrev' && <p className={styles.savedMsg}>저장됨</p>}
 
         <TagEditor
-          label="Style Type (Direct Name)"
+          label="스타일 타입 (직접 사용)"
           description="Figma 변수명을 그대로 CSS 변수명으로 사용할 토큰 타입"
           data={config.styleTypePassthrough}
           onChange={(d) => setConfig({ ...config, styleTypePassthrough: d })}
           onSave={() => save('styleTypePassthrough', config.styleTypePassthrough)}
           saving={saving === 'styleTypePassthrough'}
         />
-        {saved === 'styleTypePassthrough' && <p className={styles.savedMsg}>Saved</p>}
+        {saved === 'styleTypePassthrough' && <p className={styles.savedMsg}>저장됨</p>}
 
         <TagEditor
-          label="Palette Keywords"
+          label="팔레트 키워드"
           description="Primitive 색상 판별 키워드 (숫자 외 추가)"
           data={config.paletteKeywords}
           onChange={(d) => setConfig({ ...config, paletteKeywords: d })}
           onSave={() => save('paletteKeywords', config.paletteKeywords)}
           saving={saving === 'paletteKeywords'}
         />
-        {saved === 'paletteKeywords' && <p className={styles.savedMsg}>Saved</p>}
+        {saved === 'paletteKeywords' && <p className={styles.savedMsg}>저장됨</p>}
       </div>
     </div>
   );

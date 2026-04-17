@@ -41,12 +41,21 @@ export function mapCssValue(value: string): string {
 
 // border-radius px → 프로젝트 토큰 변수 (tokens.css에서 동적 파싱)
 
-function buildRadiusMap(): Record<string, string> {
-  const tokensPaths = [
+function resolveTokensCssPath(): string[] {
+  const configured = getGeneratorConfigSync().tokensCssPath
+  const configuredAbs = configured
+    ? (isAbsolute(configured) ? configured : join(process.cwd(), configured))
+    : null
+  return [
+    ...(configuredAbs ? [configuredAbs] : []),
     join(process.cwd(), 'public', 'css', 'tokens.css'),
     join(process.cwd(), 'public', 'tokens.css'),
     join(process.cwd(), 'tokens.css'),
   ]
+}
+
+function buildRadiusMap(): Record<string, string> {
+  const tokensPaths = resolveTokensCssPath()
   const tokensPath = tokensPaths.find(p => existsSync(p))
   if (!tokensPath) return {}
 
@@ -104,7 +113,7 @@ export function mapRadiusValue(value: string): string {
 // spacing px → 프로젝트 토큰 변수 (tokens.css에서 동적 파싱)
 
 import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { join, isAbsolute } from 'path'
 
 /**
  * tokens.css에서 --spacing-* 변수를 파싱하여 px → var() 역매핑을 생성한다.
@@ -115,11 +124,7 @@ import { join } from 'path'
  * tokens.css가 없거나 spacing 변수가 없으면 빈 맵 반환 → px 그대로 출력.
  */
 function buildSpacingMap(): Record<string, string> {
-  const tokensPaths = [
-    join(process.cwd(), 'public', 'css', 'tokens.css'),
-    join(process.cwd(), 'public', 'tokens.css'),
-    join(process.cwd(), 'tokens.css'),
-  ]
+  const tokensPaths = resolveTokensCssPath()
   const tokensPath = tokensPaths.find(p => existsSync(p))
   if (!tokensPath) return {}
 
@@ -186,11 +191,7 @@ function pxToRem(px: number): string {
 }
 
 function buildTypographyMaps(): TypographyMaps {
-  const tokensPaths = [
-    join(process.cwd(), 'public', 'css', 'tokens.css'),
-    join(process.cwd(), 'public', 'tokens.css'),
-    join(process.cwd(), 'tokens.css'),
-  ]
+  const tokensPaths = resolveTokensCssPath()
   const tokensPath = tokensPaths.find(p => existsSync(p))
   if (!tokensPath) return { fontSize: {}, lineHeight: {}, fontWeight: {} }
 

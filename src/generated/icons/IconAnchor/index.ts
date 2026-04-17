@@ -1,0 +1,1 @@
+export { IconAnchor } from './IconAnchor';

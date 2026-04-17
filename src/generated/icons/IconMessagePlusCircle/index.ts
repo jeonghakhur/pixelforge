@@ -1,0 +1,1 @@
+export { IconMessagePlusCircle } from './IconMessagePlusCircle';

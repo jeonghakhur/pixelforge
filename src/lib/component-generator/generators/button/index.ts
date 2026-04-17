@@ -8,7 +8,7 @@
 import type { GeneratorWarning } from '../../types'
 import type { GeneratorContext } from '../registry'
 import { classifyDimensions } from '../shared/dimensions'
-import { buildSingleSchemeCSS, buildMultiSchemeCSS, isDisabledState, isLoadingState } from '../shared/state-css'
+import { buildSingleSchemeCSS, buildMultiSchemeCSS, isDisabledState, isLoadingState, isBaseState } from '../shared/state-css'
 import { mapValue, warnUnmappedHex } from '../shared/state-css'
 import { mapFontWeightValue } from '../../css-var-mapper'
 import { buildSizeCSSRules, buildIconOnlyCSSRules } from '../shared/size-css'
@@ -23,7 +23,8 @@ import {
 } from './extract'
 
 import type { NormalizedPayload, GeneratorOutput } from '../../types'
-import type { InnerStructure } from '../shared/tsx-builder'
+import type { InnerStructure, TextlessIconOptions } from '../shared/tsx-builder'
+
 
 // ── 내부 요소 CSS 생성 ──────────────────────────────────────────────────
 
@@ -241,6 +242,60 @@ export function generateButton(
     ? buildLoadingSpinnerCSS(variants, appearanceKey, dims.stateKey)
     : ''
 
+  // ── 텍스트 없는 아이콘 전용 버튼 감지 ────────────────────────────────
+  const isTextless = payload.texts.all.length === 0 || payload.texts.all.every(t => !t.trim())
+
+  let textlessIcon: TextlessIconOptions | undefined
+  if (isTextless && dims.sizeKey) {
+    const sizeMap:        Record<string, number> = {}
+    const pathDataMap:    Record<string, string> = {}
+    const viewBoxMap:     Record<string, string> = {}
+    const strokeWidthMap: Record<string, number> = {}
+
+    function findVector(node: { type?: string; pathData?: string; children?: unknown[] } | undefined): { pathData?: string } | null {
+      if (!node) return null
+      if (node.type === 'VECTOR' && node.pathData) return node
+      for (const c of node.children ?? []) {
+        const r = findVector(c as { type?: string; pathData?: string; children?: unknown[] })
+        if (r) return r
+      }
+      return null
+    }
+
+    for (const v of variants) {
+      const size = v.properties[dims.sizeKey]
+      if (!size || sizeMap[size] !== undefined) continue
+      if (dims.stateKey) {
+        const state = v.properties[dims.stateKey]?.toLowerCase()
+        if (state && !isBaseState(state)) continue
+      }
+
+      // 아이콘 픽셀 크기 — childStyles에서 추출
+      for (const [key, cs] of Object.entries(v.childStyles)) {
+        if (key.toLowerCase().includes('> icon') && cs.width) {
+          const px = parseInt(cs.width, 10)
+          sizeMap[size] = px
+
+          // stroke-width
+          const sw = cs['stroke-width']
+          if (sw) strokeWidthMap[size] = parseFloat(sw)
+
+          // viewBox: icon 픽셀 크기 기반
+          viewBoxMap[size] = `0 0 ${px} ${px}`
+          break
+        }
+      }
+
+      // pathData — nodeTree VECTOR에서 추출
+      const vec = findVector(v.nodeTree as { type?: string; pathData?: string; children?: unknown[] } | undefined)
+      if (vec?.pathData) pathDataMap[size] = vec.pathData
+    }
+
+    if (Object.keys(sizeMap).length > 0) {
+      textlessIcon = { sizeMap, pathDataMap, viewBoxMap, strokeWidthMap }
+    }
+  }
+
   // ── TSX ────────────────────────────────────────────────────────────────
   const tsx = buildTsx(payload, dims, {
     element: ctx.element,
@@ -249,6 +304,7 @@ export function generateButton(
     innerStructure,
     componentProps,
     overrides: ctx.overrides,
+    textlessIcon,
   })
 
   // ── CSS 조합 ──────────────────────────────────────────────────────────

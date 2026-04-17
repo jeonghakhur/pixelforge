@@ -1,0 +1,1 @@
+export { IconEqual } from './IconEqual';

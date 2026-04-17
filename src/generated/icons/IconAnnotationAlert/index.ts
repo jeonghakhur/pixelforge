@@ -1,0 +1,1 @@
+export { IconAnnotationAlert } from './IconAnnotationAlert';

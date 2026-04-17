@@ -135,7 +135,7 @@ ${sourceAlignSelfLine}  color: ${s.source.color};
  *   - displayName / jobTitle prop 이름: Figma 레이어명("Name", "Source")을 JSX 친화적으로 변환
  */
 function buildAvatarTSX(componentName: string, s: AvatarStyles): string {
-  const { variantPropName, variantTypeName, defaultVariant, dimensions, booleanProps } = s
+  const { variantPropName, variantTypeName, defaultVariant, dimensions, booleanProps, captionGateProp } = s
 
   const variantUnion = dimensions.map((d) => `'${d.slug}'`).join(' | ')
 
@@ -147,11 +147,10 @@ function buildAvatarTSX(componentName: string, s: AvatarStyles): string {
   const boolDestructure = booleanProps.map((b) => `${b.propName} = ${b.defaultValue}`).join(', ')
   const boolDestructureLine = boolDestructure ? `\n      ${boolDestructure},` : ''
 
-  // 'source' boolean prop이 있으면 jobTitle 표시에 "source &&" 조건 추가
-  const sourceProp = booleanProps.find((b) => b.propName === 'source')
-  const sourceGuard = sourceProp ? ' && source' : ''
-  const captionCondition = sourceProp
-    ? `displayName || (source && jobTitle)`
+  // captionGateProp: nodeTree propRefs 기반으로 extract.ts가 결정
+  // 해당 prop이 false이면 figcaption 전체가 숨겨짐 (Figma 바인딩 그대로 반영)
+  const captionCondition = captionGateProp
+    ? `${captionGateProp} && (displayName || jobTitle)`
     : `displayName || jobTitle`
 
   return `import styles from './${componentName}.module.css'
@@ -211,7 +210,7 @@ export const ${componentName} = forwardRef<HTMLElement, ${componentName}Props>(
         {(${captionCondition}) && (
           <figcaption className={styles.caption}>
             {displayName && <span className={styles.name}>{displayName}</span>}
-            {jobTitle${sourceGuard} && <span className={styles.source}>{jobTitle}</span>}
+            {jobTitle && <span className={styles.source}>{jobTitle}</span>}
           </figcaption>
         )}
       </figure>

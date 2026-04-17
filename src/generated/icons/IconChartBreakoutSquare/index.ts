@@ -1,0 +1,1 @@
+export { IconChartBreakoutSquare } from './IconChartBreakoutSquare';

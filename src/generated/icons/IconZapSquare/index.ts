@@ -1,0 +1,1 @@
+export { IconZapSquare } from './IconZapSquare';

@@ -27,7 +27,7 @@ import {
   mapLineHeightValue,
   mapFontWeightValue,
 } from '../../css-var-mapper'
-import type { NormalizedPayload } from '../../types'
+import type { NormalizedPayload, NodeTreeEntry } from '../../types'
 
 // ── 공개 인터페이스 ───────────────────────────────────────────────────────────
 
@@ -49,6 +49,8 @@ export interface BooleanPropDef {
   propName: string
   /** Figma defaultValue를 boolean으로 변환한 값 */
   defaultValue: boolean
+  /** 원본 Figma property ID (예: 'Source#3287:4621') — propRefs 역참조에 사용 */
+  rawKey: string
 }
 
 /**
@@ -100,6 +102,12 @@ export interface AvatarStyles {
   dimensions: VariantDimension[]
   /** componentProperties에서 추출한 BOOLEAN 프롭 목록 */
   booleanProps: BooleanPropDef[]
+  /**
+   * figcaption 전체를 게이트하는 boolean prop 이름 (예: 'source').
+   * nodeTree propRefs.visible → booleanProps rawKey 역참조로 결정.
+   * 없으면 undefined — caption 가시성은 텍스트 props만으로 결정.
+   */
+  captionGateProp?: string
   /** "Name" 텍스트 레이어 스타일 */
   name: TextStyle
   /** "Source" 텍스트 레이어 스타일 */
@@ -152,6 +160,22 @@ function extractTextStyle(
     hasUnderline: cs['text-decoration-line'] === 'underline',
     alignSelf:    cs['align-self'] ?? '',
   }
+}
+
+/**
+ * nodeTree를 순회하며 propRefs.visible → 레이어 이름 맵을 만든다.
+ * 반환값: { "Source#3287:4621": "Text and supporting text", ... }
+ * — captionGateProp 결정에 사용된다.
+ */
+function buildPropLayerMap(nodeTree?: NodeTreeEntry): Record<string, string> {
+  const map: Record<string, string> = {}
+  if (!nodeTree) return map
+  const walk = (node: NodeTreeEntry) => {
+    if (node.propRefs?.visible) map[node.propRefs.visible] = node.name
+    node.children?.forEach(walk)
+  }
+  walk(nodeTree)
+  return map
 }
 
 // ── 공개 추출 함수 ────────────────────────────────────────────────────────────
@@ -241,14 +265,34 @@ export function extractAvatarStyles(
   }
 
   // ── Boolean props (componentProperties) ─────────────────────────────────────
-  // "Source#3287:4621" → "source", defaultValue: true
+  // "Source#3287:4621" → propName: "source", rawKey: "Source#3287:4621"
   // INSTANCE_SWAP / TEXT 타입은 현재 미지원 (향후 확장 예정)
   const booleanProps: BooleanPropDef[] = Object.entries(componentProperties ?? {})
     .filter(([, def]) => def.type === 'BOOLEAN')
-    .map(([rawKey, def]) => ({
-      propName: toCamelCase(stripPropId(rawKey)),
+    .map(([key, def]) => ({
+      propName: toCamelCase(stripPropId(key)),
       defaultValue: def.defaultValue === true || def.defaultValue === 'true',
+      rawKey: key,
     }))
+
+  // ── captionGateProp 결정 ──────────────────────────────────────────────────────
+  // nodeTree를 순회해 propRefs.visible → 레이어 이름 맵을 만든다.
+  // 캡션 컨테이너(flex-direction이 있는 중간 레이어)에 바인딩된 prop을 찾아
+  // captionGateProp으로 설정한다.
+  const propLayerMap = buildPropLayerMap(variants[0]?.nodeTree)
+  let captionGateProp: string | undefined
+
+  for (const [propId, layerName] of Object.entries(propLayerMap)) {
+    const lower = layerName.toLowerCase()
+    // 이미지 레이어나 리프 텍스트가 아닌 중간 컨테이너인지 확인
+    if (lower !== 'image' && !lower.includes('> name') && !lower.includes('> source')) {
+      const matched = booleanProps.find((b) => b.rawKey === propId)
+      if (matched) {
+        captionGateProp = matched.propName
+        break
+      }
+    }
+  }
 
   // ── 텍스트 스타일 추출 ────────────────────────────────────────────────────────
   // 우선순위:
@@ -285,6 +329,7 @@ export function extractAvatarStyles(
     captionAlignItems,
     dimensions,
     booleanProps,
+    captionGateProp,
     // defaults: 노드에서 값을 못 읽었을 때만 사용하는 최후 fallback
     name: extractTextStyle(nameCs, {
       color:      'var(--text-primary)',

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import fs from 'fs';
 import path from 'path';
 import { getTokensByType, getTokensByCollection, getSpacingPrimitives } from '@/lib/actions/tokens';
+import { getGeneratorConfig } from '@/lib/actions/generator-config';
 import { resolveAliasColors } from '@/lib/tokens/resolve-alias';
 import { TOKEN_TYPE_MAP } from '@/lib/tokens/token-types';
 import { generateCssCode } from '@/lib/tokens/css-generator';
@@ -49,10 +50,15 @@ export default async function TokenPage({ params }: TokenPageProps) {
 
   const initialCss = tokenRows.length > 0 ? generateCssCode(tokenRows, type) : '';
 
+  const { tokensCssPath } = await getGeneratorConfig();
+  const tokensCssAbsPath = path.isAbsolute(tokensCssPath)
+    ? tokensCssPath
+    : path.join(process.cwd(), tokensCssPath);
+  const tokensCssUrl = '/' + tokensCssPath.replace(/^public\//, '');
+
   let fullCss = '';
   try {
-    const cssPath = path.join(process.cwd(), 'public', 'css', 'tokens.css');
-    if (fs.existsSync(cssPath)) fullCss = fs.readFileSync(cssPath, 'utf-8');
+    if (fs.existsSync(tokensCssAbsPath)) fullCss = fs.readFileSync(tokensCssAbsPath, 'utf-8');
   } catch { /* ignore */ }
 
   return (
@@ -81,7 +87,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
       ) : (
         <>
           {(type === 'color' || type === 'typography') && (
-            <link rel="stylesheet" href="/css/tokens.css" />
+            <link rel="stylesheet" href={tokensCssUrl} />
           )}
           <div data-token-grid>
             {type === 'color'                            && <ColorGrid tokens={resolveAliasColors(tokenRows)} />}

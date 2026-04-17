@@ -10,6 +10,7 @@ import { runPipeline } from '@/lib/component-generator';
 import type { PluginPayload } from '@/lib/component-generator';
 import { notifySyncUpdated } from '@/lib/sync/sse-hub';
 import { setActiveProject } from '@/lib/actions/tokens';
+import { getGeneratorConfig } from '@/lib/actions/generator-config';
 import { writeComponentFiles } from '@/lib/component-generator/file-writer';
 
 export async function OPTIONS() {
@@ -50,11 +51,13 @@ export async function POST(req: Request) {
   const body = await req.json() as {
     figmaFileKey?: string;
     figmaFileName?: string;
+    componentType?: string;
+    styleMode?: string;
     meta: null;
     data: PluginPayload;
   };
 
-  const { figmaFileKey, figmaFileName } = body;
+  const { figmaFileKey, figmaFileName, componentType } = body;
   const rawData = body.data as unknown as Record<string, unknown>;
   const dataMeta = (rawData.meta ?? {}) as Record<string, string>;
   const dataName = (rawData.name as string) ?? '';
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
   console.log('[component-sync] ─────────────────────────────');
   console.log('[component-sync] rawName:', JSON.stringify(dataName));
   console.log('[component-sync] nodeName:', JSON.stringify(dataMeta.nodeName));
-  const result = runPipeline(rawData);
+  const result = runPipeline(rawData, { componentType });
   const componentName = result.output?.name ?? dataName;
   console.log('[component-sync] resolved:', componentName, '(DB name)');
   console.log('[component-sync] figmaPath:', dataName, '(file path)');
@@ -158,9 +161,10 @@ export async function POST(req: Request) {
     trigger: existing ? 'update' : 'generate',
   }).run();
 
-  // 파일 시스템에 TSX + CSS 파일 생성 (Figma 경로 구조 유지)
+  // 파일 시스템에 TSX + CSS 파일 생성
   if (result.output?.tsx && result.output?.css) {
-    writeComponentFiles(dataName, result.output.tsx, result.output.css);
+    const genConfig = await getGeneratorConfig();
+    writeComponentFiles(dataName, result.output.tsx, result.output.css, genConfig.outputPath);
   }
 
   // 활동 이력

@@ -73,13 +73,6 @@ function buildTextCSS(payload: TypographyPayload): string {
   lines.push(`.root[data-align='right']  { text-align: right; }`)
   lines.push(``)
 
-  // ── Wrap ──
-  lines.push(`/* ── Wrap ── */`)
-  lines.push(`.root[data-wrap='balance'] { text-wrap: balance; }`)
-  lines.push(`.root[data-wrap='pretty']  { text-wrap: pretty; }`)
-  lines.push(`.root[data-wrap='nowrap']  { white-space: nowrap; }`)
-  lines.push(``)
-
   // ── Truncate ──
   lines.push(`/* ── Truncate ── */`)
   lines.push(`.truncate {`)
@@ -134,7 +127,6 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
   as?: TextTag;
   truncate?: boolean;
   align?: 'left' | 'center' | 'right';
-  wrap?: 'balance' | 'pretty' | 'nowrap';
   srOnly?: boolean;
 }
 
@@ -146,7 +138,6 @@ export function Text({
   as: Tag = 'p',
   truncate,
   align,
-  wrap,
   srOnly,
   className,
   ...props
@@ -167,7 +158,6 @@ export function Text({
       data-weight={weight}
       data-color={color}
       {...(align && { 'data-align': align })}
-      {...(wrap && { 'data-wrap': wrap })}
       {...props}
     >
       {children}

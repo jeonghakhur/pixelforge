@@ -55,10 +55,10 @@ export const AvatarImage = forwardRef<HTMLElement, AvatarImageProps>(
         ) : (
           <div className={styles.image} aria-hidden="true" />
         )}
-        {(displayName || (source && jobTitle)) && (
+        {source && (displayName || jobTitle) && (
           <figcaption className={styles.caption}>
             {displayName && <span className={styles.name}>{displayName}</span>}
-            {jobTitle && source && <span className={styles.source}>{jobTitle}</span>}
+            {jobTitle && <span className={styles.source}>{jobTitle}</span>}
           </figcaption>
         )}
       </figure>

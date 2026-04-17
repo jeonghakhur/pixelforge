@@ -1,0 +1,1 @@
+export { IconGoogleChrome } from './IconGoogleChrome';

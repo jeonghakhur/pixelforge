@@ -1,0 +1,1 @@
+export { IconInfoHexagon } from './IconInfoHexagon';

@@ -1,0 +1,1 @@
+export { IconArrowsTriangle } from './IconArrowsTriangle';

@@ -1,0 +1,1 @@
+export { IconPhoneX } from './IconPhoneX';

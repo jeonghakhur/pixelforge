@@ -1,0 +1,131 @@
+@use '../../styles/variables' as *;
+
+// ── Trigger ──────────────────────────────────────────────────────────────────
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: map-get($spacers, 2);
+  width: 100%;
+  padding: map-get($spacers, 1) map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  transition: $transition-fast;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover { border-color: var(--text-muted); }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  }
+
+  &[data-state='open'] { border-color: var(--accent); }
+
+  &[data-placeholder] { color: var(--text-muted); }
+}
+
+.triggerValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerIcon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 200ms ease;
+
+  [data-state='open'] & { transform: rotate(180deg); }
+}
+
+// ── Dropdown ─────────────────────────────────────────────────────────────────
+.content {
+  z-index: 9999;
+  min-width: var(--radix-select-trigger-width);
+  max-height: var(--radix-select-content-available-height);
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  &[data-state='open'] {
+    animation: slideDown 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &[data-state='closed'] {
+    animation: slideUp 80ms ease-in;
+  }
+}
+
+.viewport {
+  padding: 4px;
+}
+
+// ── Item ─────────────────────────────────────────────────────────────────────
+.item {
+  display: flex;
+  align-items: center;
+  gap: map-get($spacers, 2);
+  padding: 5px map-get($spacers, 2);
+  font-size: $font-size-sm;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  border-radius: calc(#{$border-radius-sm} - 2px);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: background 80ms;
+
+  &[data-highlighted] {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  &[data-state='checked'] {
+    color: var(--text-primary);
+    font-weight: $font-weight-medium;
+  }
+
+  &[data-disabled] {
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+}
+
+.itemIndicator {
+  width: 12px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+// ── Scroll buttons ────────────────────────────────────────────────────────────
+.scrollBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  color: var(--text-muted);
+  cursor: default;
+
+  &:hover { color: var(--text-primary); }
+}
+
+// ── Animations ───────────────────────────────────────────────────────────────
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}

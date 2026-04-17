@@ -1,0 +1,1 @@
+export { IconBookmarkX } from './IconBookmarkX';

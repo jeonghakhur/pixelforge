@@ -1,0 +1,1 @@
+export { IconInfoOctagon } from './IconInfoOctagon';

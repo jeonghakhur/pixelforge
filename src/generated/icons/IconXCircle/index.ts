@@ -1,0 +1,1 @@
+export { IconXCircle } from './IconXCircle';

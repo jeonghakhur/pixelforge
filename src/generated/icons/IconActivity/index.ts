@@ -1,0 +1,1 @@
+export { IconActivity } from './IconActivity';

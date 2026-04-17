@@ -1,0 +1,1 @@
+export { IconMessageChatCircle } from './IconMessageChatCircle';

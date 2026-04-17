@@ -10,6 +10,17 @@ import type { ParsedComponentProp } from '../../component-props-parser'
 import type { ComponentOverrides } from '../../props-override'
 import { isBaseState } from './state-css'
 
+export interface TextlessIconOptions {
+  /** size → 아이콘 픽셀 크기 매핑 (예: { xs: 9, sm: 9, md: 12 }) */
+  sizeMap: Record<string, number>
+  /** size → SVG pathData (Figma VECTOR에서 추출) */
+  pathDataMap?: Record<string, string>
+  /** size → SVG viewBox */
+  viewBoxMap?: Record<string, string>
+  /** size → stroke-width */
+  strokeWidthMap?: Record<string, number>
+}
+
 export interface TsxBuildOptions {
   /** HTML 요소 ('button' | 'div' | 'span' | 'input' | 'article' | 'a') */
   element: string
@@ -23,6 +34,8 @@ export interface TsxBuildOptions {
   componentProps?: ParsedComponentProp[]
   /** 개발자가 편집한 props 오버라이드 */
   overrides?: ComponentOverrides
+  /** 텍스트 없는 아이콘 전용 버튼 — icon + ariaLabel prop 생성 */
+  textlessIcon?: TextlessIconOptions
 }
 
 /** childStyles 기반 컴포넌트 내부 구조 */
@@ -279,6 +292,177 @@ export function buildTsx(
 
   const refType = getRefType(element)
   const fullPropsType = `${elementPropsType}${elementPropsGeneric}`
+
+  // ── textlessIcon 처리 (아이콘 전용, 텍스트 없는 버튼) ─────────────────
+  const tl = options.textlessIcon
+  if (tl) {
+    const stateDestructure = dims.stateKey
+      ? `\n      state = '${defaultState ?? 'default'}',` : ''
+    const stateAttrStr = dims.stateKey ? `\n        data-state={state ?? undefined}` : ''
+    const stateDisabled = dims.stateKey
+      ? `    const isDisabled = disabled || state === 'disabled';` : '    const isDisabled = disabled;'
+
+    // pathData가 있으면 인라인 SVG, 없으면 icon prop 폴백
+    const hasSvg = tl.pathDataMap && Object.keys(tl.pathDataMap).length > 0
+
+    if (hasSvg) {
+      const pathDataMap = tl.pathDataMap!
+      const viewBoxMap  = tl.viewBoxMap  ?? {}
+      const strokeWMap  = tl.strokeWidthMap ?? {}
+
+      const pathEntries = Object.entries(pathDataMap)
+        .map(([s, d]) => `  ${s}: '${d}'`).join(',\n')
+      const viewEntries = Object.entries(viewBoxMap)
+        .map(([s, v]) => `  ${s}: '${v}'`).join(',\n')
+      const swEntries = Object.entries(strokeWMap)
+        .map(([s, w]) => `  ${s}: ${w}`).join(',\n')
+
+      return `import { forwardRef } from 'react';
+import type { ${elementPropsType} } from 'react';
+import styles from './${name}.module.css';
+
+${stateTypeDef}export type ${name}Size = ${sizeUnion};
+
+export interface ${name}Props extends ${fullPropsType} {
+  size?: ${name}Size;${stateProp}
+  /** 스크린 리더용 레이블 — 아이콘 전용 버튼 필수 */
+  ariaLabel: string;
+}
+
+/**
+ * ${name} — Figma COMPONENT_SET 기반 자동 생성
+ * dimensions: ${JSON.stringify(Object.fromEntries(
+    Object.entries(variantOptions).map(([k, v]) => [k, v.length]),
+  ))}
+ */
+const _iconSize: Record<${name}Size, number> = {
+${Object.entries(tl.sizeMap).map(([s, px]) => `  ${s}: ${px}`).join(',\n')},
+}
+const _pathData: Record<${name}Size, string> = {
+${pathEntries},
+}
+const _viewBox: Record<${name}Size, string> = {
+${viewEntries},
+}
+const _strokeWidth: Record<${name}Size, number> = {
+${swEntries},
+}
+
+export const ${name} = forwardRef<${refType}, ${name}Props>(
+  (
+    {
+      size = '${defaultSize}',${stateDestructure}
+      type = 'button',
+      ariaLabel,
+      disabled,
+      onClick,
+      className = '',
+      ...props
+    },
+    ref,
+  ) => {
+${stateDisabled}
+
+    return (
+      <${element}
+        ref={ref}
+        type={type}
+        data-size={size}${stateAttrStr}
+        aria-label={ariaLabel}
+        aria-disabled={isDisabled || undefined}
+        onClick={isDisabled ? undefined : onClick}
+        className={\`\${styles.root}\${className ? \` \${className}\` : ''}\`}
+        {...props}
+      >
+        <svg
+          width={_iconSize[size]}
+          height={_iconSize[size]}
+          viewBox={_viewBox[size]}
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d={_pathData[size]}
+            stroke="currentColor"
+            strokeWidth={_strokeWidth[size]}
+            strokeLinecap="round"
+          />
+        </svg>
+      </${element}>
+    );
+  },
+);
+${name}.displayName = '${name}';
+
+export default ${name};
+`
+    }
+
+    // pathData 없음 — icon prop 폴백
+    const sizeEntries = Object.entries(tl.sizeMap)
+      .map(([s, px]) => `  ${s}: ${px}`).join(',\n')
+
+    return `import { forwardRef } from 'react';
+import type { ${elementPropsType} } from 'react';
+import { Icon } from '@iconify/react';
+import styles from './${name}.module.css';
+
+${stateTypeDef}export type ${name}Size = ${sizeUnion};
+
+export interface ${name}Props extends ${fullPropsType} {
+  size?: ${name}Size;${stateProp}
+  icon?: string;
+  /** 스크린 리더용 레이블 — 아이콘 전용 버튼 필수 */
+  ariaLabel: string;
+}
+
+/**
+ * ${name} — Figma COMPONENT_SET 기반 자동 생성
+ * dimensions: ${JSON.stringify(Object.fromEntries(
+    Object.entries(variantOptions).map(([k, v]) => [k, v.length]),
+  ))}
+ */
+const _iconSize: Record<${name}Size, number> = {
+${sizeEntries},
+}
+
+export const ${name} = forwardRef<${refType}, ${name}Props>(
+  (
+    {
+      size = '${defaultSize}',${stateDestructure}
+      type = 'button',
+      icon,
+      ariaLabel,
+      disabled,
+      onClick,
+      className = '',
+      ...props
+    },
+    ref,
+  ) => {
+${stateDisabled}
+
+    return (
+      <${element}
+        ref={ref}
+        type={type}
+        data-size={size}${stateAttrStr}
+        aria-label={ariaLabel}
+        aria-disabled={isDisabled || undefined}
+        onClick={isDisabled ? undefined : onClick}
+        className={\`\${styles.root}\${className ? \` \${className}\` : ''}\`}
+        {...props}
+      >
+        {icon && <Icon icon={icon} width={_iconSize[size]} height={_iconSize[size]} />}
+      </${element}>
+    );
+  },
+);
+${name}.displayName = '${name}';
+
+export default ${name};
+`
+  }
 
   return `import { forwardRef } from 'react';
 import type { ${elementPropsType}, ReactNode } from 'react';

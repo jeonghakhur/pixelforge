@@ -1,0 +1,1 @@
+export { IconBarChartSquareUp } from './IconBarChartSquareUp';

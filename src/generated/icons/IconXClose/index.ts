@@ -1,0 +1,1 @@
+export { IconXClose } from './IconXClose';

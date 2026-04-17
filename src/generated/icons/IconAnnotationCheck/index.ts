@@ -1,0 +1,1 @@
+export { IconAnnotationCheck } from './IconAnnotationCheck';

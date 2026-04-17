@@ -11,9 +11,15 @@ export interface GeneratorConfig {
   colorAbbrev: Record<string, string>;
   styleTypePassthrough: string[];
   paletteKeywords: string[];
+  /** 생성된 컴포넌트 파일 저장 경로 (프로젝트 루트 기준 상대경로) */
+  outputPath: string;
+  /** tokens.css 저장 경로 (프로젝트 루트 기준 상대경로, 파일명 포함) */
+  tokensCssPath: string;
 }
 
 const DEFAULTS: GeneratorConfig = {
+  outputPath: 'src/generated/components',
+  tokensCssPath: 'public/css/tokens.css',
   semanticMap: {
     'colors-gray-white': 'bg-elevated',
     'colors-gray-50': 'bg-surface',
@@ -31,7 +37,7 @@ const DEFAULTS: GeneratorConfig = {
 };
 
 export const GENERATOR_CONFIG_KEYS: (keyof GeneratorConfig)[] = [
-  'semanticMap', 'colorAbbrev', 'styleTypePassthrough', 'paletteKeywords',
+  'outputPath', 'tokensCssPath', 'semanticMap', 'colorAbbrev', 'styleTypePassthrough', 'paletteKeywords',
 ];
 
 export const GENERATOR_DEFAULTS = DEFAULTS;

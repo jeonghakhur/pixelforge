@@ -1,0 +1,1 @@
+export { IconFaceContent } from './IconFaceContent';

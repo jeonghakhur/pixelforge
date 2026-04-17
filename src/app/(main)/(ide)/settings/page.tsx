@@ -11,8 +11,11 @@ import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ToastContainer, { type ToastItem } from '@/components/common/Toast';
-import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl, getImageStoragePath, saveImageStoragePath } from '@/lib/actions/settings';
+import { saveFigmaToken, checkFigmaToken, saveProjectFigmaUrl, getProjectFigmaUrl, getImageStoragePath, saveImageStoragePath, getIconOutputPath, saveIconOutputPath } from '@/lib/actions/settings';
+import { getGeneratorConfig, saveGeneratorConfigValue } from '@/lib/actions/generator-config';
+import { GENERATOR_DEFAULTS } from '@/lib/generator-config-cache';
 import { IMAGE_STORAGE_DEFAULT } from '@/lib/constants/images';
+import { ICON_OUTPUT_DEFAULT } from '@/lib/constants/icons';
 import { createApiKey, getApiKeys, deleteApiKey } from '@/lib/actions/api-keys';
 import { getSyncStatus, type SyncProjectStatus, type SyncItem } from '@/lib/actions/sync-status';
 import { getSnapshotListAction, rollbackSnapshotAction, deleteAllTokensAction, type SnapshotInfo } from '@/lib/actions/tokens';
@@ -111,6 +114,13 @@ export default function SettingsPage() {
   const [imageStoragePath, setImageStoragePath] = useState(IMAGE_STORAGE_DEFAULT);
   const [imagePathSaved, setImagePathSaved] = useState(false);
   const [imagePathError, setImagePathError] = useState<string | null>(null);
+  const [iconOutputPath, setIconOutputPath] = useState(ICON_OUTPUT_DEFAULT);
+  const [iconPathSaved, setIconPathSaved] = useState(false);
+  const [iconPathError, setIconPathError] = useState<string | null>(null);
+  const [componentOutputPath, setComponentOutputPath] = useState(GENERATOR_DEFAULTS.outputPath);
+  const [componentOutputPathSaved, setComponentOutputPathSaved] = useState(false);
+  const [tokensCssPath, setTokensCssPath] = useState(GENERATOR_DEFAULTS.tokensCssPath);
+  const [tokensCssPathSaved, setTokensCssPathSaved] = useState(false);
 
   const addToast = (message: string, variant: ToastItem['variant'] = 'danger') => {
     setToasts((prev) => [...prev, { id: crypto.randomUUID(), variant, message }]);
@@ -141,6 +151,11 @@ export default function SettingsPage() {
     getApiKeys().then((keys) => setApiKeyList(keys as ApiKeyRow[]));
     getSyncStatus().then(setSyncStatus);
     getImageStoragePath().then(setImageStoragePath);
+    getIconOutputPath().then(setIconOutputPath);
+    getGeneratorConfig().then((cfg) => {
+      setComponentOutputPath(cfg.outputPath);
+      setTokensCssPath(cfg.tokensCssPath);
+    });
   }, []);
 
   useEffect(() => {
@@ -181,6 +196,26 @@ export default function SettingsPage() {
     if (result.error) { setImagePathError(result.error); return; }
     setImagePathSaved(true);
     setTimeout(() => setImagePathSaved(false), 2000);
+  };
+
+  const onSaveIconOutputPath = async () => {
+    setIconPathError(null);
+    const result = await saveIconOutputPath(iconOutputPath);
+    if (result.error) { setIconPathError(result.error); return; }
+    setIconPathSaved(true);
+    setTimeout(() => setIconPathSaved(false), 2000);
+  };
+
+  const onSaveComponentOutputPath = async () => {
+    await saveGeneratorConfigValue('outputPath', componentOutputPath);
+    setComponentOutputPathSaved(true);
+    setTimeout(() => setComponentOutputPathSaved(false), 2000);
+  };
+
+  const onSaveTokensCssPath = async () => {
+    await saveGeneratorConfigValue('tokensCssPath', tokensCssPath);
+    setTokensCssPathSaved(true);
+    setTimeout(() => setTokensCssPathSaved(false), 2000);
   };
 
   const onDeleteUser = async (userId: string) => {
@@ -359,21 +394,108 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* 이미지 저장 경로 */}
           <Card className={styles.settingsCard}>
             <div className={styles.settingsContent}>
               <div className={styles.settingsLabel}>
-                <Icon icon="solar:gallery-linear" width={20} height={20} />
+                <Icon icon="solar:folder-with-files-linear" width={20} height={20} />
                 <div>
-                  <h2 className={styles.settingsTitle}>이미지 저장 경로</h2>
+                  <h2 className={styles.settingsTitle}>파일 저장 경로 <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 13 }}>(프로젝트 루트 기준)</span></h2>
                   <p className={styles.settingsDesc}>
-                    플러그인에서 전송한 이미지를 저장할 기본 경로입니다. 플러그인에서 별도 경로를 지정하면 이 설정을 무시합니다.
+                    토큰 CSS·컴포넌트·아이콘·이미지 파일의 저장 경로를 설정합니다. 플러그인에서 별도 경로를 지정하면 해당 설정을 우선합니다.
                   </p>
                 </div>
               </div>
               <div className={styles.formGroup}>
+                <label htmlFor="tokens-css-path" className={styles.formLabel}>
+                  토큰 CSS 경로 <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(파일명 포함)</span>
+                </label>
+                <div className={styles.inputRow}>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="tokens-css-path"
+                      type="text"
+                      className={styles.input}
+                      value={tokensCssPath}
+                      onChange={(e) => setTokensCssPath(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') onSaveTokensCssPath(); }}
+                      placeholder={GENERATOR_DEFAULTS.tokensCssPath}
+                    />
+                  </div>
+                  <Button type="button" onClick={onSaveTokensCssPath} leftIcon="solar:check-circle-linear">
+                    저장
+                  </Button>
+                </div>
+                {tokensCssPathSaved && (
+                  <p className={styles.success} role="status">
+                    <Icon icon="solar:check-circle-bold" width={14} height={14} />
+                    저장되었습니다.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="component-output-path" className={styles.formLabel}>
+                  컴포넌트 출력 경로
+                </label>
+                <div className={styles.inputRow}>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="component-output-path"
+                      type="text"
+                      className={styles.input}
+                      value={componentOutputPath}
+                      onChange={(e) => setComponentOutputPath(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') onSaveComponentOutputPath(); }}
+                      placeholder={GENERATOR_DEFAULTS.outputPath}
+                    />
+                  </div>
+                  <Button type="button" onClick={onSaveComponentOutputPath} leftIcon="solar:check-circle-linear">
+                    저장
+                  </Button>
+                </div>
+                {componentOutputPathSaved && (
+                  <p className={styles.success} role="status">
+                    <Icon icon="solar:check-circle-bold" width={14} height={14} />
+                    저장되었습니다.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="icon-output-path" className={styles.formLabel}>
+                  아이콘 컴포넌트 저장 경로
+                </label>
+                <div className={styles.inputRow}>
+                  <div className={styles.inputWrapper}>
+                    <input
+                      id="icon-output-path"
+                      type="text"
+                      className={styles.input}
+                      value={iconOutputPath}
+                      onChange={(e) => setIconOutputPath(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') onSaveIconOutputPath(); }}
+                      placeholder={ICON_OUTPUT_DEFAULT}
+                    />
+                  </div>
+                  <Button type="button" onClick={onSaveIconOutputPath} leftIcon="solar:check-circle-linear">
+                    저장
+                  </Button>
+                </div>
+                <p className={styles.settingsDesc} style={{ marginTop: 6 }}>
+                  아이콘 import: <code style={{ fontSize: 11 }}>{`import { Icon{Name} } from '@/${iconOutputPath.replace(/^src\//, '')}';`}</code>
+                </p>
+                {iconPathSaved && (
+                  <p className={styles.success} role="status">
+                    <Icon icon="solar:check-circle-bold" width={14} height={14} />
+                    저장되었습니다.
+                  </p>
+                )}
+                {iconPathError && <p className={styles.error} role="alert">{iconPathError}</p>}
+              </div>
+
+              <div className={styles.formGroup}>
                 <label htmlFor="image-storage-path" className={styles.formLabel}>
-                  저장 경로 <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(프로젝트 루트 기준)</span>
+                  이미지 저장 경로
                 </label>
                 <div className={styles.inputRow}>
                   <div className={styles.inputWrapper}>

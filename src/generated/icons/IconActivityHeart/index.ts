@@ -1,0 +1,1 @@
+export { IconActivityHeart } from './IconActivityHeart';

@@ -1,0 +1,1 @@
+export { IconSearchRefraction } from './IconSearchRefraction';

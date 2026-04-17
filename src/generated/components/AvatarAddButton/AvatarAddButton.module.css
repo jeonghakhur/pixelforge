@@ -1,0 +1,80 @@
+/**
+ * AvatarAddButton.module.css
+ * source: Figma COMPONENT_SET variants data
+ * size(xs|sm|md), state(Default|Hover|Focus|Disabled)
+ */
+
+/* ── Base ── */
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: var(--font-weight-medium, 500);
+  white-space: nowrap;
+  font-family: inherit;
+  transition: opacity 150ms ease, transform 150ms ease, background 150ms ease;
+}
+
+/* ── Color scheme ── */
+.root {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full, 9999px);
+}
+
+.root[data-state='focus'] {
+  box-shadow: var(--focus-ring);
+}
+
+.root[data-state='disabled'] {
+  opacity: 0.5;
+}
+
+.root[data-state='hover'] {
+  background: var(--bg-primary_hover);
+}
+
+.root .iconSlot {
+  color: var(--fg-quaternary);
+}
+
+.root[data-state='hover'] .iconSlot {
+  color: var(--fg-quaternary_hover);
+}
+
+/* ── Size variants ── */
+.root[data-size='xs'] {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.root[data-size='sm'] {
+  width: 32px;
+  height: 32px;
+  padding: var(--spacing-xs, 4px);
+  border-radius: var(--radius-full, 9999px);
+}
+
+.root[data-size='md'] {
+  width: 40px;
+  height: 40px;
+  padding: var(--spacing-sm, 6px);
+  border-radius: var(--radius-full, 9999px);
+}
+
+
+
+
+/* ── State ── */
+.root[data-state='disabled'] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+

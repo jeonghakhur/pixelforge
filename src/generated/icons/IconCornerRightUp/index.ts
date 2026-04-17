@@ -1,0 +1,1 @@
+export { IconCornerRightUp } from './IconCornerRightUp';

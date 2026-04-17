@@ -1,0 +1,1 @@
+export { IconBarLineChart } from './IconBarLineChart';
