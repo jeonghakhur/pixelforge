@@ -123,8 +123,10 @@ function parseSandboxProps(tsx: string): SandboxPropDef[] {
   const destructured = parseDestructuredProps(tsx);
   const props: SandboxPropDef[] = [];
 
-  // disabled, children, className, type, ...props는 제외
-  const SKIP = new Set(['disabled', 'children', 'className', 'type']);
+  // disabled, children, className, ...props는 제외
+  // 'type'은 제외하지 않음 — AvatarImage 등에서 variant prop으로 사용됨
+  // (Button의 type='button'은 union/boolean이 아니므로 자동으로 필터됨)
+  const SKIP = new Set(['disabled', 'children', 'className']);
 
   for (const { name, default: defaultVal } of destructured) {
     if (SKIP.has(name)) continue;
@@ -166,7 +168,12 @@ function parseSandboxProps(tsx: string): SandboxPropDef[] {
 
       const dataAttr = parseDataAttrMapping(tsx, propName);
 
-      if (typeName === 'boolean') {
+      const namedUnionVals = unionTypes.get(propName);
+      if (namedUnionVals && namedUnionVals.length > 0) {
+        // named union 타입: TextTag, ButtonVariant 등 (as?: TextTag 같은 alias prop 포함)
+        seenNames.add(propName);
+        props.push({ kind: 'union', name: propName, values: namedUnionVals, defaultValue: namedUnionVals[0], dataAttr });
+      } else if (typeName === 'boolean') {
         seenNames.add(propName);
         props.push({ kind: 'boolean', name: propName, defaultValue: false, dataAttr });
       } else if (/^'[^']+'(\s*\|\s*'[^']+')+$/.test(typeName)) {
@@ -335,6 +342,18 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
   // 부모 앱의 테마 동기화
   const resolvedTheme = useUIStore((s) => s.resolvedTheme);
 
+  // iframe 높이 자동 조정 — preview가 postMessage로 콘텐츠 높이를 전달
+  const [iframeHeight, setIframeHeight] = useState(120);
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.data?.type === 'preview-height' && typeof e.data.height === 'number') {
+        setIframeHeight(Math.max(80, e.data.height));
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
   // 초기 URL (iframe 최초 로드용) — 이후 props 변경은 postMessage로 전달
   const initialPreviewUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -385,6 +404,7 @@ function ComponentSandbox({ name, figmaPath, css, tsx }: {
               src={initialPreviewUrl}
               title={`${name} preview`}
               className={styles.sandboxIframe}
+              style={{ height: iframeHeight }}
             />
           )}
         </div>

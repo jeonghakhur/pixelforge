@@ -118,30 +118,28 @@ function buildTextTSX(payload: TypographyPayload): string {
   const defaultSize = sizes.includes('text-md') ? 'text-md' : (sizes[0] ?? 'text-md')
   const defaultColor = colorTokens.includes('primary') ? 'primary' : colorTokens[0] ?? 'primary'
 
-  return `import type { HTMLAttributes } from 'react';
+  return `import type { HTMLAttributes, ReactNode } from 'react';
 import styles from './Text.module.css';
 
 export type TextSize = ${sizeUnion || "'text-md'"};
 export type TextWeight = ${weightUnion || "'regular' | 'medium' | 'semibold' | 'bold'"};
 export type TextColor = ${colorUnion || "'primary' | 'secondary'"};
+export type TextTag = 'p' | 'span' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label';
 
 export interface TextProps extends HTMLAttributes<HTMLElement> {
+  children?: ReactNode;
   size?: TextSize;
   weight?: TextWeight;
   color?: TextColor;
-  /** 렌더링할 HTML 태그 (기본: 'p') */
-  as?: React.ElementType;
-  /** 오버플로 말줄임 */
+  as?: TextTag;
   truncate?: boolean;
-  /** 텍스트 정렬 */
   align?: 'left' | 'center' | 'right';
-  /** text-wrap 제어 */
   wrap?: 'balance' | 'pretty' | 'nowrap';
-  /** 시각적 숨김 (스크린리더 노출 유지) */
   srOnly?: boolean;
 }
 
 export function Text({
+  children = 'Text',
   size = '${defaultSize}',
   weight = 'regular',
   color = '${defaultColor}',
@@ -171,7 +169,9 @@ export function Text({
       {...(align && { 'data-align': align })}
       {...(wrap && { 'data-wrap': wrap })}
       {...props}
-    />
+    >
+      {children}
+    </Tag>
   );
 }
 

@@ -1,0 +1,62 @@
+/**
+ * AvatarImage.module.css
+ * source: Figma COMPONENT_SET (variantOptions 기반)
+ * variants: square, portrait
+ */
+
+/* ── Base ── */
+.root {
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+/* ── Image ── */
+.image {
+  display: block; /* <img>는 기본 inline — block으로 보정 */
+  align-self: stretch;
+  object-fit: cover; /* Figma background/cover 번역 */
+  background: var(--bg-secondary); /* src 없을 때 placeholder */
+}
+
+/* ── Variants ── */
+/* ── Variant: square ── */
+.root[data-type='square'] .image {
+  height: 320px;
+  border-radius: var(--radius-md);
+}
+
+/* ── Variant: portrait ── */
+.root[data-type='portrait'] .image {
+  height: 440px;
+  border-radius: var(--radius-md);
+}
+
+/* ── Caption ── */
+.caption {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  align-items: flex-start;
+}
+
+/* ── Name ── */
+.name {
+  align-self: stretch;
+  color: var(--text-primary);
+  font-size: var(--font-size-text-lg, 1.125rem);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: var(--line-height-text-lg, 1.75rem);
+}
+
+/* ── Source ── */
+.source {
+  align-self: stretch;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-text-md, 1rem);
+  font-weight: var(--font-weight-regular, 400);
+  line-height: var(--line-height-text-md, 1.5rem);
+  text-decoration: underline;
+}

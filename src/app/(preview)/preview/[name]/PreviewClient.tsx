@@ -59,6 +59,19 @@ export default function PreviewClient({ componentName, importPath, initialProps,
     document.documentElement.setAttribute('data-theme', initialTheme)
   }, [initialTheme])
 
+  // 컨텐츠 높이를 부모 iframe에 전달 (sandbox 자동 리사이즈)
+  useEffect(() => {
+    const send = () => {
+      const h = document.body.scrollHeight
+      window.parent?.postMessage({ type: 'preview-height', height: h }, '*')
+    }
+    // 초기 전송 + 크기 변화 감지
+    const ro = new ResizeObserver(send)
+    ro.observe(document.body)
+    send()
+    return () => ro.disconnect()
+  }, [props, children, nodeStrings])
+
   // postMessage 수신 핸들러
   // PropsEditor(부모 창)에서 type: 'preview-props' 메시지를 보낼 때마다 실행
   useEffect(() => {

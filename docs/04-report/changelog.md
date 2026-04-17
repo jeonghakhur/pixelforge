@@ -1,5 +1,76 @@
 # PixelForge Changelog
 
+## [2026-04-16] - avatar-generator Feature Complete (AvatarImage INSTANCE → Component Generator)
+
+### Added
+- `generators/avatar/extract.ts` (80줄) — childStyles에서 이미지·텍스트·shape 스타일 추출
+  - `classifySize()` — Image.height → sm/md/lg 분류 (180/280px 경계)
+  - `extractAvatarStyles()` — childStyles 유연 매칭 (key.toLowerCase() 기반), 토큰 매핑
+- `generators/avatar/index.ts` (174줄) — TSX + CSS Module 생성기
+  - `buildAvatarTSX()` — forwardRef, data-shape/size attributes, `isSafeUrl()` 검증
+  - `buildAvatarCSS()` — shape (square: border-radius-md, circle: 50%), size (160/240/320px)
+  - Props: `displayName`, `jobTitle` (HTML/ARIA 충돌 회피), `shape`, `size`
+- `AvatarImage.tsx` (72줄) — 생성된 컴포넌트
+  - `<figure>` + `<figcaption>` 시맨틱 구조
+  - `isSafeUrl()` — https://또는 http:// URL만 허용 (CSS injection 방지)
+  - `loading="lazy" decoding="async"` — 성능 최적화
+- `AvatarImage.module.css` (62줄) — 스타일
+  - CSS 변수 기반 (--spacing-md, --bg-secondary, --radius-md, --text-primary/tertiary)
+  - WCAG AA 명도대비 준수
+- `docs/conventions/component-generator-sandbox.md` — 재사용 가능한 제너레이터 패턴 가이드
+
+### Changed
+- `detect.ts` — avatar 패턴 감지 추가 (+2줄)
+  - `resolveType()` → `/avatar/i` 정규식
+  - `resolveElement()` → `'avatar'` case 처리, `'figure'` 반환
+- `generators/registry.ts` — avatar 제너레이터 등록 (+2줄)
+  - `generateAvatar` 함수 import, `GENERATORS` 객체에 추가
+
+### Fixed
+- 설계 초과 달성 — 6건 보안/품질/접근성 개선
+  - A: CSS injection 차단 (background-image URL → <img> + isSafeUrl())
+  - B: HTML name attribute 충돌 방지 (name → displayName)
+  - C: ARIA role attribute 충돌 방지 (role → jobTitle + Omit<..., 'role'>)
+  - D: Placeholder 배경 토큰 교정 (--surface-secondary → --bg-secondary)
+  - E: Props 타입 안전성 (Omit<HTMLAttributes, 'role'>)
+  - F: Sandbox 파서 호환성 (export type … 세미콜론 추가)
+
+### Deployment Notes
+- **Breaking Changes**: None (새로운 제너레이터 추가만)
+- **Database Migration**: None (기존 schema 변경 없음)
+- **Build Status**: ✅ Clean (`npm run build`, `npm run lint`)
+- **Test Result**: ✅ **100% Match Rate** (11/11 설계 기준 충족, 6건 초과 달성)
+
+### Technical Summary
+- **Files Added**: 4 (extract.ts, index.ts, AvatarImage.tsx, AvatarImage.module.css, conventions doc)
+- **Files Modified**: 2 (detect.ts +2줄, registry.ts +2줄)
+- **Type Safety**: 100% TypeScript strict (zero `any` types)
+- **Pattern**: INSTANCE 컴포넌트 (variants 없음) 처리 기반 마련 — Card/Media 제너레이터 재사용 가능
+- **Security**: CSS injection 방지, URL 화이트리스트 검증
+- **Accessibility**: <img> alt 텍스트, aria-hidden placeholder, WCAG AA 대비 준수
+
+### Feature Highlights
+- **INSTANCE 패턴 확립**: variants 없는 단일 노드도 registry 패턴으로 전용 제너레이터 지원
+- **토큰 정확도**: childStyles 기반 추출으로 설계 문서의 모든 토큰 변수 반영
+- **보안-우선 설계**: background-image 대신 <img> + URL 검증으로 XSS/CSS injection 차단
+- **API 명확성**: displayName/jobTitle로 HTML/ARIA 충돌 제거, 외부 사용자 DX 향상
+- **유연성**: childStyles 키 매칭으로 Figma 노드 이름 변경에 견고
+
+### Pattern Reusability
+Card/Media 계열 다음 제너레이터들은 이 패턴을 재사용:
+- `detect.ts` — `/card/i`, `/media/i` 정규식 추가 (1줄씩)
+- `registry.ts` — `generateCard`, `generateMedia` 등록 (1줄씩)
+- `generators/{type}/extract.ts` — 동일한 childStyles 매칭 구조
+- `generators/{type}/index.ts` — 동일한 template literal 생성 방식
+
+### References
+- **Completion Report**: [docs/04-report/avatar-generator.report.md](./avatar-generator.report.md)
+- **Design Document**: [docs/02-design/features/avatar-generator.design.md](../02-design/features/avatar-generator.design.md)
+- **Analysis**: [docs/03-analysis/avatar-generator.analysis.md](../03-analysis/avatar-generator.analysis.md)
+- **Conventions**: [docs/conventions/component-generator-sandbox.md](../conventions/component-generator-sandbox.md)
+
+---
+
 ## [2026-04-02] - token-history Feature Complete (Snapshot-Based Token History)
 
 ### Added

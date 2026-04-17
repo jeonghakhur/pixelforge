@@ -63,6 +63,8 @@ npm run test         # Playwright E2E
 | `QUALITY_RULES.md` | 코드 컨벤션, SCSS 규칙, 에러 패턴, 커밋 규칙 |
 | `docs/conventions/code-style.md` | 파일 구조, 네이밍, 서버 액션, Drizzle 패턴 |
 | `docs/conventions/design-system.md` | 토큰 사용법, WCAG AA, 컴포넌트 패턴 |
+| `docs/conventions/component-generator-sandbox.md` | **생성기 필수** — Sandbox 호환 TSX 출력 규칙 (세미콜론, export type, HTML 충돌 prop) |
+| `docs/conventions/component-generator-guide.md` | **생성기 필수** — 파일별 역할·수정 포인트·새 제너레이터 추가 절차·컴포넌트 목록 |
 | `docs/test/playwright-guide.md` | E2E 설정, 인증 처리, 시나리오 |
 | `docs/decisions/README.md` | ADR (주요 기술 결정 기록) |
 | `docs/next-project-guide.md` | 전체 개발 가이드 |

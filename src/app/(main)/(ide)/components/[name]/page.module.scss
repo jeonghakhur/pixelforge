@@ -242,9 +242,10 @@
 
 .sandboxIframe {
   width: 100%;
-  min-height: 120px;
   border: none;
   background: transparent;
+  display: block;
+  transition: height 150ms ease;
 }
 
 .sandboxPlaceholder {

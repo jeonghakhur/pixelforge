@@ -1,0 +1,118 @@
+/**
+ * Text.module.css
+ * source: DB Typography tokens (font-size / line-height)
+ */
+
+/* ── Base ── */
+.root {
+  font-family: var(--font-family-body, Inter);
+  font-size: var(--font-size-text-md, 1rem);
+  line-height: var(--line-height-text-md, 1.5rem);
+  font-weight: var(--font-weight-regular, 400);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Size ── */
+.root[data-size='display-2xl'] {
+  font-family: var(--font-family-display, Inter);
+  font-size: var(--font-size-display-2xl, 4.5rem);
+  line-height: var(--line-height-display-2xl, 5.625rem);
+}
+.root[data-size='display-xl'] {
+  font-family: var(--font-family-display, Inter);
+  font-size: var(--font-size-display-xl, 3.75rem);
+  line-height: var(--line-height-display-xl, 4.5rem);
+}
+.root[data-size='display-lg'] {
+  font-family: var(--font-family-display, Inter);
+  font-size: var(--font-size-display-lg, 3rem);
+  line-height: var(--line-height-display-lg, 3.75rem);
+}
+.root[data-size='display-md'] {
+  font-family: var(--font-family-display, Inter);
+  font-size: var(--font-size-display-md, 2.25rem);
+  line-height: var(--line-height-display-md, 2.75rem);
+}
+.root[data-size='display-xs'] {
+  font-family: var(--font-family-display, Inter);
+  font-size: var(--font-size-display-xs, 1.5rem);
+  line-height: var(--line-height-display-xs, 2rem);
+}
+.root[data-size='text-xl'] {
+  font-size: var(--font-size-text-xl, 1.25rem);
+  line-height: var(--line-height-text-xl, 1.875rem);
+}
+.root[data-size='text-lg'] {
+  font-size: var(--font-size-text-lg, 1.125rem);
+  line-height: var(--line-height-text-lg, 1.75rem);
+}
+.root[data-size='text-md'] {
+  font-size: var(--font-size-text-md, 1rem);
+  line-height: var(--line-height-text-md, 1.5rem);
+}
+.root[data-size='text-sm'] {
+  font-size: var(--font-size-text-sm, 0.875rem);
+  line-height: var(--line-height-text-sm, 1.25rem);
+}
+.root[data-size='text-xs'] {
+  font-size: var(--font-size-text-xs, 0.75rem);
+  line-height: var(--line-height-text-xs, 1.125rem);
+}
+
+/* ── Weight ── */
+.root[data-weight='medium'] { font-weight: var(--font-weight-medium, 500); }
+.root[data-weight='semibold'] { font-weight: var(--font-weight-semibold, 600); }
+.root[data-weight='bold'] { font-weight: var(--font-weight-bold, 700); }
+
+/* ── Color ── */
+.root[data-color='tertiary'] { color: var(--text-tertiary); }
+.root[data-color='error-primary'] { color: var(--text-error-primary); }
+.root[data-color='warning-primary'] { color: var(--text-warning-primary); }
+.root[data-color='success-primary'] { color: var(--text-success-primary); }
+.root[data-color='white'] { color: var(--text-white); }
+.root[data-color='secondary'] { color: var(--text-secondary); }
+.root[data-color='secondary_hover'] { color: var(--text-secondary_hover); }
+.root[data-color='tertiary_hover'] { color: var(--text-tertiary_hover); }
+.root[data-color='brand-secondary'] { color: var(--text-brand-secondary); }
+.root[data-color='placeholder'] { color: var(--text-placeholder); }
+.root[data-color='brand-tertiary'] { color: var(--text-brand-tertiary); }
+.root[data-color='quaternary'] { color: var(--text-quaternary); }
+.root[data-color='brand-primary'] { color: var(--text-brand-primary); }
+.root[data-color='primary_on-brand'] { color: var(--text-primary_on-brand); }
+.root[data-color='secondary_on-brand'] { color: var(--text-secondary_on-brand); }
+.root[data-color='tertiary_on-brand'] { color: var(--text-tertiary_on-brand); }
+.root[data-color='quaternary_on-brand'] { color: var(--text-quaternary_on-brand); }
+.root[data-color='brand-tertiary_alt'] { color: var(--text-brand-tertiary_alt); }
+.root[data-color='error-primary_hover'] { color: var(--text-error-primary_hover); }
+.root[data-color='brand-secondary_hover'] { color: var(--text-brand-secondary_hover); }
+
+/* ── Align ── */
+.root[data-align='left']   { text-align: left; }
+.root[data-align='center'] { text-align: center; }
+.root[data-align='right']  { text-align: right; }
+
+/* ── Wrap ── */
+.root[data-wrap='balance'] { text-wrap: balance; }
+.root[data-wrap='pretty']  { text-wrap: pretty; }
+.root[data-wrap='nowrap']  { white-space: nowrap; }
+
+/* ── Truncate ── */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── sr-only ── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
